@@ -1,0 +1,8 @@
+
+> gorilla@0.1.0 start
+> next start --port 3101
+
+▲ Next.js 16.2.3
+- Local:         http://localhost:3101
+- Network:       http://10.148.56.11:3101
+✓ Ready in 323ms

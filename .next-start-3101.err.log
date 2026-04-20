@@ -1,0 +1,28 @@
+Error [HttpError]: Active team application already exists
+    at <unknown> (HttpError: Active team application already exists)
+    at e.$transaction.isolationLevel (C:\Gorilla\gorilla\.next\server\chunks\[root-of-the-server]__0x3ok55._.js:1:4138)
+    at async d (C:\Gorilla\gorilla\.next\server\chunks\[root-of-the-server]__0fqdl-5._.js:1:5976)
+    at async Module.h [as handler] (C:\Gorilla\gorilla\.next\server\chunks\[root-of-the-server]__0fqdl-5._.js:1:8168) {
+  statusCode: 409
+}
+Error [HttpError]: Participant not found
+    at <unknown> (HttpError: Participant not found)
+    at e.$transaction.isolationLevel (C:\Gorilla\gorilla\.next\server\chunks\[root-of-the-server]__0x3ok55._.js:1:3882)
+    at async d (C:\Gorilla\gorilla\.next\server\chunks\[root-of-the-server]__0fqdl-5._.js:1:5976)
+    at async Module.h [as handler] (C:\Gorilla\gorilla\.next\server\chunks\[root-of-the-server]__0fqdl-5._.js:1:8168) {
+  statusCode: 404
+}
+Error [HttpError]: Team application is already cancelled
+    at <unknown> (HttpError: Team application is already cancelled)
+    at o (C:\Gorilla\gorilla\.next\server\chunks\[root-of-the-server]__0x3ok55._.js:1:4816)
+    at async l (C:\Gorilla\gorilla\.next\server\chunks\[root-of-the-server]__0p1yjnb._.js:1:5608)
+    at async Module.y [as handler] (C:\Gorilla\gorilla\.next\server\chunks\[root-of-the-server]__0p1yjnb._.js:1:7769) {
+  statusCode: 409
+}
+Error [HttpError]: Team application not found
+    at <unknown> (HttpError: Team application not found)
+    at o (C:\Gorilla\gorilla\.next\server\chunks\[root-of-the-server]__0x3ok55._.js:1:4734)
+    at async l (C:\Gorilla\gorilla\.next\server\chunks\[root-of-the-server]__0p1yjnb._.js:1:5608)
+    at async Module.y [as handler] (C:\Gorilla\gorilla\.next\server\chunks\[root-of-the-server]__0p1yjnb._.js:1:7769) {
+  statusCode: 404
+}
