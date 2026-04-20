@@ -1,5 +1,5 @@
 {
-  "name": "gorilla",
+  "name": "dnkbiz-course-mvp",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "db:generate": "prisma generate",
     "db:seed": "node --env-file=.env prisma/seed.mjs"
   },
   "dependencies": {
@@ -14,8 +15,7 @@
     "next": "16.2.3",
     "prisma": "^6.19.3",
     "react": "19.2.4",
-    "react-dom": "19.2.4",
-    "telegraf": "^4.16.3"
+    "react-dom": "19.2.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

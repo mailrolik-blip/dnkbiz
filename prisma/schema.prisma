@@ -7,310 +7,128 @@ generator client {
   provider = "prisma-client-js"
 }
 
-enum TeamRole {
-  PLAYER
-  COACH
-  CAPTAIN
-  PARENT
-}
-
-enum TeamMemberStatus {
-  ACTIVE
-  INJURED
-  SUSPENDED
-}
-
-enum StaffRole {
-  MANAGER
+enum UserRole {
   ADMIN
+  USER
 }
 
-enum TeamApplicationStatus {
+enum OrderStatus {
   PENDING
-  IN_REVIEW
-  ACCEPTED
-  REJECTED
-  CANCELLED
-}
-
-enum RentalSlotStatus {
-  AVAILABLE
-  BOOKED
-  UNAVAILABLE
-}
-
-enum RentalBookingStatus {
-  PENDING_CONFIRMATION
-  CONFIRMED
-  CANCELLED
+  PAID
+  CANCELED
 }
 
 model User {
-  id           Int     @id @default(autoincrement())
-  email        String? @unique
-  phone        String? @unique
-  telegramId   String? @unique
-  passwordHash String?
-  staffRole    StaffRole?
+  id           Int       @id @default(autoincrement())
+  email        String    @unique
+  passwordHash String
+  name         String?
+  role         UserRole  @default(USER)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  profiles    UserProfile[]
-  memberships TeamMember[]
-  bookings       Booking[]       @relation("UserBookings")
-  rentalBookings RentalBooking[] @relation("UserRentalBookings")
-  reviewedTeamApplications TeamApplication[] @relation("ReviewedTeamApplications")
-  trainings   SchoolTraining[] // как тренер
+  enrollments    Enrollment[]
+  lessonProgress LessonProgress[]
+  orders         Order[]
 }
 
-model UserProfile {
-  id     Int  @id @default(autoincrement())
-  userId Int
-  user   User @relation(fields: [userId], references: [id])
-
-  profileType String
-  firstName   String?
-  lastName    String?
-  birthDate   DateTime?
-
-  parentId Int?
-  parent   UserProfile?  @relation("ParentChild", fields: [parentId], references: [id])
-  children UserProfile[] @relation("ParentChild")
-
-  cityId Int?
-  city   City? @relation(fields: [cityId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  bookings         Booking[]         @relation("UserProfileBookings")
-  rentalBookings   RentalBooking[]
-  trainingBookings TrainingBooking[]
-  teamApplications TeamApplication[]
-  teamMemberships  TeamMember[]
-}
-
-model Team {
-  id          Int    @id @default(autoincrement())
-  name        String
-  slug        String? @unique
-  description String?
-  cityId      Int?
-  city        City? @relation(fields: [cityId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  members TeamMember[]
-  applications TeamApplication[]
-}
-
-model TeamMember {
-  id           Int              @id @default(autoincrement())
-  userId       Int?
-  participantId Int?
-  teamId       Int
-  role         TeamRole
-  status       TeamMemberStatus
-  positionCode String?
-  jerseyNumber Int?
-  joinedAt     DateTime         @default(now())
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
-
-  user        User?       @relation(fields: [userId], references: [id])
-  participant UserProfile? @relation(fields: [participantId], references: [id])
-  team        Team        @relation(fields: [teamId], references: [id])
-
-  @@unique([userId, teamId])
-  @@unique([participantId, teamId])
-  @@index([participantId])
-}
-
-model Session {
-  id          Int     @id @default(autoincrement())
+model Course {
+  id          Int      @id @default(autoincrement())
   title       String
+  slug        String   @unique
   description String?
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  startTime DateTime
-  endTime   DateTime
-
-  cityId Int?
-  city   City? @relation(fields: [cityId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  bookings Booking[]
+  enrollments Enrollment[]
+  lessons     Lesson[]
+  tariffs     Tariff[]
 }
 
-model Booking {
-  id            Int @id @default(autoincrement())
-  participantId Int
-  sessionId     Int
+model Lesson {
+  id          Int      @id @default(autoincrement())
+  courseId    Int
+  title       String
+  slug        String
+  description String?
+  content     String?
+  position    Int
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  status String
+  course   Course            @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  progress LessonProgress[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  participant UserProfile @relation("UserProfileBookings", fields: [participantId], references: [id])
-  session     Session     @relation(fields: [sessionId], references: [id])
-
-  user   User? @relation("UserBookings", fields: [userId], references: [id])
-  userId Int?
-
-  @@unique([participantId, sessionId])
+  @@unique([courseId, slug])
+  @@unique([courseId, position])
+  @@index([courseId, position])
 }
 
-model City {
-  id   Int    @id @default(autoincrement())
-  name String @unique
-
-  profiles  UserProfile[]
-  teams     Team[]
-  sessions  Session[]
-  trainings SchoolTraining[]
-  rentalFacilities RentalFacility[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model SchoolTraining {
-  trainingId   Int    @id @default(autoincrement())
-  name         String
-  description  String?
-  trainingType String
-
-  cityId Int
-  city   City @relation(fields: [cityId], references: [id])
-
-  trainerId Int?
-  trainer   User? @relation(fields: [trainerId], references: [id])
-
-  startTime DateTime
-  endTime   DateTime
-  location  String
-
-  capacity     Int      @default(20)   
-  isActive     Boolean   @default(true) 
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  bookings TrainingBooking[]
-
-  @@index([startTime])
-  @@index([endTime])
-  @@index([cityId])
-}
-
-model TrainingBooking {
-  id            Int      @id @default(autoincrement())
-
-  participantId Int
-  trainingId    Int
-
-  status        String   // booked, cancelled
-
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  participant   UserProfile    @relation(fields: [participantId], references: [id])
-  training      SchoolTraining @relation(fields: [trainingId], references: [trainingId])
-
-  @@unique([participantId, trainingId])
-  @@index([participantId])
-  @@index([trainingId])
-}
-
-model TeamApplication {
-  id                   Int                   @id @default(autoincrement())
-  participantId        Int
-  teamId               Int
-  reviewedById         Int?
-  status               TeamApplicationStatus @default(PENDING)
-  commentFromApplicant String?
-  internalNote         String?
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @updatedAt
-
-  participant UserProfile @relation(fields: [participantId], references: [id])
-  team        Team        @relation(fields: [teamId], references: [id])
-  reviewedBy  User?       @relation("ReviewedTeamApplications", fields: [reviewedById], references: [id])
-
-  @@index([participantId])
-  @@index([teamId])
-  @@index([reviewedById])
-  @@index([status])
-}
-
-model RentalFacility {
+model Tariff {
   id        Int      @id @default(autoincrement())
-  name      String
-  cityId    Int
+  title     String
+  slug      String   @unique
+  price     Int
+  interval  String?
+  isActive  Boolean  @default(true)
+  courseId  Int
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  city      City             @relation(fields: [cityId], references: [id])
-  resources RentalResource[]
+  course Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  orders Order[]
 
-  @@index([cityId])
+  @@index([courseId])
 }
 
-model RentalResource {
-  id           Int      @id @default(autoincrement())
-  facilityId   Int
-  name         String
-  resourceType String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+model Order {
+  id        Int         @id @default(autoincrement())
+  userId    Int
+  tariffId  Int
+  status    OrderStatus @default(PENDING)
+  amount    Int
+  paidAt    DateTime?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
 
-  facility RentalFacility @relation(fields: [facilityId], references: [id])
-  slots    RentalSlot[]
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tariff     Tariff      @relation(fields: [tariffId], references: [id], onDelete: Restrict)
+  enrollment Enrollment?
 
-  @@index([facilityId])
+  @@index([userId, status])
+  @@index([tariffId])
 }
 
-model RentalSlot {
-  id         Int              @id @default(autoincrement())
-  resourceId Int
-  startsAt   DateTime
-  endsAt     DateTime
-  status     RentalSlotStatus @default(AVAILABLE)
-  isPublic   Boolean          @default(true)
-  createdAt  DateTime         @default(now())
-  updatedAt  DateTime         @updatedAt
+model Enrollment {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  courseId  Int
+  orderId   Int?     @unique
+  createdAt DateTime @default(now())
 
-  resource RentalResource @relation(fields: [resourceId], references: [id])
-  bookings RentalBooking[]
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  order  Order? @relation(fields: [orderId], references: [id], onDelete: SetNull)
 
-  @@index([resourceId])
-  @@index([startsAt])
-  @@index([endsAt])
-  @@index([status])
-  @@index([isPublic])
+  @@unique([userId, courseId])
+  @@index([courseId])
 }
 
-model RentalBooking {
-  id           Int                 @id @default(autoincrement())
-  slotId        Int
-  userId        Int
-  participantId Int?
-  status        RentalBookingStatus @default(PENDING_CONFIRMATION)
-  noteFromUser  String?
-  managerNote   String?
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
+model LessonProgress {
+  id           Int       @id @default(autoincrement())
+  userId       Int
+  lessonId     Int
+  completed    Boolean   @default(false)
+  answer       String?
+  lastViewedAt DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
-  slot        RentalSlot   @relation(fields: [slotId], references: [id])
-  user        User         @relation("UserRentalBookings", fields: [userId], references: [id])
-  participant UserProfile? @relation(fields: [participantId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
-  @@index([slotId])
-  @@index([userId])
-  @@index([participantId])
-  @@index([status])
+  @@unique([userId, lessonId])
+  @@index([lessonId])
 }

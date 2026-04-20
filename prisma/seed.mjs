@@ -1,642 +1,211 @@
 import { PrismaClient } from '@prisma/client';
+import { randomBytes, scrypt as scryptCallback } from 'node:crypto';
+import { promisify } from 'node:util';
 
 const prisma = new PrismaClient();
+const scrypt = promisify(scryptCallback);
 
-const DEV_MARKER = 'dev-seed';
-const ALLOWED_DEV_HOSTS = new Set(['localhost', '127.0.0.1', 'postgres-db', 'db']);
-const EXPECTED_DATABASE_NAMES = new Set(['hockey_platform']);
+const ALLOWED_DEV_HOSTS = new Set(['localhost', '127.0.0.1', 'course-db', 'db']);
+const EXPECTED_DATABASE_NAMES = new Set(['course_platform']);
 
 function assertDevSeedAllowed() {
   if (process.env.NODE_ENV === 'production') {
-    throw new Error('Dev seed is disabled in production.');
+    throw new Error('Seed is disabled in production.');
   }
 
   const databaseUrl = process.env.DATABASE_URL;
 
   if (!databaseUrl) {
-    throw new Error('DATABASE_URL is required for dev seed.');
+    throw new Error('DATABASE_URL is required for seed.');
   }
 
-  let parsedUrl;
+  const parsed = new URL(databaseUrl);
+  const databaseName = parsed.pathname.replace(/^\/+/, '').split('/')[0];
 
-  try {
-    parsedUrl = new URL(databaseUrl);
-  } catch (error) {
-    throw new Error(`DATABASE_URL is invalid: ${error instanceof Error ? error.message : 'unknown error'}`);
-  }
-
-  const hostname = parsedUrl.hostname.toLowerCase();
-  const databaseName = parsedUrl.pathname.replace(/^\/+/, '').split('/')[0];
-
-  if (!ALLOWED_DEV_HOSTS.has(hostname) || !EXPECTED_DATABASE_NAMES.has(databaseName)) {
+  if (
+    !ALLOWED_DEV_HOSTS.has(parsed.hostname.toLowerCase()) ||
+    !EXPECTED_DATABASE_NAMES.has(databaseName)
+  ) {
     throw new Error(
-      `Refusing to run dev seed for non-dev database host "${hostname}" and database "${databaseName}".`
+      `Refusing to seed non-dev database host "${parsed.hostname}" and database "${databaseName}".`
     );
   }
 }
 
-function fixedUtcDate(year, month, day, hour, minute = 0) {
-  return new Date(Date.UTC(year, month - 1, day, hour, minute, 0, 0));
+async function hashPassword(password) {
+  const salt = randomBytes(16).toString('hex');
+  const derivedKey = await scrypt(password, salt, 64);
+  return `${salt}:${Buffer.from(derivedKey).toString('hex')}`;
 }
 
-async function upsertCity(name) {
-  return prisma.city.upsert({
-    where: { name },
-    update: {},
-    create: { name },
-  });
-}
-
-async function upsertUser({ email, telegramId, staffRole }) {
+async function upsertUser({ email, password, name, role }) {
   return prisma.user.upsert({
-    where: { email },
+    where: {
+      email,
+    },
     update: {
-      telegramId,
-      staffRole,
+      passwordHash: await hashPassword(password),
+      name,
+      role,
     },
     create: {
       email,
-      telegramId,
-      staffRole,
-    },
-  });
-}
-
-async function ensureProfile({
-  userId,
-  profileType,
-  firstName,
-  lastName,
-  birthDate,
-  cityId,
-}) {
-  const existingProfile = await prisma.userProfile.findFirst({
-    where: {
-      userId,
-      profileType,
-      firstName,
-      lastName,
-    },
-    orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
-  });
-
-  if (existingProfile) {
-    return prisma.userProfile.update({
-      where: { id: existingProfile.id },
-      data: {
-        birthDate,
-        cityId,
-      },
-    });
-  }
-
-  return prisma.userProfile.create({
-    data: {
-      userId,
-      profileType,
-      firstName,
-      lastName,
-      birthDate,
-      cityId,
-    },
-  });
-}
-
-async function upsertTeam({ name, slug, description, cityId }) {
-  return prisma.team.upsert({
-    where: { slug },
-    update: {
+      passwordHash: await hashPassword(password),
       name,
-      description,
-      cityId,
-    },
-    create: {
-      name,
-      slug,
-      description,
-      cityId,
+      role,
     },
   });
-}
-
-async function upsertCoachMembership({ userId, teamId, positionCode, jerseyNumber }) {
-  return prisma.teamMember.upsert({
-    where: {
-      userId_teamId: {
-        userId,
-        teamId,
-      },
-    },
-    update: {
-      role: 'COACH',
-      status: 'ACTIVE',
-      positionCode,
-      jerseyNumber,
-    },
-    create: {
-      userId,
-      teamId,
-      role: 'COACH',
-      status: 'ACTIVE',
-      positionCode,
-      jerseyNumber,
-    },
-  });
-}
-
-async function upsertParticipantMembership({
-  participantId,
-  teamId,
-  positionCode,
-  jerseyNumber,
-}) {
-  return prisma.teamMember.upsert({
-    where: {
-      participantId_teamId: {
-        participantId,
-        teamId,
-      },
-    },
-    update: {
-      role: 'PLAYER',
-      status: 'ACTIVE',
-      positionCode,
-      jerseyNumber,
-    },
-    create: {
-      participantId,
-      teamId,
-      role: 'PLAYER',
-      status: 'ACTIVE',
-      positionCode,
-      jerseyNumber,
-    },
-  });
-}
-
-async function ensureTraining({
-  name,
-  description,
-  trainingType,
-  cityId,
-  trainerId,
-  startTime,
-  endTime,
-  location,
-  capacity,
-  isActive,
-}) {
-  const existingTraining = await prisma.schoolTraining.findFirst({
-    where: {
-      name,
-      cityId,
-      location,
-    },
-    orderBy: [{ createdAt: 'asc' }, { trainingId: 'asc' }],
-  });
-
-  if (existingTraining) {
-    return prisma.schoolTraining.update({
-      where: { trainingId: existingTraining.trainingId },
-      data: {
-        description,
-        trainingType,
-        trainerId,
-        startTime,
-        endTime,
-        capacity,
-        isActive,
-      },
-    });
-  }
-
-  return prisma.schoolTraining.create({
-    data: {
-      name,
-      description,
-      trainingType,
-      cityId,
-      trainerId,
-      startTime,
-      endTime,
-      location,
-      capacity,
-      isActive,
-    },
-  });
-}
-
-async function ensureTrainingBooking({ participantId, trainingId }) {
-  const existingBooking = await prisma.trainingBooking.findUnique({
-    where: {
-      participantId_trainingId: {
-        participantId,
-        trainingId,
-      },
-    },
-  });
-
-  if (existingBooking) {
-    return prisma.trainingBooking.update({
-      where: { id: existingBooking.id },
-      data: {
-        status: 'booked',
-      },
-    });
-  }
-
-  return prisma.trainingBooking.create({
-    data: {
-      participantId,
-      trainingId,
-      status: 'booked',
-    },
-  });
-}
-
-async function ensureTeamApplication({
-  participantId,
-  teamId,
-  status,
-  commentFromApplicant,
-  internalNote,
-  reviewedById,
-}) {
-  const existingApplication = await prisma.teamApplication.findFirst({
-    where: {
-      participantId,
-      teamId,
-      commentFromApplicant,
-    },
-    orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
-  });
-
-  if (existingApplication) {
-    return prisma.teamApplication.update({
-      where: { id: existingApplication.id },
-      data: {
-        status,
-        internalNote,
-        reviewedById,
-      },
-    });
-  }
-
-  return prisma.teamApplication.create({
-    data: {
-      participantId,
-      teamId,
-      status,
-      commentFromApplicant,
-      internalNote,
-      reviewedById,
-    },
-  });
-}
-
-async function ensureRentalFacility({ name, cityId }) {
-  const existingFacility = await prisma.rentalFacility.findFirst({
-    where: {
-      name,
-      cityId,
-    },
-    orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
-  });
-
-  if (existingFacility) {
-    return prisma.rentalFacility.update({
-      where: { id: existingFacility.id },
-      data: {
-        cityId,
-      },
-    });
-  }
-
-  return prisma.rentalFacility.create({
-    data: {
-      name,
-      cityId,
-    },
-  });
-}
-
-async function ensureRentalResource({ facilityId, name, resourceType }) {
-  const existingResource = await prisma.rentalResource.findFirst({
-    where: {
-      facilityId,
-      name,
-    },
-    orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
-  });
-
-  if (existingResource) {
-    return prisma.rentalResource.update({
-      where: { id: existingResource.id },
-      data: {
-        resourceType,
-      },
-    });
-  }
-
-  return prisma.rentalResource.create({
-    data: {
-      facilityId,
-      name,
-      resourceType,
-    },
-  });
-}
-
-async function ensureRentalSlot({
-  resourceId,
-  startsAt,
-  endsAt,
-  status,
-  isPublic,
-}) {
-  const existingSlot = await prisma.rentalSlot.findFirst({
-    where: {
-      resourceId,
-      startsAt,
-      endsAt,
-    },
-    orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
-  });
-
-  if (existingSlot) {
-    return prisma.rentalSlot.update({
-      where: { id: existingSlot.id },
-      data: {
-        status,
-        isPublic,
-      },
-    });
-  }
-
-  return prisma.rentalSlot.create({
-    data: {
-      resourceId,
-      startsAt,
-      endsAt,
-      status,
-      isPublic,
-    },
-  });
-}
-
-async function ensureRentalBooking({
-  slotId,
-  userId,
-  participantId,
-  status,
-  noteFromUser,
-  managerNote,
-}) {
-  const existingBooking = await prisma.rentalBooking.findFirst({
-    where: {
-      slotId,
-      userId,
-    },
-    orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
-  });
-
-  if (existingBooking) {
-    return prisma.rentalBooking.update({
-      where: { id: existingBooking.id },
-      data: {
-        participantId,
-        status,
-        noteFromUser,
-        managerNote,
-      },
-    });
-  }
-
-  return prisma.rentalBooking.create({
-    data: {
-      slotId,
-      userId,
-      participantId,
-      status,
-      noteFromUser,
-      managerNote,
-    },
-  });
-}
-
-function printSummary(summary) {
-  console.log('');
-  console.log('DEV_SEED_SUMMARY');
-  console.log(`ADMIN userId: ${summary.users.admin.id}`);
-  console.log(`MANAGER userId: ${summary.users.manager.id}`);
-  console.log(`USER userId: ${summary.users.user.id}`);
-  console.log(`USER participantId: ${summary.participant.id}`);
-  console.log(`Cities: ${summary.cities.map((city) => `${city.id}:${city.name}`).join(', ')}`);
-  console.log(`Teams: ${summary.teams.map((team) => `${team.id}:${team.name}`).join(', ')}`);
-  console.log(
-    `Trainings: ${summary.trainings
-      .map((training) => `${training.trainingId}:${training.name}`)
-      .join(', ')}`
-  );
-  console.log(
-    `Rental facility/resource: ${summary.rental.facility.id}:${summary.rental.facility.name} / ${summary.rental.resource.id}:${summary.rental.resource.name}`
-  );
-  console.log(
-    `Rental slots: ${summary.rental.slots
-      .map((slot) => `${slot.id}:${slot.status}:${slot.startsAt.toISOString()}`)
-      .join(', ')}`
-  );
-  console.log(
-    `Training booking: ${summary.trainingBooking.id} for training ${summary.trainingBooking.trainingId}`
-  );
-  console.log(
-    `Team application: ${summary.teamApplication.id} -> team ${summary.teamApplication.teamId}`
-  );
-  console.log(`Rental booking: ${summary.rental.booking.id} -> slot ${summary.rental.booking.slotId}`);
-  console.log('');
 }
 
 async function main() {
   assertDevSeedAllowed();
 
-  const moscow = await upsertCity('Москва');
-  const nizhnyNovgorod = await upsertCity('Нижний Новгород');
-
-  const adminUser = await upsertUser({
-    email: 'admin.dev@gorilla.local',
-    telegramId: 'gorilla_admin_dev',
-    staffRole: 'ADMIN',
-  });
-  const managerUser = await upsertUser({
-    email: 'manager.dev@gorilla.local',
-    telegramId: 'gorilla_manager_dev',
-    staffRole: 'MANAGER',
-  });
-  const regularUser = await upsertUser({
-    email: 'user.dev@gorilla.local',
-    telegramId: 'gorilla_user_dev',
-    staffRole: null,
+  const admin = await upsertUser({
+    email: 'admin@example.com',
+    password: 'Admin123!',
+    name: 'Admin User',
+    role: 'ADMIN',
   });
 
-  await ensureProfile({
-    userId: adminUser.id,
-    profileType: 'ADULT',
-    firstName: 'Анна',
-    lastName: 'Админ',
-    birthDate: fixedUtcDate(1990, 5, 12, 12),
-    cityId: moscow.id,
-  });
-  await ensureProfile({
-    userId: managerUser.id,
-    profileType: 'ADULT',
-    firstName: 'Максим',
-    lastName: 'Менеджер',
-    birthDate: fixedUtcDate(1992, 8, 4, 12),
-    cityId: moscow.id,
-  });
-  await ensureProfile({
-    userId: regularUser.id,
-    profileType: 'PARENT',
-    firstName: 'Ольга',
-    lastName: 'Родитель',
-    birthDate: fixedUtcDate(1988, 11, 20, 12),
-    cityId: moscow.id,
+  const user = await upsertUser({
+    email: 'user@example.com',
+    password: 'User12345!',
+    name: 'Test User',
+    role: 'USER',
   });
 
-  const participant = await ensureProfile({
-    userId: regularUser.id,
-    profileType: 'CHILD',
-    firstName: 'Иван',
-    lastName: 'Игрок',
-    birthDate: fixedUtcDate(2014, 2, 15, 12),
-    cityId: moscow.id,
-  });
-
-  const moscowTeam = await upsertTeam({
-    name: 'Команда клуба Москва (dev)',
-    slug: 'team-moscow-dev-seed',
-    description: `Минимальная dev-команда для проверки user/staff flows (${DEV_MARKER}).`,
-    cityId: moscow.id,
-  });
-  const nizhnyTeam = await upsertTeam({
-    name: 'Команда клуба Нижний Новгород (dev)',
-    slug: 'team-nizhny-dev-seed',
-    description: `Минимальная dev-команда для проверки user/staff flows (${DEV_MARKER}).`,
-    cityId: nizhnyNovgorod.id,
-  });
-
-  await upsertCoachMembership({
-    userId: managerUser.id,
-    teamId: moscowTeam.id,
-    positionCode: 'HC',
-    jerseyNumber: null,
-  });
-  await upsertParticipantMembership({
-    participantId: participant.id,
-    teamId: moscowTeam.id,
-    positionCode: 'FWD',
-    jerseyNumber: 17,
-  });
-
-  const moscowTraining = await ensureTraining({
-    name: 'Тренировка Москва (dev)',
-    description: `Активная тренировка для проверки записи в кабинет и staff dashboard (${DEV_MARKER}).`,
-    trainingType: 'group',
-    cityId: moscow.id,
-    trainerId: managerUser.id,
-    startTime: fixedUtcDate(2030, 1, 15, 15, 0),
-    endTime: fixedUtcDate(2030, 1, 15, 16, 30),
-    location: 'ЛДС Москва, лёд A',
-    capacity: 20,
-    isActive: true,
-  });
-  const nizhnyTraining = await ensureTraining({
-    name: 'Тренировка Нижний Новгород (dev)',
-    description: `Вторая активная тренировка для проверки доступного каталога (${DEV_MARKER}).`,
-    trainingType: 'group',
-    cityId: nizhnyNovgorod.id,
-    trainerId: managerUser.id,
-    startTime: fixedUtcDate(2030, 1, 16, 14, 0),
-    endTime: fixedUtcDate(2030, 1, 16, 15, 30),
-    location: 'ФОК Нижний, лёд B',
-    capacity: 18,
-    isActive: true,
-  });
-
-  const trainingBooking = await ensureTrainingBooking({
-    participantId: participant.id,
-    trainingId: moscowTraining.trainingId,
-  });
-
-  const teamApplication = await ensureTeamApplication({
-    participantId: participant.id,
-    teamId: nizhnyTeam.id,
-    status: 'PENDING',
-    commentFromApplicant: `Хочу попасть на просмотр в команду Нижнего Новгорода (${DEV_MARKER}).`,
-    internalNote: null,
-    reviewedById: null,
-  });
-
-  const rentalFacility = await ensureRentalFacility({
-    name: 'Ледовая арена Москва (dev)',
-    cityId: moscow.id,
-  });
-  const rentalResource = await ensureRentalResource({
-    facilityId: rentalFacility.id,
-    name: 'Лёд A (dev)',
-    resourceType: 'ice-rink',
-  });
-
-  const availableRentalSlotOne = await ensureRentalSlot({
-    resourceId: rentalResource.id,
-    startsAt: fixedUtcDate(2030, 1, 17, 10, 0),
-    endsAt: fixedUtcDate(2030, 1, 17, 11, 0),
-    status: 'AVAILABLE',
-    isPublic: true,
-  });
-  const availableRentalSlotTwo = await ensureRentalSlot({
-    resourceId: rentalResource.id,
-    startsAt: fixedUtcDate(2030, 1, 18, 12, 0),
-    endsAt: fixedUtcDate(2030, 1, 18, 13, 0),
-    status: 'AVAILABLE',
-    isPublic: true,
-  });
-  const bookedRentalSlot = await ensureRentalSlot({
-    resourceId: rentalResource.id,
-    startsAt: fixedUtcDate(2030, 1, 19, 14, 0),
-    endsAt: fixedUtcDate(2030, 1, 19, 15, 0),
-    status: 'BOOKED',
-    isPublic: true,
-  });
-
-  const rentalBooking = await ensureRentalBooking({
-    slotId: bookedRentalSlot.id,
-    userId: regularUser.id,
-    participantId: participant.id,
-    status: 'PENDING_CONFIRMATION',
-    noteFromUser: `Нужна тестовая бронь для проверки rental flow (${DEV_MARKER}).`,
-    managerNote: `Создано сидом для ручной проверки (${DEV_MARKER}).`,
-  });
-
-  printSummary({
-    cities: [moscow, nizhnyNovgorod],
-    users: {
-      admin: adminUser,
-      manager: managerUser,
-      user: regularUser,
+  const course = await prisma.course.upsert({
+    where: {
+      slug: 'practical-course',
     },
-    participant,
-    teams: [moscowTeam, nizhnyTeam],
-    trainings: [moscowTraining, nizhnyTraining],
-    trainingBooking,
-    teamApplication,
-    rental: {
-      facility: rentalFacility,
-      resource: rentalResource,
-      slots: [availableRentalSlotOne, availableRentalSlotTwo, bookedRentalSlot],
-      booking: rentalBooking,
+    update: {
+      title: 'Practical Course',
+      description: 'A paid course used to validate auth, orders, enrollments, and lesson progress.',
+      isPublished: true,
+    },
+    create: {
+      title: 'Practical Course',
+      slug: 'practical-course',
+      description: 'A paid course used to validate auth, orders, enrollments, and lesson progress.',
+      isPublished: true,
     },
   });
+
+  const lessons = [
+    {
+      title: 'Welcome and setup',
+      slug: 'welcome-and-setup',
+      description: 'How the course is structured and how to work through it.',
+      content:
+        'Lesson 1\n\nStart with the overall roadmap. The goal is to finish every lesson in order and mark your progress as you go.',
+      position: 1,
+    },
+    {
+      title: 'Define your offer',
+      slug: 'define-your-offer',
+      description: 'Pick one clear paid offer and remove side quests.',
+      content:
+        'Lesson 2\n\nWrite a one-sentence offer, define the customer, and decide what outcome the course provides.',
+      position: 2,
+    },
+    {
+      title: 'Find the core promise',
+      slug: 'find-the-core-promise',
+      description: 'Turn your idea into one measurable transformation.',
+      content:
+        'Lesson 3\n\nEvery strong course promise is specific, believable, and easy to repeat in sales copy.',
+      position: 3,
+    },
+    {
+      title: 'Build the lesson map',
+      slug: 'build-the-lesson-map',
+      description: 'Split the promise into a simple lesson sequence.',
+      content:
+        'Lesson 4\n\nMap the course so every lesson resolves one problem and prepares the next lesson.',
+      position: 4,
+    },
+    {
+      title: 'Write the first draft',
+      slug: 'write-the-first-draft',
+      description: 'Use rough drafts instead of waiting for perfect content.',
+      content:
+        'Lesson 5\n\nFast first drafts beat overthinking. Get the material into the lesson editor and iterate from there.',
+      position: 5,
+    },
+    {
+      title: 'Add proof and examples',
+      slug: 'add-proof-and-examples',
+      description: 'Support each module with examples, templates, or exercises.',
+      content:
+        'Lesson 6\n\nGood examples reduce friction. Add specific use cases, examples, and checkpoints to each module.',
+      position: 6,
+    },
+    {
+      title: 'Finish and review',
+      slug: 'finish-and-review',
+      description: 'Review the course end-to-end and tighten weak parts.',
+      content:
+        'Lesson 7\n\nReview the whole experience, remove duplicated content, and keep only what helps the learner finish.',
+      position: 7,
+    },
+  ];
+
+  for (const lesson of lessons) {
+    await prisma.lesson.upsert({
+      where: {
+        courseId_slug: {
+          courseId: course.id,
+          slug: lesson.slug,
+        },
+      },
+      update: {
+        title: lesson.title,
+        description: lesson.description,
+        content: lesson.content,
+        position: lesson.position,
+        isPublished: true,
+      },
+      create: {
+        courseId: course.id,
+        title: lesson.title,
+        slug: lesson.slug,
+        description: lesson.description,
+        content: lesson.content,
+        position: lesson.position,
+        isPublished: true,
+      },
+    });
+  }
+
+  const tariff = await prisma.tariff.upsert({
+    where: {
+      slug: 'practical-course-access',
+    },
+    update: {
+      title: 'Full course access',
+      price: 14900,
+      interval: 'one-time',
+      isActive: true,
+      courseId: course.id,
+    },
+    create: {
+      title: 'Full course access',
+      slug: 'practical-course-access',
+      price: 14900,
+      interval: 'one-time',
+      isActive: true,
+      courseId: course.id,
+    },
+  });
+
+  console.log('');
+  console.log('SEED_SUMMARY');
+  console.log(`Admin: ${admin.email} / Admin123! / id=${admin.id}`);
+  console.log(`User: ${user.email} / User12345! / id=${user.id}`);
+  console.log(`Course: ${course.title} / slug=${course.slug}`);
+  console.log(`Lessons: ${lessons.length}`);
+  console.log(`Tariff: ${tariff.title} / ${tariff.price} RUB / id=${tariff.id}`);
+  console.log('');
 }
 
 main()
