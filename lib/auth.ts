@@ -5,7 +5,8 @@ import { cookies } from 'next/headers';
 
 import prisma from './prisma';
 
-const SESSION_COOKIE_NAME = 'course_session';
+const SESSION_COOKIE_NAME =
+  process.env.SESSION_COOKIE_NAME?.trim() || 'dnkbiz_session';
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
 
 type SessionPayload = {

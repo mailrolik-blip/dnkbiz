@@ -29,12 +29,12 @@ export async function POST(request: Request) {
     const name = normalizeName(body?.name);
 
     if (!email) {
-      return Response.json({ error: 'Email is required.' }, { status: 400 });
+      return Response.json({ error: 'Укажите email.' }, { status: 400 });
     }
 
     if (password.length < 8) {
       return Response.json(
-        { error: 'Password must be at least 8 characters.' },
+        { error: 'Пароль должен содержать минимум 8 символов.' },
         { status: 400 }
       );
     }
@@ -63,12 +63,15 @@ export async function POST(request: Request) {
       error.code === 'P2002'
     ) {
       return Response.json(
-        { error: 'A user with this email already exists.' },
+        { error: 'Пользователь с таким email уже существует.' },
         { status: 409 }
       );
     }
 
     console.error(error);
-    return Response.json({ error: 'Registration failed.' }, { status: 500 });
+    return Response.json(
+      { error: 'Не удалось завершить регистрацию.' },
+      { status: 500 }
+    );
   }
 }

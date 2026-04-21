@@ -1,4 +1,5 @@
 import { getOptionalCurrentUser } from '@/lib/auth';
+import { getOrderCheckoutUrl } from '@/lib/orders';
 import prisma from '@/lib/prisma';
 
 function toPositiveInt(value: unknown) {
@@ -10,7 +11,7 @@ export async function POST(request: Request) {
   const user = await getOptionalCurrentUser();
 
   if (!user) {
-    return Response.json({ error: 'Unauthorized.' }, { status: 401 });
+    return Response.json({ error: 'Требуется авторизация.' }, { status: 401 });
   }
 
   const body = (await request.json().catch(() => null)) as
@@ -19,7 +20,10 @@ export async function POST(request: Request) {
   const tariffId = toPositiveInt(body?.tariffId);
 
   if (!tariffId) {
-    return Response.json({ error: 'tariffId must be a positive integer.' }, { status: 400 });
+    return Response.json(
+      { error: 'Поле tariffId должно быть положительным целым числом.' },
+      { status: 400 }
+    );
   }
 
   const tariff = await prisma.tariff.findFirst({
@@ -45,7 +49,7 @@ export async function POST(request: Request) {
   });
 
   if (!tariff) {
-    return Response.json({ error: 'Tariff not found.' }, { status: 404 });
+    return Response.json({ error: 'Тариф не найден.' }, { status: 404 });
   }
 
   const [existingEnrollment, existingPendingOrder] = await Promise.all([
@@ -71,14 +75,18 @@ export async function POST(request: Request) {
 
   if (existingEnrollment) {
     return Response.json(
-      { error: 'Course is already unlocked for this user.' },
+      { error: 'Курс уже открыт для этого пользователя.' },
       { status: 409 }
     );
   }
 
   if (existingPendingOrder) {
     return Response.json(
-      { error: `Pending order #${existingPendingOrder.id} already exists for this tariff.` },
+      {
+        error: `Заказ #${existingPendingOrder.id} уже создан и ожидает оплаты.`,
+        orderId: existingPendingOrder.id,
+        checkoutUrl: getOrderCheckoutUrl(existingPendingOrder.id),
+      },
       { status: 409 }
     );
   }
@@ -101,6 +109,7 @@ export async function POST(request: Request) {
   return Response.json(
     {
       order,
+      checkoutUrl: getOrderCheckoutUrl(order.id),
       tariff: {
         title: tariff.title,
         courseTitle: tariff.course.title,

@@ -1,0 +1,502 @@
+<script src="https://unpkg.com/feather-icons"></script>
+
+<style>
+/* БАЗА */
+.edu-container, .edu-container * { box-sizing: border-box; font-family: 'TildaSans', Arial, sans-serif !important; outline: none; }
+
+/* ТРЕК */
+.edu-scroll-track { width: 100%; height: 200vh; position: relative; z-index: 20; }
+.edu-sticky-viewport { position: -webkit-sticky; position: sticky; top: 0; width: 100%; height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+
+/* ГРУППА */
+.edu-content-group {
+    width: 100%; max-width: 1200px;
+    display: flex; flex-direction: column; justify-content: center; gap: 20px; padding: 20px;
+    transform-origin: center center; will-change: transform, opacity, filter;
+}
+
+/* ЗАГОЛОВОК */
+.section-header { display: flex; align-items: baseline; gap: 15px; margin: 0 0 0 10px; font-weight: 700; font-size: 42px; line-height: 1; }
+.title-main { opacity: 0.3; color: #fff; } 
+.title-divider { opacity: 0.3; font-weight: 300; color: #fff; }
+.title-course { color: #fff; }
+body.light-mode .title-main, body.light-mode .title-divider, body.light-mode .title-course { color: #222; }
+
+/* ПАНЕЛИ */
+.glass-panel, .course-card {
+    position: relative; border-radius: 24px;
+    background: rgba(30, 30, 30, 0.4); border: 1px solid rgba(255, 255, 255, 0.1); 
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    overflow: hidden; transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* GLOW ФОН */
+.glass-panel::before, .course-card::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: -2;
+    background: radial-gradient(600px circle at var(--x, 50%) var(--y, 50%), rgba(1, 247, 246, 0.15), transparent 40%);
+    opacity: 0; transition: opacity 0.3s; pointer-events: none;
+}
+
+/* GLOW РАМКА (Исправлено) */
+.glass-panel::after, .course-card::after {
+    content: ""; position: absolute; inset: -2px; /* Чуть шире блока */
+    border-radius: 26px; /* Чуть больше радиус */
+    z-index: -1; 
+    background: radial-gradient(400px circle at var(--x, 50%) var(--y, 50%), #01f7f6, transparent 40%);
+    opacity: 0; transition: opacity 0.3s; pointer-events: none;
+    
+    /* Маска, чтобы показывать только рамку */
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    padding: 2px; /* Толщина свечения */
+}
+
+@media (min-width: 961px) {
+    .glass-panel:hover::before, .glass-panel:hover::after, .course-card:hover::before, .course-card:hover::after { opacity: 1; }
+    .course-card:hover { transform: translateY(-5px); }
+}
+
+body.light-mode .glass-panel, body.light-mode .course-card { background: rgba(255, 255, 255, 0.6); border-color: rgba(0, 0, 0, 0.1); color: #222; }
+body.light-mode .glass-panel::before, body.light-mode .course-card::before { background: radial-gradient(600px circle at var(--x, 50%) var(--y, 50%), rgba(1, 247, 246, 0.3), transparent 40%); }
+
+/* --- LMS --- */
+.lms-wrapper { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; height: 500px; }
+.lms-main { padding: 30px; display: flex; flex-direction: column; position: relative; overflow: hidden; } /* Скрываем общий скролл */
+
+/* Контейнер скролла внутри */
+.lms-scroll-area {
+    overflow-y: auto; padding-right: 10px; height: 100%;
+}
+.lms-scroll-area::-webkit-scrollbar { width: 4px; }
+.lms-scroll-area::-webkit-scrollbar-thumb { background: rgba(128,128,128,0.3); border-radius: 4px; }
+
+.lms-tag { color: #01f7f6; font-size: 12px; font-weight: 700; text-transform: uppercase; margin-bottom: 10px; }
+.lms-title { font-size: 28px; font-weight: 700; margin: 0 0 10px 0; line-height: 1.2; color: #fff; }
+.lms-desc { font-size: 15px; line-height: 1.5; margin-bottom: 20px; color: #ccc; }
+body.light-mode .lms-title { color: #222; } body.light-mode .lms-desc { color: #555; }
+
+.video-placeholder {
+    width: 100%; height: 200px; flex-shrink: 0; background: rgba(0,0,0,0.3); border-radius: 16px;
+    border: 1px dashed rgba(128,128,128,0.3); display: flex; align-items: center; justify-content: center; color: #01f7f6;
+    margin-bottom: 20px; position: relative;
+}
+.video-placeholder svg { width: 48px; height: 48px; stroke-width: 1.5; }
+
+/* УСПЕХ */
+.success-screen {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: inherit; backdrop-filter: inherit; z-index: 10;
+    display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+    border-radius: 24px; padding: 20px;
+    animation: fadeIn 0.5s;
+}
+.success-icon { width: 80px; height: 80px; border-radius: 50%; background: rgba(1,247,246,0.1); color: #01f7f6; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; box-shadow: 0 0 30px rgba(1,247,246,0.2); }
+.success-title { font-size: 32px; font-weight: 700; color: #fff; margin-bottom: 10px; }
+.success-btn { display: inline-flex; padding: 16px 40px; background: #00ff88; color: #000; border-radius: 50px; font-weight: 700; text-decoration: none; box-shadow: 0 0 20px rgba(0,255,136,0.4); transition: 0.3s; margin-top: 20px; }
+.success-btn:hover { background: #fff; transform: scale(1.05); }
+body.light-mode .success-title { color: #222; }
+
+/* МИНИ-ПЛАШКА */
+.success-mini-badge {
+    position: absolute; top: 20px; right: 20px;
+    background: rgba(0, 255, 136, 0.2); border: 1px solid #00ff88; color: #00ff88;
+    padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 700;
+    display: none; align-items: center; gap: 5px; cursor: pointer; transition: 0.3s;
+    z-index: 10;
+}
+.success-mini-badge:hover { background: #00ff88; color: #000; }
+
+/* ДЗ */
+.homework-box { margin-top: auto; padding: 20px; background: rgba(0,0,0,0.2); border-radius: 16px; border: 1px solid rgba(255,255,255,0.05); transition: border-color 0.2s; }
+body.light-mode .homework-box { background: rgba(255,255,255,0.5); border-color: rgba(0,0,0,0.05); }
+.shake-error { animation: shake 0.4s; border-color: #ff4444 !important; box-shadow: 0 0 10px rgba(255, 68, 68, 0.3); }
+@keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+
+.hw-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.hw-task { font-size: 14px; font-weight: 600; margin-bottom: 15px; color: #ccc; }
+body.light-mode .hw-task { color: #444; }
+
+.hw-input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid rgba(128,128,128,0.3); background: rgba(0,0,0,0.2); color: #fff; font-size: 14px; resize: none; }
+body.light-mode .hw-input { background: #fff; border-color: rgba(0,0,0,0.1); color: #222; }
+.hw-input:focus { border-color: #01f7f6; }
+
+.hw-options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.hw-checkbox {
+    display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 13px;
+    padding: 10px; border-radius: 8px; border: 1px solid rgba(128,128,128,0.2);
+    background: transparent; color: #fff; transition: 0.2s;
+}
+body.light-mode .hw-checkbox { color: #222; border-color: rgba(0,0,0,0.1); }
+.hw-checkbox:hover { border-color: #01f7f6; }
+.checkmark {
+    width: 18px; height: 18px; flex-shrink: 0; border: 2px solid rgba(128,128,128,0.5); border-radius: 4px;
+    display: flex; align-items: center; justify-content: center; background: transparent;
+}
+.hw-checkbox input { display: none; }
+.hw-checkbox input:checked + .checkmark { border-color: #01f7f6; }
+.checkmark svg { width: 12px; height: 12px; opacity: 0; color: #01f7f6; stroke-width: 3; }
+.hw-checkbox input:checked + .checkmark svg { opacity: 1; }
+
+.hw-file-btn {
+    display: inline-flex; align-items: center; gap: 8px; width: 100%; justify-content: center;
+    padding: 12px; border: 1px dashed rgba(128,128,128,0.5);
+    border-radius: 8px; cursor: pointer; font-size: 13px; transition: 0.3s;
+    color: #fff;
+}
+body.light-mode .hw-file-btn { color: #444; }
+.hw-file-btn:hover, .hw-file-btn.uploaded { border-color: #01f7f6; color: #01f7f6; background: rgba(1, 247, 246, 0.05); }
+
+/* SIDEBAR */
+.lms-sidebar { padding: 25px; display: flex; flex-direction: column; gap: 15px; overflow: hidden; }
+.progress-box { padding-bottom: 15px; border-bottom: 1px solid rgba(128,128,128,0.2); }
+.progress-info { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px; opacity: 0.8; color: #fff; }
+body.light-mode .progress-info { color: #222; }
+.progress-line { width: 100%; height: 4px; background: rgba(128,128,128,0.2); border-radius: 4px; overflow: hidden; }
+.progress-fill { height: 100%; width: 0%; background: #01f7f6; transition: width 0.5s; }
+
+.lessons-list { overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 5px; flex-grow: 1; }
+.lessons-list::-webkit-scrollbar { width: 4px; }
+.lessons-list::-webkit-scrollbar-thumb { background: rgba(128,128,128,0.3); border-radius: 4px; }
+
+.lesson-btn { padding: 12px 15px; border-radius: 12px; border: 1px solid transparent; background: rgba(255,255,255,0.03); display: flex; align-items: center; justify-content: space-between; font-size: 13px; font-weight: 500; cursor: pointer; transition: 0.2s; color: #fff; }
+body.light-mode .lesson-btn { background: rgba(0,0,0,0.03); color: #222; }
+.lesson-btn.active { border-color: #01f7f6; background: rgba(1, 247, 246, 0.1) !important; color: #01f7f6 !important; }
+.lesson-btn.completed .check-icon svg { opacity: 1; }
+.check-icon { width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; }
+.check-icon svg { width: 14px; height: 14px; opacity: 0; stroke: #01f7f6; }
+
+.ai-btn { margin-top: 10px; width: 100%; padding: 12px; background: linear-gradient(45deg, #01f7f6, #0088cc); border: none; border-radius: 12px; color: #000; font-weight: 700; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.3s; }
+.ai-btn:hover { filter: brightness(1.2); box-shadow: 0 0 15px rgba(1, 247, 246, 0.4); }
+
+/* AI MODAL */
+.ai-modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.4); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); z-index: 99999; display: none; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s; }
+.ai-modal-overlay.open { display: flex; opacity: 1; }
+.ai-chat-window { width: 90%; max-width: 450px; height: 60vh; background: #1a1a1a; border: 1px solid rgba(255,255,255,0.1); border-radius: 24px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.5); transform: scale(0.9); transition: transform 0.3s; }
+.ai-modal-overlay.open .ai-chat-window { transform: scale(1); }
+body.light-mode .ai-chat-window { background: #fff; }
+.chat-header { padding: 15px 20px; background: rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center; color: #fff; font-weight: 700; }
+body.light-mode .chat-header { background: #f5f5f5; border-color: #ddd; color: #222; }
+.close-chat { cursor: pointer; opacity: 0.7; }
+.chat-body { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+.chat-msg { max-width: 80%; padding: 10px 15px; border-radius: 12px; font-size: 14px; line-height: 1.4; }
+.msg-ai { align-self: flex-start; background: rgba(255,255,255,0.1); color: #fff; }
+.msg-user { align-self: flex-end; background: #01f7f6; color: #000; }
+body.light-mode .msg-ai { background: #f0f0f0; color: #333; }
+.chat-footer { padding: 15px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; gap: 10px; }
+body.light-mode .chat-footer { border-color: #ddd; }
+.chat-input { flex-grow: 1; background: rgba(255,255,255,0.05); border: none; padding: 10px; border-radius: 8px; color: #fff; }
+body.light-mode .chat-input { background: #f5f5f5; color: #222; }
+.chat-send { background: #01f7f6; border: none; width: 40px; height: 40px; border-radius: 8px; color: #000; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+/* ГАЛЕРЕЯ */
+.gallery-wrapper { width: 100%; position: relative; -webkit-mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent); mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent); }
+.gallery-track { display: flex; gap: 20px; overflow-x: auto; cursor: grab; padding: 30px 20px; scrollbar-width: none; -ms-overflow-style: none; }
+.gallery-track::-webkit-scrollbar { display: none; }
+.course-card { min-width: 300px; max-width: 300px; padding: 25px; display: flex; flex-direction: column; gap: 12px; }
+.course-meta { display: flex; justify-content: space-between; font-size: 12px; opacity: 0.7; color: #ccc; }
+.course-title { font-size: 18px; font-weight: 700; line-height: 1.3; margin: 5px 0; color: #fff; }
+.course-footer { margin-top: auto; display: flex; justify-content: space-between; align-items: center; padding-top: 15px; border-top: 1px solid rgba(128,128,128,0.2); }
+.course-price { font-weight: 600; font-size: 16px; color: #fff; }
+body.light-mode .course-meta { color: #555; } body.light-mode .course-title, body.light-mode .course-price { color: #222; }
+
+/* КНОПКА ГАЛЕРЕИ (БЕЛАЯ В ТЕМНОЙ ТЕМЕ) */
+.course-btn { padding: 8px 16px; border-radius: 30px; font-size: 13px; text-decoration: none; transition: 0.3s; }
+body:not(.light-mode) .course-btn { border: 1px solid #01f7f6; color: #ffffff !important; }
+body:not(.light-mode) .course-btn:hover { background: #01f7f6; color: #000 !important; }
+body.light-mode .course-btn { border: 1px solid #01f7f6; color: #01f7f6 !important; }
+body.light-mode .course-btn:hover { background: #01f7f6; color: #fff !important; }
+
+@media (max-width: 900px) {
+    .edu-scroll-track { height: auto; padding-bottom: 80px; }
+    .edu-sticky-viewport { position: relative; height: auto; top: auto; display: block; overflow: visible; }
+    .edu-content-group { height: auto; transform: none !important; opacity: 1 !important; filter: none !important; padding: 40px 10px; }
+    .section-header { font-size: 32px; flex-direction: column; gap: 5px; } 
+    .title-divider { display: none; }
+    .lms-wrapper { grid-template-columns: 1fr; height: auto; }
+    
+    .lms-main { 
+        min-height: 400px; 
+        max-height: 600px; /* Ограничил высоту на мобилках */
+        order: 1; margin-bottom: 20px; 
+    }
+    /* Фикс экрана успеха на мобилке */
+    .success-screen { min-height: 350px; position: absolute; z-index: 20; }
+    
+    .lms-sidebar { max-height: auto; order: 2; overflow: visible; }
+    .gallery-track { padding: 20px 10px; }
+    .course-card { min-width: 260px; max-width: 260px; }
+}
+</style>
+
+<div class="edu-container">
+    <div class="edu-scroll-track js-edu-track">
+        <div class="edu-sticky-viewport">
+            <div class="edu-content-group js-edu-anim">
+                
+                <div id="education" style="position: absolute; top: -100px;"></div>
+                
+                <div class="section-header">
+                    <span class="title-main">Обучение</span>
+                    <span class="title-divider">/</span>
+                    <span class="title-course">Платформа</span>
+                </div>
+
+                <!-- 1. LMS -->
+                <div class="lms-wrapper">
+                    <!-- КОНТЕЙНЕР УРОКА / УСПЕХА -->
+                    <div class="glass-panel lms-main glow-target" style="position:relative;">
+                        
+                        <!-- МИНИ-БЕЙДЖ -->
+                        <div class="success-mini-badge" id="mini-success-badge" onclick="showSuccessScreen()">
+                            <i data-feather="check-circle" style="width:14px;height:14px;"></i> Пройдено
+                        </div>
+
+                        <!-- ЭКРАН УРОКА (SCROLLABLE AREA) -->
+                        <div id="lms-lesson-view" class="lms-scroll-area">
+                            <div class="lms-tag">Урок <span id="lms-num">1</span></div>
+                            <h3 class="lms-title" id="lms-title">Загрузка...</h3>
+                            <div class="lms-desc" id="lms-text">...</div>
+                            <div class="video-placeholder"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></svg></div>
+                            <div class="homework-box" id="hw-box">
+                                <div class="hw-header">
+                                    <span class="hw-label">Домашнее задание</span>
+                                </div>
+                                <div class="hw-task" id="hw-task-text">Задание...</div>
+                                <div id="hw-content"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- ЭКРАН УСПЕХА (Абсолютный слой внутри) -->
+                        <div id="lms-success-view" class="success-screen">
+                            <div class="success-icon"><i data-feather="check" style="width: 40px; height: 40px;"></i></div>
+                            <div class="success-title">Курс пройден!</div>
+                            <div class="lms-desc">Вы успешно изучили все материалы по работе с платформой.</div>
+                            <a href="#dashboard" class="success-btn">Перейти в личный кабинет</a>
+                        </div>
+                    </div>
+
+                    <!-- МЕНЮ -->
+                    <div class="glass-panel lms-sidebar glow-target">
+                        <div class="progress-box">
+                            <div class="progress-info"><span>Прогресс</span><span id="lms-percent">0%</span></div>
+                            <div class="progress-line"><div class="progress-fill" id="lms-bar"></div></div>
+                        </div>
+                        <div class="lessons-list" id="lessons-list-container"></div>
+                        <button class="ai-btn" onclick="toggleChat(true)"><i data-feather="message-square"></i> Задать вопрос</button>
+                    </div>
+                </div>
+
+                <!-- 2. ГАЛЕРЕЯ -->
+                <div class="gallery-wrapper">
+                    <div class="gallery-track" id="gallery-track">
+                        <div class="course-card glow-target"><div class="course-meta"><span>12 уроков</span><span>Start</span></div><div class="course-title">Нейросети для бизнеса</div><div class="course-footer"><span class="course-price">2 недели</span><a href="#" class="course-btn">Начать</a></div></div>
+                        <div class="course-card glow-target"><div class="course-meta"><span>24 урока</span><span>Pro</span></div><div class="course-title">Аналитика продаж</div><div class="course-footer"><span class="course-price">1 месяц</span><a href="#" class="course-btn">Начать</a></div></div>
+                        <div class="course-card glow-target"><div class="course-meta"><span>8 уроков</span><span>Basic</span></div><div class="course-title">Чат-боты с нуля</div><div class="course-footer"><span class="course-price">10 дней</span><a href="#" class="course-btn">Начать</a></div></div>
+                        <div class="course-card glow-target"><div class="course-meta"><span>16 уроков</span><span>Team</span></div><div class="course-title">Управление командой</div><div class="course-footer"><span class="course-price">3 недели</span><a href="#" class="course-btn">Начать</a></div></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="ai-modal-overlay" id="ai-modal">
+    <div class="ai-chat-window">
+        <div class="chat-header"><span>AI Ассистент</span><div class="close-chat" onclick="toggleChat(false)"><i data-feather="x"></i></div></div>
+        <div class="chat-body" id="chat-body"><div class="chat-msg msg-ai">Привет! Я AI-помощник платформы. Чем могу помочь?</div></div>
+        <div class="chat-footer"><input type="text" class="chat-input" id="chat-input" placeholder="Введите вопрос..."><button class="chat-send" onclick="sendAiMsg()"><i data-feather="arrow-up"></i></button></div>
+    </div>
+</div>
+
+<script>
+feather.replace();
+
+var lessons = [
+    {t: "Регистрация аккаунта", d: "Как создать учетную запись и подтвердить email.", type: "text", task: "Введите email, который использовали.", saved: ""},
+    {t: "Обзор интерфейса", d: "Где найти настройки, биллинг и поддержку.", type: "radio", task: "Где кнопка выхода?", opts: ["Слева", "Справа вверху", "Внизу", "Нет кнопки"], saved: ""},
+    {t: "Создание проекта", d: "Как запустить первый проект в системе.", type: "text", task: "Придумайте название для теста.", saved: ""},
+    {t: "Настройки команды", d: "Добавление сотрудников и ролей.", type: "text", task: "Кого вы добавите первым?", saved: ""},
+    {t: "Биллинг и тарифы", d: "Как оплатить и скачать закрывающие.", type: "radio", task: "Есть ли бесплатный тариф?", opts: ["Да", "Нет", "Только триал", "Не знаю"], saved: ""},
+    {t: "Интеграции API", d: "Подключение внешних сервисов.", type: "text", task: "Какой сервис хотите подключить?", saved: ""},
+    {t: "Безопасность", d: "2FA и история входов.", type: "text", task: "Включили ли вы 2FA?", saved: ""},
+    {t: "Поддержка", d: "Как создать тикет.", type: "radio", task: "Время ответа поддержки?", opts: ["1 час", "24 часа", "Мгновенно", "Не отвечают"], saved: ""}
+];
+
+var currentIdx = 0;
+var homeworkStatus = new Array(lessons.length).fill(false);
+var courseFinished = false;
+
+function renderList() {
+    var container = document.getElementById('lessons-list-container');
+    container.innerHTML = '';
+    for (var i = 0; i < lessons.length; i++) {
+        var div = document.createElement('div');
+        div.className = 'lesson-btn';
+        if (i === currentIdx) div.classList.add('active');
+        if (homeworkStatus[i]) div.classList.add('completed');
+        var span = document.createElement('span'); span.innerText = (i + 1) + ". " + lessons[i].t;
+        var icon = document.createElement('div'); icon.className = 'check-icon';
+        icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+        div.appendChild(span); div.appendChild(icon);
+        (function(index) { div.onclick = function() { trySwitchLesson(index); }; })(i);
+        container.appendChild(div);
+    }
+    updateProgress();
+}
+
+function loadLessonContent(idx) {
+    currentIdx = idx;
+    var l = lessons[idx];
+    
+    document.getElementById('lms-lesson-view').style.display = 'block';
+    document.getElementById('lms-success-view').style.display = 'none';
+    
+    if (courseFinished) {
+        document.getElementById('mini-success-badge').style.display = 'flex';
+    } else {
+        document.getElementById('mini-success-badge').style.display = 'none';
+    }
+
+    document.getElementById('lms-num').innerText = idx + 1;
+    document.getElementById('lms-title').innerText = l.t;
+    document.getElementById('lms-text').innerText = l.d;
+    document.getElementById('hw-task-text').innerText = l.task;
+    
+    var hwContainer = document.getElementById('hw-content');
+    hwContainer.innerHTML = '';
+    
+    if (l.type === 'text') {
+        var area = document.createElement('textarea'); 
+        area.className = 'hw-input'; area.rows = 2; area.placeholder = 'Ответ...';
+        area.value = l.saved || "";
+        area.oninput = function() { l.saved = this.value; checkInput(idx, this.value.length > 1); }; 
+        hwContainer.appendChild(area);
+    } else if (l.type === 'file') {
+        var label = document.createElement('label'); label.className = 'hw-file-btn';
+        var btnText = l.saved ? "Файл: " + l.saved : "Загрузить файл";
+        if (l.saved) label.classList.add('uploaded');
+        label.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg> <span>' + btnText + '</span><input type="file" hidden>';
+        var input = label.querySelector('input');
+        input.onchange = function() { 
+            if(this.files.length > 0) {
+                var fname = this.files[0].name; l.saved = fname; label.classList.add('uploaded');
+                label.querySelector('span').innerText = 'Файл: ' + fname; checkInput(idx, true);
+            }
+        };
+        hwContainer.appendChild(label);
+    } else if (l.type === 'radio') {
+        var grid = document.createElement('div'); grid.className = 'hw-options-grid';
+        for (var o = 0; o < 4; o++) {
+            var label = document.createElement('label'); label.className = 'hw-checkbox';
+            var check = document.createElement('div'); check.className = 'checkmark';
+            check.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+            var inp = document.createElement('input'); inp.type = 'radio'; inp.name = 'hw_radio';
+            if (l.saved === l.opts[o]) inp.checked = true;
+            (function(optText) { inp.onchange = function() { l.saved = optText; checkInput(idx, true); }; })(l.opts[o]);
+            label.appendChild(inp); label.appendChild(check); label.appendChild(document.createTextNode(l.opts[o])); grid.appendChild(label);
+        }
+        hwContainer.appendChild(grid);
+    }
+    feather.replace();
+    renderList();
+}
+
+function checkInput(idx, isValid) {
+    if (isValid) { homeworkStatus[idx] = true; renderList(); checkAllDone(); }
+}
+
+function trySwitchLesson(newIdx) {
+    if (newIdx === currentIdx) return;
+    if (courseFinished) { loadLessonContent(newIdx); return; }
+    if (!homeworkStatus[currentIdx]) {
+        var box = document.getElementById('hw-box');
+        box.classList.add('shake-error');
+        setTimeout(function() { box.classList.remove('shake-error'); }, 500);
+        return;
+    }
+    loadLessonContent(newIdx);
+}
+
+function updateProgress() {
+    var done = homeworkStatus.filter(Boolean).length;
+    var total = lessons.length;
+    var p = Math.round((done / total) * 100);
+    document.getElementById('lms-bar').style.width = p + '%';
+    document.getElementById('lms-percent').innerText = p + '%';
+}
+
+function checkAllDone() {
+    var done = homeworkStatus.filter(Boolean).length;
+    if(done === lessons.length) {
+        courseFinished = true;
+        showSuccessScreen();
+    }
+}
+
+function showSuccessScreen() {
+    document.getElementById('lms-lesson-view').style.display = 'none';
+    document.getElementById('lms-success-view').style.display = 'flex';
+    document.getElementById('mini-success-badge').style.display = 'none';
+}
+
+function toggleChat(show) {
+    var modal = document.getElementById('ai-modal');
+    if(show) modal.classList.add('open'); else modal.classList.remove('open');
+}
+function sendAiMsg() {
+    var input = document.getElementById('chat-input');
+    var txt = input.value;
+    if(!txt) return;
+    var body = document.getElementById('chat-body');
+    body.innerHTML += `<div class="chat-msg msg-user">${txt}</div>`;
+    input.value = '';
+    setTimeout(function() {
+        body.innerHTML += `<div class="chat-msg msg-ai">Это демо-ответ AI. Подключите API для реальных ответов.</div>`;
+        body.scrollTop = body.scrollHeight;
+    }, 1000);
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    loadLessonContent(0);
+    
+    var targets = document.querySelectorAll('.glow-target');
+    if (window.innerWidth > 960) {
+        document.addEventListener('mousemove', function(e) {
+            for (var i = 0; i < targets.length; i++) {
+                var r = targets[i].getBoundingClientRect();
+                targets[i].style.setProperty('--x', (e.clientX - r.left) + 'px');
+                targets[i].style.setProperty('--y', (e.clientY - r.top) + 'px');
+            }
+        });
+    }
+    
+    const slider = document.getElementById('gallery-track');
+    let isDown = false; let startX; let scrollLeft;
+    slider.addEventListener('mousedown', function(e){ isDown=true; startX=e.pageX - slider.offsetLeft; scrollLeft=slider.scrollLeft; });
+    slider.addEventListener('mouseleave', function(){ isDown=false; });
+    slider.addEventListener('mouseup', function(){ isDown=false; });
+    slider.addEventListener('mousemove', function(e){ if(!isDown)return; e.preventDefault(); const x=e.pageX - slider.offsetLeft; const walk=(x-startX)*2; slider.scrollLeft=scrollLeft-walk; });
+
+    var track = document.querySelector('.js-edu-track');
+    var group = document.querySelector('.js-edu-anim');
+    window.addEventListener('scroll', function() {
+        if(window.innerWidth <= 960) return;
+        var rect = track.getBoundingClientRect();
+        if (rect.top <= 0) {
+            var dist = rect.height - window.innerHeight;
+            if (dist > 0) {
+                var p = Math.abs(rect.top) / dist;
+                var effP = (p > 0.2) ? (p - 0.2) / 0.8 : 0;
+                if(effP > 1) effP = 1;
+                group.style.transform = `scale(${1 + effP * 0.2})`;
+                group.style.opacity = 1 - effP;
+                group.style.filter = `blur(${effP * 20}px)`;
+            }
+        } else {
+            group.style.transform = 'scale(1)'; group.style.opacity = 1; group.style.filter = 'blur(0px)';
+        }
+    });
+});
+</script>

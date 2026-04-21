@@ -22,7 +22,7 @@ export async function POST(request: Request) {
 
     if (!email || !password) {
       return Response.json(
-        { error: 'Email and password are required.' },
+        { error: 'Укажите email и пароль.' },
         { status: 400 }
       );
     }
@@ -41,7 +41,10 @@ export async function POST(request: Request) {
     });
 
     if (!user || !(await verifyPassword(password, user.passwordHash))) {
-      return Response.json({ error: 'Invalid credentials.' }, { status: 401 });
+      return Response.json(
+        { error: 'Неверный email или пароль.' },
+        { status: 401 }
+      );
     }
 
     const token = await createSessionToken(user.id);
@@ -62,6 +65,6 @@ export async function POST(request: Request) {
     return response;
   } catch (error) {
     console.error(error);
-    return Response.json({ error: 'Login failed.' }, { status: 500 });
+    return Response.json({ error: 'Не удалось выполнить вход.' }, { status: 500 });
   }
 }

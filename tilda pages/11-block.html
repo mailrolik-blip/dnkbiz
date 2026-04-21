@@ -1,0 +1,262 @@
+<script src="https://unpkg.com/feather-icons"></script>
+
+<style>
+/* СБРОС */
+#custom-menu-wrapper * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+#custom-menu-wrapper { position: fixed; top: 0; left: 0; width: 0; height: 0; z-index: 99999999; }
+
+/* 1. ЛОГОТИП */
+.sidebar-logo {
+    position: fixed; top: 30px; left: 30px; width: 50px; height: 50px;
+    background: transparent; border: none; backdrop-filter: none;
+    display: flex; align-items: center; justify-content: center;
+    color: #01f7f6;
+    transition: all 0.3s ease; cursor: default; pointer-events: auto;
+}
+/* Иконка Activity как ДНК */
+.sidebar-logo svg { width: 40px; height: 40px; transform: rotate(90deg); }
+
+/* 2. МЕНЮ (ДЕСКТОП) */
+.sidebar-menu {
+    position: fixed; top: 50%; left: 30px; transform: translateY(-50%);
+    display: flex; flex-direction: column; gap: 12px;
+}
+
+/* 3. КНОПКИ */
+.menu-item {
+    position: relative; width: 50px; height: 50px;
+    background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    color: #ffffff !important;
+    transition: all 0.3s ease; cursor: pointer; text-decoration: none !important; outline: none;
+    pointer-events: auto;
+}
+
+body.light-mode .menu-item { background: rgba(255, 255, 255, 0.4); border-color: rgba(0,0,0,0.1); color: #666666 !important; }
+body.light-mode .menu-item.green-btn { color: #00aa55 !important; border-color: #00aa55 !important; }
+
+.menu-item svg { width: 22px; height: 22px; stroke-width: 2; fill: none !important; stroke: currentColor; }
+
+.menu-item:not(.green-btn):hover, .menu-item:not(.green-btn).active {
+    background: rgba(1, 247, 246, 0.15) !important; border-color: #01f7f6 !important;
+    color: #01f7f6 !important; transform: translateX(5px);
+}
+
+.menu-item.green-btn { color: #00ff88 !important; border-color: rgba(0, 255, 136, 0.5) !important; margin-top: 10px; }
+.menu-item.green-btn:hover { background: rgba(0, 255, 136, 0.15) !important; }
+
+.menu-label {
+    position: absolute; left: 65px; top: 50%; transform: translateY(-50%) translateX(-10px);
+    background: rgba(0, 0, 0, 0.8); color: #fff !important; padding: 6px 12px; border-radius: 6px;
+    font-size: 12px; font-family: Arial, sans-serif; font-weight: bold; white-space: nowrap; pointer-events: none;
+    opacity: 0; visibility: hidden; transition: all 0.3s ease;
+}
+.menu-item:hover .menu-label { opacity: 1; visibility: visible; transform: translateY(-50%) translateX(0); }
+
+.mobile-toggle-btn { display: none !important; }
+
+
+/* =========================================
+   МОБИЛЬНАЯ ВЕРСИЯ
+   ========================================= */
+@media (max-width: 900px) {
+    .sidebar-logo { width: 40px; height: 40px; top: 20px; left: 20px; }
+    .sidebar-logo svg { width: 30px; height: 30px; }
+
+    .mobile-toggle-btn {
+        display: flex !important; align-items: center; justify-content: center;
+        position: fixed; bottom: 30px; right: 30px; width: 50px; height: 50px;
+        background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,0.2); border-radius: 50%;
+        color: #fff; box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+        cursor: pointer; transition: all 0.2s ease; outline: none;
+        pointer-events: auto !important;
+    }
+    .mobile-toggle-btn.open {
+        background: rgba(0, 0, 0, 0.8); color: #01f7f6; border-color: #01f7f6;
+        transform: rotate(90deg);
+    }
+
+    .sidebar-menu {
+        position: fixed; 
+        bottom: 90px; 
+        right: 35px; 
+        top: auto; left: auto; 
+        transform: none; 
+        
+        display: flex; 
+        flex-direction: column; 
+        align-items: flex-end; 
+        gap: 10px;
+        
+        pointer-events: none;
+    }
+    
+    .sidebar-menu::before {
+        content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.6); 
+        backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+        opacity: 0; transition: opacity 0.2s ease;
+        z-index: -1;
+    }
+
+    .sidebar-menu.show { pointer-events: auto; }
+    .sidebar-menu.show::before { opacity: 1; pointer-events: auto; }
+
+    .menu-item {
+        width: 35px; height: 35px; border: none !important; background: transparent !important;
+        border-radius: 50%;
+        opacity: 0; 
+        transform: translateY(20px) scale(0); transform-origin: bottom center;
+        transition: all 0.2s cubic-bezier(0.55, 0.085, 0.68, 0.53);
+    }
+    .menu-item svg { width: 18px; height: 18px; }
+    .menu-item.green-btn { margin-top: 15px; }
+
+    .sidebar-menu.show .menu-item {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    
+    /* Задержки (Снизу вверх) */
+    .sidebar-menu.show .menu-item:nth-last-child(1) { transition-delay: 0.02s; }
+    .sidebar-menu.show .menu-item:nth-last-child(2) { transition-delay: 0.04s; }
+    .sidebar-menu.show .menu-item:nth-last-child(3) { transition-delay: 0.06s; }
+    .sidebar-menu.show .menu-item:nth-last-child(4) { transition-delay: 0.08s; }
+    .sidebar-menu.show .menu-item:nth-last-child(5) { transition-delay: 0.10s; }
+    .sidebar-menu.show .menu-item:nth-last-child(6) { transition-delay: 0.12s; }
+    .sidebar-menu.show .menu-item:nth-last-child(7) { transition-delay: 0.14s; }
+    .sidebar-menu.show .menu-item:nth-last-child(8) { transition-delay: 0.16s; }
+    .sidebar-menu.show .menu-item:nth-last-child(9) { transition-delay: 0.18s; }
+
+    .menu-label {
+        left: auto; right: 50px; transform: translateY(-50%);
+        opacity: 1; visibility: visible;
+        background: transparent !important;
+        text-shadow: 0 0 5px rgba(0,0,0,0.8); color: #fff !important;
+        font-size: 14px; font-weight: 600; padding: 0; text-align: right;
+        pointer-events: none; white-space: nowrap;
+    }
+    
+    .menu-item:hover { transform: none; }
+}
+</style>
+
+<div id="custom-menu-wrapper">
+    <div class="sidebar-logo"><i data-feather="activity"></i></div>
+
+    <nav class="sidebar-menu" id="mobile-menu-container">
+        <div id="menu-backdrop-close" style="position:absolute; top:0; left:0; width:100%; height:100%; z-index:-1;"></div>
+
+        <!-- ✅ ДОБАВЛЕНО: первый пункт меню для нового блока -->
+        <a href="#nq" class="menu-item" data-anchor="nq"><i data-feather="award"></i><span class="menu-label">НОК</span></a>
+        
+        <a href="#education" class="menu-item" data-anchor="education"><i data-feather="book-open"></i><span class="menu-label">Обучение</span></a>
+        <a href="#checklists" class="menu-item" data-anchor="checklists"><i data-feather="check-square"></i><span class="menu-label">Чек листы</span></a>
+        <a href="#automation" class="menu-item" data-anchor="automation"><i data-feather="settings"></i><span class="menu-label">Автоматизации</span></a>
+        <a href="#news" class="menu-item" data-anchor="news"><i data-feather="globe"></i><span class="menu-label">Новости</span></a>
+        <a href="#about" class="menu-item" data-anchor="about"><i data-feather="users"></i><span class="menu-label">О нас</span></a>
+        <a href="#pricing" class="menu-item" data-anchor="pricing"><i data-feather="credit-card"></i><span class="menu-label">Тарифы</span></a>
+        <a href="#contacts" class="menu-item" data-anchor="contacts"><i data-feather="phone"></i><span class="menu-label">Контакты</span></a>
+        <a href="#login" class="menu-item green-btn" data-anchor="login"><i data-feather="log-in"></i><span class="menu-label">Вход</span></a>
+    </nav>
+
+    <div class="mobile-toggle-btn" id="mobile-toggle"><i data-feather="menu"></i></div>
+</div>
+
+<script>
+    feather.replace();
+    document.addEventListener("DOMContentLoaded", function() {
+        var menuWrapper = document.getElementById('custom-menu-wrapper');
+        document.body.appendChild(menuWrapper);
+
+        var menuItems = document.querySelectorAll('.menu-item');
+        var toggleBtn = document.getElementById('mobile-toggle');
+        var menuContainer = document.getElementById('mobile-menu-container');
+        var backdropClose = document.getElementById('menu-backdrop-close');
+        var isMenuOpen = false;
+
+        function setMenuState(open) {
+            isMenuOpen = open;
+            if (open) {
+                menuContainer.classList.add('show');
+                toggleBtn.classList.add('open');
+                toggleBtn.innerHTML = '<i data-feather="x"></i>';
+                feather.replace();
+            } else {
+                menuContainer.classList.remove('show');
+                toggleBtn.classList.remove('open');
+                toggleBtn.innerHTML = '<i data-feather="menu"></i>';
+                feather.replace();
+            }
+        }
+
+        if (window.innerWidth < 901) {
+            setTimeout(function() { setMenuState(true); }, 500);
+        }
+
+        toggleBtn.addEventListener('click', function(e) {
+            e.preventDefault(); e.stopPropagation();
+            setMenuState(!isMenuOpen);
+        });
+        
+        backdropClose.addEventListener('click', function() { setMenuState(false); });
+
+        for (var m = 0; menuItems.length > m; m++) {
+            menuItems[m].addEventListener('click', function(e) {
+                e.preventDefault();
+                if (window.innerWidth < 901) { setMenuState(false); }
+                var targetName = this.getAttribute('data-anchor');
+                var targetAnchor = document.querySelector('a[name="' + targetName + '"]');
+                if (!targetAnchor) targetAnchor = document.getElementById(targetName);
+                
+                if (targetAnchor) {
+                    var parent = targetAnchor.closest('.t-rec') || targetAnchor;
+                    window.scrollTo({ top: parent.offsetTop, behavior: 'smooth' });
+                }
+            });
+        }
+
+        function onScroll() {
+            var scrollPos = window.scrollY;
+            if (901 > window.innerWidth && isMenuOpen) {
+                if (scrollPos > 50) { setMenuState(false); }
+            }
+
+            var triggerLine = scrollPos + (window.innerHeight * 0.5);
+            var activeId = '';
+            
+            var targets = [];
+            for (var k = 0; k < menuItems.length; k++) {
+                var id = menuItems[k].getAttribute('data-anchor');
+                var el = document.getElementById(id) || document.querySelector('a[name="' + id + '"]');
+                if (el) targets.push({ id: id, el: el });
+            }
+            
+            for (var j = 0; targets.length > j; j++) {
+                var t = targets[j];
+                var parent = t.el.closest('.t-rec') || t.el.parentElement || t.el;
+                
+                var top = parent.offsetTop;
+                var bottom = top + parent.offsetHeight;
+                var buffer = 100; 
+                
+                if (triggerLine >= (top - buffer) && triggerLine < (bottom - buffer)) {
+                    activeId = t.id;
+                    break;
+                }
+            }
+
+            for (var k = 0; menuItems.length > k; k++) {
+                var item = menuItems[k];
+                item.classList.remove('active');
+                if (item.getAttribute('data-anchor') === activeId) { item.classList.add('active'); }
+            }
+        }
+
+        window.addEventListener('scroll', onScroll);
+        setTimeout(onScroll, 1000);
+    });
+</script>

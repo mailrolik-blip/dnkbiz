@@ -1,97 +1,139 @@
-import Link from 'next/link';
-
+import LandingClient from '@/components/landing-client';
+import { getOptionalCurrentUser } from '@/lib/auth';
+import { getOrderCheckoutUrl } from '@/lib/orders';
 import prisma from '@/lib/prisma';
 
-function formatMoney(value: number) {
-  return `${value.toLocaleString('en-US')} RUB`;
-}
-
 export default async function Home() {
-  const course = await prisma.course.findFirst({
-    where: {
-      isPublished: true,
-    },
-    select: {
-      title: true,
-      slug: true,
-      description: true,
-      lessons: {
-        where: {
+  const user = await getOptionalCurrentUser();
+
+  const [featuredCourse, tariffs, enrollments, pendingOrders] = await Promise.all([
+    prisma.course.findFirst({
+      where: {
+        isPublished: true,
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+      select: {
+        title: true,
+        slug: true,
+        description: true,
+        lessons: {
+          where: {
+            isPublished: true,
+          },
+          orderBy: {
+            position: 'asc',
+          },
+          select: {
+            id: true,
+            title: true,
+            position: true,
+          },
+        },
+      },
+    }),
+    prisma.tariff.findMany({
+      where: {
+        isActive: true,
+        course: {
           isPublished: true,
         },
-        select: {
-          id: true,
+      },
+      orderBy: {
+        price: 'asc',
+      },
+      select: {
+        id: true,
+        title: true,
+        price: true,
+        interval: true,
+        course: {
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            description: true,
+            lessons: {
+              where: {
+                isPublished: true,
+              },
+              select: {
+                id: true,
+              },
+            },
+          },
         },
       },
-      tariffs: {
-        where: {
-          isActive: true,
-        },
-        orderBy: {
-          price: 'asc',
-        },
-        select: {
-          title: true,
-          price: true,
-          interval: true,
-        },
+    }),
+    user
+      ? prisma.enrollment.findMany({
+          where: {
+            userId: user.id,
+          },
+          select: {
+            courseId: true,
+          },
+        })
+      : Promise.resolve([]),
+    user
+      ? prisma.order.findMany({
+          where: {
+            userId: user.id,
+            status: 'PENDING',
+          },
+          select: {
+            id: true,
+            tariffId: true,
+          },
+        })
+      : Promise.resolve([]),
+  ]);
+
+  const ownedCourseIds = new Set(enrollments.map((item) => item.courseId));
+  const pendingOrdersByTariffId = new Map(
+    pendingOrders.map((item) => [
+      item.tariffId,
+      {
+        id: item.id,
+        checkoutUrl: getOrderCheckoutUrl(item.id),
       },
-    },
-  });
+    ])
+  );
 
   return (
-    <main className="page-shell">
-      <section className="hero-grid">
-        <div className="hero-copy">
-          <span className="eyebrow">Course access MVP</span>
-          <h1>Sell one course, protect access, and track lesson progress.</h1>
-          <p className="hero-text">
-            This baseline includes email auth, tariff orders, manual payment confirmation,
-            enrollments, a protected course page, and per-lesson progress storage.
-          </p>
-          <div className="hero-actions">
-            <Link href="/register" className="primary-button">
-              Create account
-            </Link>
-            <Link href="/login" className="secondary-button">
-              Sign in
-            </Link>
-          </div>
-        </div>
-
-        <article className="feature-card">
-          <span className="eyebrow">Published offer</span>
-          {course ? (
-            <>
-              <h2>{course.title}</h2>
-              <p>{course.description || 'A published course is available in the seed data.'}</p>
-              <dl className="stat-list">
-                <div>
-                  <dt>Lessons</dt>
-                  <dd>{course.lessons.length}</dd>
-                </div>
-                <div>
-                  <dt>Slug</dt>
-                  <dd>{course.slug}</dd>
-                </div>
-                <div>
-                  <dt>Tariff</dt>
-                  <dd>
-                    {course.tariffs[0]
-                      ? `${course.tariffs[0].title} / ${formatMoney(course.tariffs[0].price)}`
-                      : 'No active tariff'}
-                  </dd>
-                </div>
-              </dl>
-            </>
-          ) : (
-            <>
-              <h2>No published course yet</h2>
-              <p>Run the seed to create the initial course, lessons, and tariff.</p>
-            </>
-          )}
-        </article>
-      </section>
-    </main>
+    <LandingClient
+      featuredCourse={
+        featuredCourse
+          ? {
+              title: featuredCourse.title,
+              slug: featuredCourse.slug,
+              description: featuredCourse.description,
+              lessonsCount: featuredCourse.lessons.length,
+              lessons: featuredCourse.lessons,
+            }
+          : null
+      }
+      tariffs={tariffs.map((tariff) => ({
+        id: tariff.id,
+        title: tariff.title,
+        price: tariff.price,
+        interval: tariff.interval,
+        courseTitle: tariff.course.title,
+        courseSlug: tariff.course.slug,
+        courseDescription: tariff.course.description,
+        lessonsCount: tariff.course.lessons.length,
+        isOwned: ownedCourseIds.has(tariff.course.id),
+        pendingOrder: pendingOrdersByTariffId.get(tariff.id) ?? null,
+      }))}
+      user={
+        user
+          ? {
+              email: user.email,
+              name: user.name,
+            }
+          : null
+      }
+    />
   );
 }

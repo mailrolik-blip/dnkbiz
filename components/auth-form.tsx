@@ -44,14 +44,14 @@ export default function AuthForm({ mode }: AuthFormProps) {
         | null;
 
       if (!response.ok) {
-        throw new Error(payload?.error || 'Request failed.');
+        throw new Error(payload?.error || 'Запрос не выполнен.');
       }
 
       router.push('/lk');
       router.refresh();
     } catch (submitError) {
       setError(
-        submitError instanceof Error ? submitError.message : 'Request failed.'
+        submitError instanceof Error ? submitError.message : 'Запрос не выполнен.'
       );
       setPending(false);
       return;
@@ -62,26 +62,26 @@ export default function AuthForm({ mode }: AuthFormProps) {
 
   return (
     <div className="auth-card">
-      <span className="eyebrow">{isRegister ? 'Register' : 'Login'}</span>
+      <span className="eyebrow">{isRegister ? 'Регистрация' : 'Вход'}</span>
       <h2 style={{ marginTop: '0.85rem' }}>
-        {isRegister ? 'Create your account' : 'Sign in to your dashboard'}
+        {isRegister ? 'Создайте аккаунт ученика' : 'Войдите в личный кабинет'}
       </h2>
       <p className="panel-copy" style={{ marginTop: '0.85rem' }}>
         {isRegister
-          ? 'Use email and password. A session cookie is created automatically after signup.'
-          : 'Sign in with the seeded account or with an account created through the register page.'}
+          ? 'После регистрации пользователь автоматически получает сессию и попадает в кабинет.'
+          : 'Используйте тестовый аккаунт из сид-данных или войдите под уже созданной учётной записью.'}
       </p>
 
       <form onSubmit={handleSubmit} style={{ marginTop: '1.2rem', display: 'grid', gap: '1rem' }}>
         {isRegister ? (
           <div className="field">
-            <label htmlFor="name">Name</label>
+            <label htmlFor="name">Имя</label>
             <input
               id="name"
               autoComplete="name"
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder="Your name"
+              placeholder="Как к вам обращаться"
             />
           </div>
         ) : null}
@@ -96,12 +96,12 @@ export default function AuthForm({ mode }: AuthFormProps) {
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            placeholder="you@example.com"
+            placeholder="name@example.com"
           />
         </div>
 
         <div className="field">
-          <label htmlFor="password">Password</label>
+          <label htmlFor="password">Пароль</label>
           <input
             id="password"
             autoComplete={isRegister ? 'new-password' : 'current-password'}
@@ -109,30 +109,30 @@ export default function AuthForm({ mode }: AuthFormProps) {
             type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            placeholder="At least 8 characters"
+            placeholder="Минимум 8 символов"
           />
         </div>
 
         <button className="primary-button" disabled={pending} type="submit">
           {pending
             ? isRegister
-              ? 'Creating account...'
-              : 'Signing in...'
+              ? 'Создаём аккаунт...'
+              : 'Входим...'
             : isRegister
-              ? 'Register'
-              : 'Login'}
+              ? 'Зарегистрироваться'
+              : 'Войти'}
         </button>
       </form>
 
       {error ? <p className="feedback feedback-error">{error}</p> : null}
 
       <p className="muted-text" style={{ marginTop: '1rem' }}>
-        {isRegister ? 'Already have an account?' : 'Need an account?'}{' '}
+        {isRegister ? 'Уже есть аккаунт?' : 'Ещё не зарегистрированы?'}{' '}
         <Link
           href={isRegister ? '/login' : '/register'}
-          style={{ color: 'var(--accent-strong)', fontWeight: 600 }}
+          style={{ color: 'var(--accent-strong)', fontWeight: 700 }}
         >
-          {isRegister ? 'Login' : 'Register'}
+          {isRegister ? 'Войти' : 'Создать аккаунт'}
         </Link>
       </p>
     </div>

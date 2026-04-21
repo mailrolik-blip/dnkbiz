@@ -1,0 +1,353 @@
+<script src="https://unpkg.com/feather-icons"></script>
+
+<style>
+/* БАЗА */
+.audit-wrapper * { box-sizing: border-box; font-family: 'TildaSans', Arial, sans-serif !important; outline: none; }
+
+/* ТРЕК */
+.audit-scroll-track { width: 100%; height: 200vh; position: relative; z-index: 20; }
+.audit-sticky { position: -webkit-sticky; position: sticky; top: 0; width: 100%; height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+
+/* ГРУППА */
+.audit-group {
+    width: 100%; max-width: 1200px;
+    margin: 0 auto; padding: 20px 20px 20px 80px; 
+    display: flex; flex-direction: column; gap: 30px; 
+    transform-origin: center center; will-change: transform, opacity, filter;
+    height: 90vh; justify-content: center;
+}
+@media (max-width: 900px) { 
+    .audit-group { padding: 40px 20px; justify-content: flex-start; height: auto; overflow: visible; } 
+    .audit-scroll-track { height: auto; } /* Отключаем sticky трек на моб */
+    .audit-sticky { position: relative; height: auto; top: auto; display: block; overflow: visible; }
+}
+
+/* ЗАГОЛОВОК */
+.audit-header { display: flex; align-items: baseline; gap: 15px; margin-bottom: 10px; flex-shrink: 0; }
+.audit-title-main { font-size: 42px; font-weight: 700; opacity: 0.3; color: #fff; }
+.audit-divider { font-size: 42px; font-weight: 300; opacity: 0.3; color: #fff; }
+.audit-title-sub { font-size: 42px; font-weight: 700; color: #fff; }
+body.light-mode .audit-title-main, body.light-mode .audit-divider, body.light-mode .audit-title-sub { color: #222; }
+
+/* СЕТКА */
+.audit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; height: 550px; }
+
+/* СТЕКЛО */
+.glass-box {
+    position: relative; border-radius: 30px;
+    background: rgba(30, 30, 30, 0.4); border: 1px solid rgba(255, 255, 255, 0.1); 
+    backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+    overflow: hidden; padding: 30px; display: flex; flex-direction: column;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.3); transition: transform 0.3s ease;
+}
+body.light-mode .glass-box { background: rgba(255, 255, 255, 0.6); border-color: rgba(0, 0, 0, 0.1); }
+
+/* GLOW */
+.glass-box::before { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(600px circle at var(--x, 50%) var(--y, 50%), rgba(1, 247, 246, 0.15), transparent 40%); opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+.glass-box::after { content: ""; position: absolute; inset: -1px; border-radius: 30px; z-index: -1; padding: 1px; background: radial-gradient(400px circle at var(--x, 50%) var(--y, 50%), #01f7f6, transparent 40%); -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+@media (min-width: 961px) { .glass-box:hover::before, .glass-box:hover::after { opacity: 1; } }
+
+
+/* --- ЛЕВАЯ КОЛОНКА --- */
+.lk-visual { position: relative; flex-grow: 1; display: flex; flex-direction: column; gap: 20px; overflow: hidden; }
+
+.health-circle-wrap { display: flex; align-items: center; gap: 20px; margin-bottom: 10px; flex-shrink: 0; }
+.health-circle { width: 80px; height: 80px; position: relative; }
+.health-circle svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.health-bg { fill: none; stroke: rgba(255,255,255,0.1); stroke-width: 4; }
+/* 2*PI*38 ~= 238 */
+.health-progress { fill: none; stroke: #01f7f6; stroke-width: 4; stroke-dasharray: 238; stroke-dashoffset: 238; transition: stroke-dashoffset 1s ease; }
+.health-val { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 24px; font-weight: 700; color: #01f7f6; }
+.health-label { font-size: 14px; color: #ccc; max-width: 150px; line-height: 1.4; }
+body.light-mode .health-label { color: #555; }
+
+/* Метрики (Кликабельные) */
+.metrics-list { display: flex; flex-direction: column; gap: 8px; flex-grow: 1; padding-bottom: 20px; }
+.metric-row { 
+    display: flex; justify-content: space-between; align-items: center; 
+    padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,0.05); 
+    cursor: pointer; transition: 0.2s;
+}
+.metric-row:hover { background: rgba(255,255,255,0.1); border: 1px solid rgba(1, 247, 246, 0.3); }
+body.light-mode .metric-row { background: rgba(0,0,0,0.05); }
+
+.metric-name { font-size: 13px; font-weight: 500; color: #fff; display: flex; align-items: center; gap: 10px; }
+.metric-name svg { width: 14px; color: #01f7f6; }
+body.light-mode .metric-name { color: #222; }
+
+.metric-val { font-size: 13px; font-weight: 700; color: #01f7f6; }
+.metric-val.bad { color: #ff4444; } .metric-val.mid { color: #ffbb33; }
+
+.promo-text { margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px; flex-shrink: 0; }
+.promo-desc { font-size: 13px; color: #ccc; line-height: 1.4; margin-bottom: 15px; }
+body.light-mode .promo-desc { color: #555; }
+.promo-btn { display: inline-flex; padding: 10px 25px; background: #01f7f6; color: #000; border-radius: 50px; font-weight: 700; text-decoration: none; font-size: 13px; }
+.promo-btn:hover { background: #fff; }
+
+
+/* --- ПРАВАЯ КОЛОНКА (КВИЗ) --- */
+.quiz-box { justify-content: center; text-align: center; position: relative; z-index: 5; }
+.q-progress { width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 4px; position: absolute; top: 40px; left: 40px; right: 40px; width: auto; }
+.q-bar { height: 100%; background: #01f7f6; width: 0%; transition: width 0.3s; }
+
+.q-step { display: none; flex-direction: column; align-items: center; width: 100%; animation: slideIn 0.4s ease; }
+@keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+
+.q-cat { color: #01f7f6; font-size: 12px; font-weight: 700; text-transform: uppercase; margin-bottom: 15px; margin-top: 30px; }
+.q-question { font-size: 20px; font-weight: 600; color: #fff; margin-bottom: 40px; min-height: 80px; display: flex; align-items: center; line-height: 1.4; justify-content: center; }
+body.light-mode .q-question { color: #222; }
+
+.q-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 100%; }
+.q-btn { padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: #fff; font-weight: 600; cursor: pointer; transition: 0.2s; z-index: 10; position: relative; }
+.q-btn:hover { border-color: #01f7f6; color: #01f7f6; background: rgba(1,247,246,0.1); }
+body.light-mode .q-btn { border-color: rgba(0,0,0,0.1); background: rgba(0,0,0,0.05); color: #222; }
+
+/* Результат */
+.res-screen { display: none; flex-direction: column; align-items: center; width: 100%; animation: fadeIn 0.5s; height: 100%; justify-content: center; }
+.res-circle-wrap { position: relative; width: 140px; height: 140px; margin-bottom: 20px; }
+.res-circle-svg { transform: rotate(-90deg); width: 100%; height: 100%; }
+.res-circle-bg { fill: none; stroke: rgba(255,255,255,0.1); stroke-width: 10; }
+/* 2*PI*70 = 440 */
+.res-circle-val { fill: none; stroke: #01f7f6; stroke-width: 10; stroke-dasharray: 440; stroke-dashoffset: 440; transition: stroke-dashoffset 1s ease; stroke-linecap: round; }
+.res-text-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 32px; font-weight: 700; color: #fff; }
+body.light-mode .res-text-center { color: #222; }
+
+.res-verdict { font-size: 20px; font-weight: 700; color: #fff; margin-bottom: 10px; }
+.res-sub { font-size: 14px; color: #ccc; margin-bottom: 30px; }
+.save-btn { padding: 12px 30px; background: #01f7f6; color: #000; border-radius: 50px; font-weight: 700; text-decoration: none; font-size: 14px; cursor: pointer; z-index: 10; position: relative; }
+.save-btn:hover { background: #fff; }
+
+
+/* ГАЛЕРЕЯ ТЕСТОВ (СНИЗУ) */
+.tests-gallery { display: flex; gap: 15px; overflow-x: auto; padding: 10px 0; scrollbar-width: none; flex-shrink: 0; z-index: 10; position: relative; }
+.tests-gallery::-webkit-scrollbar { display: none; }
+
+.test-card { min-width: 200px; padding: 15px; border-radius: 16px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 10px; }
+.test-card:hover, .test-card.active { border-color: #01f7f6; background: rgba(1, 247, 246, 0.05); transform: translateY(-3px); }
+body.light-mode .test-card { background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.1); }
+.test-card span { font-weight: 600; font-size: 14px; color: #fff; }
+body.light-mode .test-card span { color: #222; }
+
+.full-audit-btn { min-width: 200px; padding: 15px; border-radius: 16px; background: rgba(1, 247, 246, 0.1); border: 1px dashed #01f7f6; color: #01f7f6; font-weight: 700; text-align: center; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.3s; cursor: pointer; }
+.full-audit-btn:hover { background: #01f7f6; color: #000; }
+
+@media (max-width: 900px) {
+    .audit-header { font-size: 32px; flex-direction: column; gap: 5px; }
+    .title-divider { display: none; }
+    .audit-grid { grid-template-columns: 1fr; height: auto; display: flex; flex-direction: column; gap: 20px; }
+    .glass-box { min-height: 400px; padding: 25px; }
+    .promo-content { order: 2; } 
+    .quiz-box { order: 1; margin-bottom: 20px; }
+}
+</style>
+
+<div class="audit-wrapper">
+    <div class="audit-scroll-track js-audit-track">
+        <div class="audit-sticky">
+            <div class="audit-group js-audit-anim">
+                <div id="checklists" style="position: absolute; top: -100px;"></div>
+                <div class="audit-header">
+                    <span class="audit-title-main">Чек лист</span>
+                    <span class="audit-divider">/</span>
+                    <span class="audit-title-sub">Стартовый аудит</span>
+                </div>
+
+                <div class="audit-grid" id="audit-main-grid">
+                    <!-- ЛЕВО -->
+                    <div class="glass-box promo-content glow-target">
+                        <div class="lk-visual">
+                            <div class="health-circle-wrap">
+                                <div class="health-circle">
+                                    <svg viewBox="0 0 36 36"><path class="health-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/><path class="health-progress" id="gl-health-svg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" style="stroke-dashoffset: 238;"/></svg>
+                                    <div class="health-val" id="gl-health">0%</div>
+                                </div>
+                                <div class="health-label">Здоровье бизнеса<br><span style="color:#01f7f6;font-size:12px;">Аналитика LIVE</span></div>
+                            </div>
+                            <div class="metrics-list">
+                                <!-- Кликабельные строки -->
+                                <div class="metric-row" onclick="window.loadTest('sales')"><div class="metric-name"><i data-feather="dollar-sign"></i> Финансы</div><div class="metric-val mid" id="val-sales">--</div></div>
+                                <div class="metric-row" onclick="window.loadTest('team')"><div class="metric-name"><i data-feather="users"></i> Команда</div><div class="metric-val" id="val-team">--</div></div>
+                                <div class="metric-row" onclick="window.loadTest('proc')"><div class="metric-name"><i data-feather="settings"></i> Процессы</div><div class="metric-val bad" id="val-proc">--</div></div>
+                                <div class="metric-row" onclick="window.loadTest('base')"><div class="metric-name"><i data-feather="layers"></i> Базовый</div><div class="metric-val" id="val-base">--</div></div>
+                            </div>
+                        </div>
+                        <div class="promo-text"><p class="promo-desc">Ведите аналитику своего бизнеса в реальном времени.</p><a href="#login" class="promo-btn">Создать кабинет</a></div>
+                    </div>
+
+                    <!-- ПРАВО -->
+                    <div class="glass-box quiz-box glow-target" id="quiz-container">
+                        <div class="q-progress"><div class="q-bar" id="q-bar"></div></div>
+                        <div id="q-step-box" class="q-step visible">
+                            <div class="q-cat" id="q-cat">Загрузка...</div>
+                            <div class="q-question" id="q-text">...</div>
+                            <div class="q-actions">
+                                <div class="q-btn" id="btn-no">Нет</div>
+                                <div class="q-btn" id="btn-yes">Да</div>
+                            </div>
+                        </div>
+                        <div id="res-screen" class="res-screen">
+                            <div class="res-circle-wrap">
+                                <svg class="res-circle-svg" viewBox="0 0 160 160"><circle class="res-circle-bg" cx="80" cy="80" r="70"></circle><circle class="res-circle-val" id="res-svg-val" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/></svg>
+                                <div class="res-text-center" id="res-pct">0%</div>
+                            </div>
+                            <div class="res-verdict" id="res-title">Результат</div>
+                            <div class="res-sub" id="res-desc">...</div>
+                            <a href="#login" class="save-btn">Сохранить прогресс</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ГАЛЕРЕЯ -->
+                <div class="tests-gallery">
+                    <div class="test-card active" id="btn-base"><i data-feather="layers" style="color:#01f7f6"></i><span>Базовый</span></div>
+                    <div class="test-card" id="btn-sales"><i data-feather="dollar-sign" style="color:#01f7f6"></i><span>Финансы</span></div>
+                    <div class="test-card" id="btn-team"><i data-feather="users" style="color:#01f7f6"></i><span>Команда</span></div>
+                    <div class="test-card" id="btn-proc"><i data-feather="settings" style="color:#01f7f6"></i><span>Процессы</span></div>
+                    <a href="#login" class="full-audit-btn"><i data-feather="cpu"></i> Начать полный анализ</a>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    feather.replace();
+    
+    var testsDB = {
+        base: { title: "Базовый аудит", q: [{c:"Структура", t:"У компании есть оргструктура?"}, {c:"Финансы", t:"Знаете ли вы маржинальность?"}, {c:"Команда", t:"Работа не встает без вас?"}] },
+        sales: { title: "Аудит Финансов", q: [{c:"Учет", t:"Ведется ли ДДС?"}, {c:"Учет", t:"Считаете ли ROI?"}, {c:"План", t:"Есть финмодель?"}] },
+        team: { title: "Аудит Команды", q: [{c:"Найм", t:"Есть профиль должности?"}, {c:"KPI", t:"Есть система мотивации?"}, {c:"Адаптация", t:"Есть обучение новичков?"}] },
+        proc: { title: "Аудит Процессов", q: [{c:"Регламенты", t:"Описан продукт?"}, {c:"CRM", t:"Внедрена CRM?"}, {c:"Контроль", t:"Есть точки контроля?"}] }
+    };
+
+    var currentQ = 0;
+    var answers = [];
+    var currentKey = 'base';
+    var totalSum = 0;
+    var totalCount = 0;
+
+    window.loadTest = function(key) {
+        if(!testsDB[key]) return;
+        currentKey = key;
+        currentQ = 0;
+        answers = [];
+        
+        document.getElementById('res-screen').style.display = 'none';
+        document.getElementById('q-step-box').style.display = 'flex';
+        
+        var cards = document.querySelectorAll('.test-card');
+        for(var i=0; i<cards.length; i++) {
+            if(cards[i].id === 'btn-'+key) cards[i].classList.add('active');
+            else cards[i].classList.remove('active');
+        }
+        
+        // Auto Scroll Up on Mobile (To start of grid)
+        if(window.innerWidth <= 900) {
+            document.querySelector('.audit-grid').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        renderQ();
+    };
+
+    function renderQ() {
+        var q = testsDB[currentKey].q[currentQ];
+        document.getElementById('q-cat').innerText = q.c;
+        document.getElementById('q-text').innerText = q.t;
+        var pct = (currentQ / testsDB[currentKey].q.length) * 100;
+        document.getElementById('q-bar').style.width = pct + '%';
+        
+        var box = document.getElementById('q-step-box');
+        box.classList.remove('visible');
+        setTimeout(function(){ box.classList.add('visible'); }, 50);
+    }
+
+    window.next = function(val) {
+        answers.push(val);
+        currentQ++;
+        if(currentQ < testsDB[currentKey].q.length) {
+            renderQ();
+        } else {
+            finish();
+        }
+    };
+
+    function finish() {
+        document.getElementById('q-step-box').style.display = 'none';
+        document.getElementById('q-bar').style.width = '100%';
+        document.getElementById('res-screen').style.display = 'flex';
+        
+        var yes = answers.filter(Boolean).length;
+        var pct = Math.round((yes / answers.length) * 100);
+        
+        var metricEl = document.getElementById('val-' + currentKey);
+        if(metricEl) {
+            metricEl.innerText = pct + '%';
+            metricEl.style.color = pct > 70 ? '#00ff88' : '#ff4444';
+        }
+        
+        if(totalCount === 0) { totalSum = pct; totalCount = 1; }
+        else { totalSum = Math.round((totalSum + pct)/2); }
+        
+        document.getElementById('gl-health').innerText = totalSum + '%';
+        var dash = 238 * (1 - totalSum/100);
+        document.getElementById('gl-health-svg').style.strokeDashoffset = dash;
+        
+        document.getElementById('res-pct').innerText = pct + '%';
+        // 440 - circumference
+        var dashR = 440 * (1 - pct/100);
+        document.getElementById('res-svg-val').style.strokeDashoffset = dashR;
+        
+        var t = "Хаос"; var d = "Нужна система.";
+        if(pct > 50) { t = "Рост"; d = "Есть база."; }
+        if(pct > 80) { t = "Система"; d = "Отлично."; }
+        document.getElementById('res-title').innerText = t;
+        document.getElementById('res-desc').innerText = d;
+    }
+
+    document.getElementById('btn-yes').addEventListener('click', function(){ window.next(true); });
+    document.getElementById('btn-no').addEventListener('click', function(){ window.next(false); });
+    
+    document.getElementById('btn-base').addEventListener('click', function(){ window.loadTest('base'); });
+    document.getElementById('btn-sales').addEventListener('click', function(){ window.loadTest('sales'); });
+    document.getElementById('btn-team').addEventListener('click', function(){ window.loadTest('team'); });
+    document.getElementById('btn-proc').addEventListener('click', function(){ window.loadTest('proc'); });
+
+    window.loadTest('base');
+    
+    // GLOW & SCROLL
+    var track = document.querySelector('.js-audit-track');
+    var group = document.querySelector('.js-audit-anim');
+    var targets = document.querySelectorAll('.glow-target');
+    
+    if (window.innerWidth > 960) {
+        document.addEventListener('mousemove', function(e) {
+            for (var i = 0; i < targets.length; i++) {
+                var r = targets[i].getBoundingClientRect();
+                targets[i].style.setProperty('--x', (e.clientX - r.left) + 'px');
+                targets[i].style.setProperty('--y', (e.clientY - r.top) + 'px');
+            }
+        });
+    }
+    
+    window.addEventListener('scroll', function() {
+        if (window.innerWidth > 960) {
+            var rect = track.getBoundingClientRect();
+            if (rect.top <= 0) {
+                var dist = rect.height - window.innerHeight;
+                if (dist > 0) {
+                    var p = Math.abs(rect.top) / dist;
+                    var effP = (p > 0.2) ? (p - 0.2) / 0.8 : 0;
+                    if(effP > 1) effP = 1;
+                    group.style.transform = 'scale(' + (1 + effP * 0.2) + ')';
+                    group.style.opacity = 1 - effP;
+                    group.style.filter = 'blur(' + (effP * 20) + 'px)';
+                }
+            } else {
+                group.style.transform = 'scale(1)'; group.style.opacity = 1; group.style.filter = 'blur(0px)';
+            }
+        }
+    });
+});
+</script>

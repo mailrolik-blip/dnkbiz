@@ -10,13 +10,13 @@ const EXPECTED_DATABASE_NAMES = new Set(['course_platform']);
 
 function assertDevSeedAllowed() {
   if (process.env.NODE_ENV === 'production') {
-    throw new Error('Seed is disabled in production.');
+    throw new Error('Seed отключен в production.');
   }
 
   const databaseUrl = process.env.DATABASE_URL;
 
   if (!databaseUrl) {
-    throw new Error('DATABASE_URL is required for seed.');
+    throw new Error('Для seed требуется DATABASE_URL.');
   }
 
   const parsed = new URL(databaseUrl);
@@ -27,7 +27,7 @@ function assertDevSeedAllowed() {
     !EXPECTED_DATABASE_NAMES.has(databaseName)
   ) {
     throw new Error(
-      `Refusing to seed non-dev database host "${parsed.hostname}" and database "${databaseName}".`
+      `Seed разрешён только для dev-базы. Текущий хост "${parsed.hostname}", база "${databaseName}".`
     );
   }
 }
@@ -63,14 +63,14 @@ async function main() {
   const admin = await upsertUser({
     email: 'admin@example.com',
     password: 'Admin123!',
-    name: 'Admin User',
+    name: 'Администратор DNK',
     role: 'ADMIN',
   });
 
   const user = await upsertUser({
     email: 'user@example.com',
     password: 'User12345!',
-    name: 'Test User',
+    name: 'Тестовый ученик',
     role: 'USER',
   });
 
@@ -79,73 +79,75 @@ async function main() {
       slug: 'practical-course',
     },
     update: {
-      title: 'Practical Course',
-      description: 'A paid course used to validate auth, orders, enrollments, and lesson progress.',
+      title: 'Платформа ДНК: стартовый курс',
+      description:
+        'Стартовая программа ДНК для проверки регистрации, заказов, открытия доступа и сохранения прогресса по урокам.',
       isPublished: true,
     },
     create: {
-      title: 'Practical Course',
+      title: 'Платформа ДНК: стартовый курс',
       slug: 'practical-course',
-      description: 'A paid course used to validate auth, orders, enrollments, and lesson progress.',
+      description:
+        'Стартовая программа ДНК для проверки регистрации, заказов, открытия доступа и сохранения прогресса по урокам.',
       isPublished: true,
     },
   });
 
   const lessons = [
     {
-      title: 'Welcome and setup',
+      title: 'Добро пожаловать на платформу',
       slug: 'welcome-and-setup',
-      description: 'How the course is structured and how to work through it.',
+      description: 'Как устроено обучение, личный кабинет и работа с материалами курса.',
       content:
-        'Lesson 1\n\nStart with the overall roadmap. The goal is to finish every lesson in order and mark your progress as you go.',
+        'Урок 1\n\nЭто вводный модуль платформы ДНК. Здесь вы знакомитесь с логикой кабинета, доступом к курсу и базовым сценарием прохождения программы.',
       position: 1,
     },
     {
-      title: 'Define your offer',
+      title: 'Как устроен личный кабинет',
       slug: 'define-your-offer',
-      description: 'Pick one clear paid offer and remove side quests.',
+      description: 'Разбираем, где находятся ваши курсы, заказы и активные тарифы.',
       content:
-        'Lesson 2\n\nWrite a one-sentence offer, define the customer, and decide what outcome the course provides.',
+        'Урок 2\n\nВ личном кабинете пользователь видит свои оплаченные программы, историю заказов и доступные тарифы. Это основная точка входа после авторизации.',
       position: 2,
     },
     {
-      title: 'Find the core promise',
+      title: 'Оформление доступа к программе',
       slug: 'find-the-core-promise',
-      description: 'Turn your idea into one measurable transformation.',
+      description: 'Что происходит после выбора тарифа и создания заказа.',
       content:
-        'Lesson 3\n\nEvery strong course promise is specific, believable, and easy to repeat in sales copy.',
+        'Урок 3\n\nПосле создания заказа система фиксирует статус PENDING. Когда администратор переводит заказ в PAID, пользователю автоматически открывается доступ к курсу.',
       position: 3,
     },
     {
-      title: 'Build the lesson map',
+      title: 'Структура учебного модуля',
       slug: 'build-the-lesson-map',
-      description: 'Split the promise into a simple lesson sequence.',
+      description: 'Как построен экран урока и навигация внутри программы.',
       content:
-        'Lesson 4\n\nMap the course so every lesson resolves one problem and prepares the next lesson.',
+        'Урок 4\n\nЭкран курса включает список уроков, основную область материала, блок заметок и индикатор прогресса. Пользователь проходит программу по шагам.',
       position: 4,
     },
     {
-      title: 'Write the first draft',
+      title: 'Сохранение прогресса',
       slug: 'write-the-first-draft',
-      description: 'Use rough drafts instead of waiting for perfect content.',
+      description: 'Как отмечать уроки завершёнными и сохранять ответы.',
       content:
-        'Lesson 5\n\nFast first drafts beat overthinking. Get the material into the lesson editor and iterate from there.',
+        'Урок 5\n\nПосле прохождения урока можно сохранить заметку и отметить материал завершённым. Данные записываются в таблицу прогресса и привязаны к текущему пользователю.',
       position: 5,
     },
     {
-      title: 'Add proof and examples',
+      title: 'Практика и заметки',
       slug: 'add-proof-and-examples',
-      description: 'Support each module with examples, templates, or exercises.',
+      description: 'Используем текстовый ответ как рабочее поле для практики по уроку.',
       content:
-        'Lesson 6\n\nGood examples reduce friction. Add specific use cases, examples, and checkpoints to each module.',
+        'Урок 6\n\nБлок домашней практики нужен для коротких выводов, ответов и фиксации действий. Он уже подключён к реальному API сохранения прогресса.',
       position: 6,
     },
     {
-      title: 'Finish and review',
+      title: 'Завершение курса',
       slug: 'finish-and-review',
-      description: 'Review the course end-to-end and tighten weak parts.',
+      description: 'Подводим итог и проверяем, что весь контур обучения работает целиком.',
       content:
-        'Lesson 7\n\nReview the whole experience, remove duplicated content, and keep only what helps the learner finish.',
+        'Урок 7\n\nКогда все уроки отмечены завершёнными, курс показывает экран успеха. Пользователь может вернуться в кабинет или продолжить просмотр материалов.',
       position: 7,
     },
   ];
@@ -182,14 +184,14 @@ async function main() {
       slug: 'practical-course-access',
     },
     update: {
-      title: 'Full course access',
+      title: 'Доступ к стартовому курсу',
       price: 14900,
       interval: 'one-time',
       isActive: true,
       courseId: course.id,
     },
     create: {
-      title: 'Full course access',
+      title: 'Доступ к стартовому курсу',
       slug: 'practical-course-access',
       price: 14900,
       interval: 'one-time',
@@ -200,11 +202,11 @@ async function main() {
 
   console.log('');
   console.log('SEED_SUMMARY');
-  console.log(`Admin: ${admin.email} / Admin123! / id=${admin.id}`);
-  console.log(`User: ${user.email} / User12345! / id=${user.id}`);
-  console.log(`Course: ${course.title} / slug=${course.slug}`);
-  console.log(`Lessons: ${lessons.length}`);
-  console.log(`Tariff: ${tariff.title} / ${tariff.price} RUB / id=${tariff.id}`);
+  console.log(`Админ: ${admin.email} / Admin123! / id=${admin.id}`);
+  console.log(`Пользователь: ${user.email} / User12345! / id=${user.id}`);
+  console.log(`Курс: ${course.title} / slug=${course.slug}`);
+  console.log(`Уроков: ${lessons.length}`);
+  console.log(`Тариф: ${tariff.title} / ${tariff.price} RUB / id=${tariff.id}`);
   console.log('');
 }
 

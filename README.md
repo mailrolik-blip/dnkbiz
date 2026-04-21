@@ -1,20 +1,85 @@
-## DNK Biz MVP 0.1
+## DNK Biz MVP
 
-Проект пересобран на базе Gorilla 0.7.1 как новый MVP для платного доступа к курсу.
+Локальный MVP платформы Бизнес Школы ДНК: регистрация, вход, выбор тарифа, переход в test checkout, тестовая оплата, автоматическое открытие курса и сохранение прогресса по урокам.
 
-На текущем этапе реализованы:
-- регистрация и вход пользователя
-- личный кабинет
-- создание заказа на тариф
-- ручное подтверждение оплаты через смену статуса заказа
-- автоматическая выдача доступа к курсу после оплаты
-- защищенная страница курса
-- сохранение прогресса по урокам
+### Запуск
 
-Текущие маршруты:
-- /register
-- /login
-- /lk
-- /courses/[slug]
+Установка зависимостей:
 
-Текущий MVP готов к следующему этапу: подключению реального фронтенда и привязке существующих Tilda-блоков к рабочему backend.
+```bash
+npm install
+```
+
+Запуск в dev-режиме на `3002`:
+
+```bash
+npm run dev:3002
+```
+
+Локальный production-запуск на `3002`:
+
+```bash
+npm run build
+npm run start:3002
+```
+
+Если нужно заполнить базу тестовыми данными:
+
+```bash
+npm run db:seed
+```
+
+### ENV
+
+- `DATABASE_URL`
+- `AUTH_SECRET`
+- `ENABLE_TEST_PAYMENTS=true` для локального test checkout
+- `SESSION_COOKIE_NAME` опционально, если нужно переопределить имя session cookie
+
+### Тестовые аккаунты
+
+- `admin@example.com / Admin123!`
+- `user@example.com / User12345!`
+
+### Основные маршруты
+
+- `/`
+- `/register`
+- `/login`
+- `/lk`
+- `/checkout/test?orderId=:id`
+- `/courses/practical-course`
+
+### Основные API
+
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `POST /api/auth/logout`
+- `GET /api/me`
+- `GET /api/me/courses`
+- `POST /api/orders`
+- `POST /api/orders/:id/test-pay`
+- `PATCH /api/orders/:id/status`
+- `GET /api/courses/:slug`
+- `POST /api/lessons/:id/progress`
+
+### Основной пользовательский flow
+
+1. Пользователь регистрируется или входит в аккаунт.
+2. На главной или в кабинете выбирает тариф.
+3. `POST /api/orders` создаёт новый `PENDING` order или возвращает checkout уже существующего pending order.
+4. UI сразу переводит пользователя в `/checkout/test`.
+5. Тестовая оплата через `POST /api/orders/:id/test-pay` переводит заказ в `PAID`.
+6. После `PAID` автоматически создаётся или переиспользуется `Enrollment`.
+7. Пользователь сразу попадает в `/courses/:slug`, где открывается курс-фронт на базе `03-block.html`.
+8. Прогресс и домашка сохраняются через `POST /api/lessons/:id/progress`.
+
+### Secondary path
+
+- `PATCH /api/orders/:id/status` сохранён как резервный admin-only flow для локальной отладки.
+- Основной пользовательский путь для MVP — через `checkout/test`.
+
+### Локальная изоляция
+
+- Для локального запуска рядом с другим проектом добавлены scripts на порт `3002`.
+- Имя session cookie по умолчанию: `dnkbiz_session`.

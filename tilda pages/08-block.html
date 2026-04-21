@@ -1,0 +1,314 @@
+<script src="https://unpkg.com/feather-icons"></script>
+
+<style>
+/* БАЗА */
+.pricing-wrapper * { box-sizing: border-box; font-family: 'TildaSans', Arial, sans-serif !important; outline: none; }
+
+/* ТРЕК */
+.pricing-scroll-track { width: 100%; height: 200vh; position: relative; z-index: 20; }
+.pricing-sticky { position: -webkit-sticky; position: sticky; top: 0; width: 100%; height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+
+/* ГРУППА */
+.pricing-group {
+    width: 100%; max-width: 1200px;
+    padding: 20px 20px 20px 80px; 
+    display: flex; flex-direction: column; gap: 30px; 
+    transform-origin: center center; will-change: transform, opacity, filter;
+    height: 90vh; justify-content: center;
+}
+@media (max-width: 900px) { .pricing-group { padding: 40px 20px; justify-content: flex-start; height: auto; overflow-y: auto; } }
+
+/* ЗАГОЛОВОК */
+.pricing-header { display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; margin-left: 10px; flex-shrink: 0; }
+.pricing-title-row { display: flex; align-items: baseline; gap: 15px; }
+.pricing-title-main { font-size: 42px; font-weight: 700; opacity: 0.3; color: #fff; }
+.pricing-divider { font-size: 42px; font-weight: 300; opacity: 0.3; color: #fff; }
+.pricing-title-sub { font-size: 42px; font-weight: 700; color: #fff; }
+.pricing-desc { font-size: 16px; color: #aaa; max-width: 600px; line-height: 1.4; }
+body.light-mode .pricing-title-main, body.light-mode .pricing-divider, body.light-mode .pricing-title-sub { color: #222; }
+body.light-mode .pricing-desc { color: #555; }
+
+/* TOGGLE (Месяц / Год) */
+.toggle-wrapper { display: flex; align-items: center; gap: 15px; margin-left: 10px; margin-bottom: 10px; }
+.toggle-label { font-size: 14px; font-weight: 600; color: #fff; opacity: 0.6; cursor: pointer; transition: 0.3s; }
+.toggle-label.active { opacity: 1; color: #01f7f6; }
+.toggle-switch { 
+    width: 50px; height: 26px; background: rgba(255,255,255,0.1); border-radius: 20px; 
+    position: relative; cursor: pointer; border: 1px solid rgba(255,255,255,0.2);
+}
+.toggle-knob {
+    width: 20px; height: 20px; background: #fff; border-radius: 50%;
+    position: absolute; top: 2px; left: 2px; transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.toggle-switch.yearly .toggle-knob { left: 26px; background: #01f7f6; }
+.discount-badge { 
+    background: #01f7f6; color: #000; font-size: 10px; font-weight: 700; 
+    padding: 2px 6px; border-radius: 4px; margin-left: -5px; 
+}
+
+/* СЕТКА ТАРИФОВ */
+.pricing-grid {
+    display: grid; grid-template-columns: 1fr 1.1fr 1fr; /* Центр шире */
+    gap: 30px; align-items: stretch;
+}
+
+/* КАРТОЧКА */
+.price-card {
+    position: relative; border-radius: 30px;
+    background: rgba(30, 30, 30, 0.4); border: 1px solid rgba(255, 255, 255, 0.1); 
+    backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+    padding: 40px 30px; display: flex; flex-direction: column;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+    transition: transform 0.3s ease, border-color 0.3s ease;
+}
+body.light-mode .price-card { background: rgba(255, 255, 255, 0.6); border-color: rgba(0, 0, 0, 0.1); }
+
+/* GLOW */
+.price-card:hover { transform: translateY(-10px); border-color: #01f7f6; }
+.price-card::before {
+    content: ""; position: absolute; inset: 0; z-index: -1;
+    background: radial-gradient(400px circle at var(--x, 50%) var(--y, 50%), rgba(1, 247, 246, 0.1), transparent 40%);
+    opacity: 0; transition: opacity 0.3s;
+}
+.price-card:hover::before { opacity: 1; }
+
+/* PRO CARD (АКЦЕНТ) */
+.price-card.pro {
+    background: rgba(30, 30, 30, 0.7); border: 1px solid #01f7f6;
+    box-shadow: 0 0 40px rgba(1, 247, 246, 0.15);
+    transform: scale(1.05); z-index: 2;
+}
+.price-card.pro:hover { transform: scale(1.05) translateY(-10px); }
+.best-value {
+    position: absolute; top: 0; left: 50%; transform: translate(-50%, -50%);
+    background: #01f7f6; color: #000; font-size: 12px; font-weight: 800;
+    padding: 6px 15px; border-radius: 20px; text-transform: uppercase;
+}
+
+/* КОНТЕНТ */
+.price-name { font-size: 18px; text-transform: uppercase; color: #fff; font-weight: 700; letter-spacing: 1px; margin-bottom: 15px; opacity: 0.8; }
+.price-card.pro .price-name { color: #01f7f6; opacity: 1; }
+body.light-mode .price-name { color: #222; }
+
+.price-val-wrap { display: flex; align-items: baseline; gap: 5px; margin-bottom: 5px; }
+.price-currency { font-size: 24px; color: #fff; font-weight: 400; }
+.price-val { font-size: 48px; font-weight: 700; color: #fff; transition: opacity 0.3s; }
+.price-period { font-size: 14px; color: #888; margin-bottom: 30px; }
+body.light-mode .price-val, body.light-mode .price-currency { color: #222; }
+
+/* СПИСОК ФИЧ */
+.price-features { display: flex; flex-direction: column; gap: 15px; margin-bottom: 40px; flex-grow: 1; }
+.feat-item { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; color: #ccc; line-height: 1.4; }
+body.light-mode .feat-item { color: #555; }
+.feat-icon { color: #01f7f6; width: 18px; height: 18px; flex-shrink: 0; margin-top: 2px; }
+.feat-item.disabled { opacity: 0.4; }
+.feat-item.disabled .feat-icon { color: #666; }
+
+/* КНОПКА */
+.price-btn {
+    padding: 15px; border-radius: 50px; text-align: center; text-decoration: none;
+    font-weight: 700; font-size: 14px; transition: 0.3s; cursor: pointer;
+    background: transparent; border: 1px solid rgba(255,255,255,0.2); color: #fff;
+    width: 100%; display: block;
+}
+body.light-mode .price-btn { border-color: rgba(0,0,0,0.2); color: #222; }
+
+.price-card.pro .price-btn { background: #01f7f6; border-color: #01f7f6; color: #000; }
+.price-btn:hover { background: #fff; color: #000; border-color: #fff; }
+.price-card.pro .price-btn:hover { box-shadow: 0 0 20px rgba(1, 247, 246, 0.5); background: #fff; }
+
+@media (max-width: 900px) {
+    .pricing-header { font-size: 32px; flex-direction: column; gap: 5px; } .title-divider { display: none; }
+    .pricing-grid { 
+        display: flex; overflow-x: auto; gap: 20px; padding: 40px 10px; 
+        scroll-snap-type: x mandatory; 
+        width: 100vw; margin-left: -20px;
+    }
+    .price-card { 
+        min-width: 280px; scroll-snap-align: center; 
+        transform: none !important; 
+    }
+    .price-card.pro { transform: scale(1) !important; border: 1px solid #01f7f6; }
+    .pricing-grid::-webkit-scrollbar { display: none; }
+}
+</style>
+
+<div class="pricing-wrapper">
+    <div class="pricing-scroll-track js-price-track">
+        <div class="pricing-sticky">
+            
+            <div id="pricing" style="position: absolute; top: -100px;"></div>
+
+            <div class="pricing-group js-price-anim">
+                
+                <div class="pricing-header">
+                    <div class="pricing-title-row">
+                        <span class="pricing-title-main">Доступ</span>
+                        <span class="pricing-divider">/</span>
+                        <span class="pricing-title-sub">Тарифы</span>
+                    </div>
+                    <div class="pricing-desc">Выберите уровень доступа к системе. От самостоятельного обучения до полного внедрения под ключ.</div>
+                </div>
+
+                <div class="toggle-wrapper">
+                    <div class="toggle-label active" id="label-month" onclick="switchPrice(false)">Ежемесячно</div>
+                    <div class="toggle-switch" id="price-toggle" onclick="togglePrice()">
+                        <div class="toggle-knob"></div>
+                    </div>
+                    <div class="toggle-label" id="label-year" onclick="switchPrice(true)">На год <span class="discount-badge">-20%</span></div>
+                </div>
+
+                <div class="pricing-grid">
+                    
+                    <!-- 1. BASE -->
+                    <div class="price-card glow-target">
+                        <div class="price-name">База</div>
+                        <div class="price-val-wrap">
+                            <span class="price-val" data-month="2 990" data-year="28 900">2 990</span>
+                            <span class="price-currency">₽</span>
+                        </div>
+                        <div class="price-period" id="period-text">в месяц</div>
+                        
+                        <div class="price-features">
+                            <div class="feat-item"><i data-feather="check" class="feat-icon"></i> Доступ к Базе Знаний</div>
+                            <div class="feat-item"><i data-feather="check" class="feat-icon"></i> Базовый AI-помощник</div>
+                            <div class="feat-item"><i data-feather="check" class="feat-icon"></i> Самостоятельное обучение</div>
+                            <div class="feat-item disabled"><i data-feather="lock" class="feat-icon"></i> Готовые шаблоны ботов</div>
+                            <div class="feat-item disabled"><i data-feather="lock" class="feat-icon"></i> Личный разбор</div>
+                        </div>
+                        <a href="#login" class="price-btn">Начать бесплатно</a>
+                    </div>
+
+                    <!-- 2. SYSTEM (PRO) -->
+                    <div class="price-card pro glow-target">
+                        <div class="best-value">Выбор предпринимателей</div>
+                        <div class="price-name">Система</div>
+                        <div class="price-val-wrap">
+                            <span class="price-val" data-month="9 900" data-year="95 000">9 900</span>
+                            <span class="price-currency">₽</span>
+                        </div>
+                        <div class="price-period">в месяц</div>
+                        
+                        <div class="price-features">
+                            <div class="feat-item"><i data-feather="check" class="feat-icon"></i> <b>Всё из тарифа База</b></div>
+                            <div class="feat-item"><i data-feather="check" class="feat-icon"></i> Библиотека Шаблонов (CRM, Боты)</div>
+                            <div class="feat-item"><i data-feather="check" class="feat-icon"></i> Продвинутый AI-Стратег</div>
+                            <div class="feat-item"><i data-feather="check" class="feat-icon"></i> Юридические документы</div>
+                            <div class="feat-item"><i data-feather="check" class="feat-icon"></i> Закрытое комьюнити</div>
+                        </div>
+                        <a href="#login" class="price-btn">Оформить подписку</a>
+                    </div>
+
+                    <!-- 3. MENTOR -->
+                    <div class="price-card glow-target">
+                        <div class="price-name">Наставничество</div>
+                        <div class="price-val-wrap">
+                            <span class="price-val" data-month="49 000" data-year="490 000">49 000</span>
+                            <span class="price-currency">₽</span>
+                        </div>
+                        <div class="price-period">в месяц</div>
+                        
+                        <div class="price-features">
+                            <div class="feat-item"><i data-feather="check" class="feat-icon"></i> <b>Всё из тарифа Система</b></div>
+                            <div class="feat-item"><i data-feather="check" class="feat-icon"></i> Личный трекер (4 созвона)</div>
+                            <div class="feat-item"><i data-feather="check" class="feat-icon"></i> Ручной аудит бизнеса</div>
+                            <div class="feat-item"><i data-feather="check" class="feat-icon"></i> Помощь во внедрении</div>
+                            <div class="feat-item"><i data-feather="check" class="feat-icon"></i> Прямая связь 24/7</div>
+                        </div>
+                        <a href="#contacts" class="price-btn">Подать заявку</a>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+feather.replace();
+
+let isYearly = false;
+
+function togglePrice() {
+    isYearly = !isYearly;
+    updatePrices();
+}
+
+function switchPrice(yearly) {
+    if (isYearly !== yearly) {
+        isYearly = yearly;
+        updatePrices();
+    }
+}
+
+function updatePrices() {
+    const toggle = document.getElementById('price-toggle');
+    const lblM = document.getElementById('label-month');
+    const lblY = document.getElementById('label-year');
+    
+    if (isYearly) {
+        toggle.classList.add('yearly');
+        lblM.classList.remove('active');
+        lblY.classList.add('active');
+    } else {
+        toggle.classList.remove('yearly');
+        lblM.classList.add('active');
+        lblY.classList.remove('active');
+    }
+    
+    const prices = document.querySelectorAll('.price-val');
+    prices.forEach(el => {
+        // Простая анимация смены
+        el.style.opacity = 0;
+        setTimeout(() => {
+            el.innerText = isYearly ? el.getAttribute('data-year') : el.getAttribute('data-month');
+            el.style.opacity = 1;
+        }, 200);
+    });
+    
+    const periods = document.querySelectorAll('.price-period');
+    periods.forEach(el => {
+        el.innerText = isYearly ? 'в год' : 'в месяц';
+    });
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    
+    // GLOW EFFECT
+    var targets = document.querySelectorAll('.glow-target');
+    if (window.innerWidth > 960) {
+        document.addEventListener('mousemove', function(e) {
+            for (var i = 0; i < targets.length; i++) {
+                var r = targets[i].getBoundingClientRect();
+                var x = e.clientX - r.left;
+                var y = e.clientY - r.top;
+                targets[i].style.setProperty('--x', x + 'px');
+                targets[i].style.setProperty('--y', y + 'px');
+            }
+        });
+    }
+    
+    // SCROLL ANIMATION
+    var track = document.querySelector('.js-price-track');
+    var group = document.querySelector('.js-price-anim');
+    
+    window.addEventListener('scroll', function() {
+        if(window.innerWidth <= 960) return;
+        var rect = track.getBoundingClientRect();
+        if (rect.top <= 0) {
+            var dist = rect.height - window.innerHeight;
+            if (dist > 0) {
+                var p = Math.abs(rect.top) / dist;
+                var effP = (p > 0.2) ? (p - 0.2) / 0.8 : 0;
+                if(effP > 1) effP = 1;
+                group.style.transform = `scale(${1 + effP * 0.2})`;
+                group.style.opacity = 1 - effP;
+                group.style.filter = `blur(${effP * 20}px)`;
+            }
+        } else {
+            group.style.transform = 'scale(1)'; group.style.opacity = 1; group.style.filter = 'blur(0px)';
+        }
+    });
+});
+</script>

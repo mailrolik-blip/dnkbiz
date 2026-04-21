@@ -1,0 +1,293 @@
+<script src="https://unpkg.com/feather-icons"></script>
+
+<style>
+/* 1. БАЗА */
+.hero-container, .hero-container * { box-sizing: border-box; font-family: 'TildaSans', 'Arial', sans-serif !important; font-weight: 400; }
+#allrecords a { text-decoration: none; color: inherit !important; }
+
+/* 2. ТРЕК (Длинный для медленной анимации) */
+.hero-scroll-track { 
+    width: 100%; 
+    height: 300vh; /* Вернул 300vh, чтобы исчезало медленно */
+    position: relative; 
+    z-index: 10; 
+}
+
+/* 3. ФИКСАЦИЯ */
+.hero-sticky-viewport { 
+    position: -webkit-sticky; 
+    position: sticky; 
+    top: 0; 
+    width: 100%; 
+    height: 100vh; 
+    display: flex; align-items: center; justify-content: center; 
+    overflow: hidden; 
+}
+
+/* 4. СЕТКА */
+.hero-grid { 
+    display: grid; 
+    grid-template-columns: 1.8fr 1fr 1fr; 
+    grid-template-rows: 240px 240px; 
+    gap: 20px; 
+    width: 100%; max-width: 1200px; padding: 20px; 
+    transform-origin: center center; 
+    will-change: transform, opacity, filter; 
+}
+
+/* 5. КАРТОЧКА (СВЕТЛАЯ ТЕМА) */
+.bento-card { 
+    position: relative; 
+    /* Прозрачность 0.5 (50%) чтобы работал Blur */
+    background: rgba(255, 255, 255, 0.85); 
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.6); 
+    border-radius: 24px; padding: 30px; overflow: hidden; 
+    display: flex; flex-direction: column; justify-content: space-between; 
+    box-shadow: 0 10px 30px rgba(0,0,0,0.05); 
+    cursor: pointer; 
+    transition: border-color 0.5s ease, box-shadow 0.5s ease, transform 0.5s ease; 
+}
+
+/* СВЕЧЕНИЕ */
+.bento-card::before { 
+    content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: -1; 
+    background: radial-gradient(400px circle at var(--x, 50%) var(--y, 50%), rgba(1, 247, 246, 0.2), transparent 100%); 
+    opacity: 0; transition: opacity 0.5s ease; pointer-events: none; 
+}
+@media (min-width: 961px) { 
+    .bento-card:hover::before { opacity: 1; } 
+    .bento-card:hover { border-color: #01f7f6; box-shadow: 0 20px 50px rgba(0,0,0,0.1); } 
+}
+
+/* МОБИЛЬНАЯ АКТИВНОСТЬ (Яркая рамка) */
+.bento-card.mob-active { 
+    border-color: #01f7f6 !important; 
+    box-shadow: 0 0 30px rgba(1, 247, 246, 0.3) !important; 
+    transform: scale(1.02); 
+    z-index: 5; /* Поверх остальных */
+}
+.bento-card.mob-active::before { opacity: 1 !important; }
+
+/* ТИПОГРАФИКА */
+.bento-title { font-size: 22px; font-weight: 700; color: #222; margin-bottom: 5px; line-height: 1.2; }
+.bento-desc { font-size: 15px; color: #555; line-height: 1.4; font-weight: 400; }
+.bento-icon { width: 45px; height: 45px; flex-shrink: 0; background: rgba(255,255,255,0.7); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #0077aa; }
+.bento-icon svg { width: 24px; height: 24px; stroke-width: 2; }
+.arrow-icon { margin-left: auto; color: #fff; transition: 0.5s; opacity: 0.8; }
+.bento-card:hover .arrow-icon { color: #01f7f6; transform: translateX(5px); opacity: 1; }
+
+/* КНОПКА (СВЕТЛАЯ) */
+a.hero-btn { 
+    display: inline-flex; justify-content: center; align-items: center; 
+    padding: 16px 40px; 
+    background: #01f7f6 !important; 
+    color: #000000 !important; 
+    border-radius: 50px; font-weight: 600; font-size: 16px; 
+    transition: 0.5s; box-shadow: 0 5px 20px rgba(1, 247, 246, 0.3); 
+    width: fit-content; border: none; 
+}
+a.hero-btn:hover { background: #fff !important; box-shadow: 0 10px 30px rgba(255, 255, 255, 0.6); }
+
+/* РАСПОЛОЖЕНИЕ */
+.card-main { grid-column: 1 / 2; grid-row: 1 / 3; justify-content: center; padding: 50px; }
+.card-main h1 { font-size: 42px; margin: 0 0 25px 0; color: #111; font-weight: 700; line-height: 1.1; }
+.card-main p { font-size: 18px; margin: 0 0 40px 0; color: #444; max-width: 90%; }
+.horizontal-card { flex-direction: row; align-items: center; justify-content: flex-start; }
+.horizontal-card .text-wrap { margin-left: 20px; flex-grow: 1; }
+.card-auto { grid-column: 2 / 4; grid-row: 1 / 2; }
+.card-check { grid-column: 2 / 3; grid-row: 2 / 3; }
+.card-mentor { grid-column: 3 / 4; grid-row: 2 / 3; }
+
+/* --- ТЕМНАЯ ТЕМА --- */
+body:not(.light-mode) .bento-card { 
+    /* Темный полупрозрачный фон */
+    background: rgba(30, 30, 30, 0.85); 
+    backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+    border: 1px solid rgba(255, 255, 255, 0.1); 
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); 
+}
+body:not(.light-mode) .bento-title, body:not(.light-mode) .card-main h1 { color: #ffffff; }
+body:not(.light-mode) .bento-desc, body:not(.light-mode) .card-main p { color: #bbbbbb; }
+body:not(.light-mode) .bento-icon { background: rgba(255, 255, 255, 0.08); color: #01f7f6; }
+
+/* КНОПКА ТЕМНАЯ (БЕЛЫЙ ТЕКСТ) */
+body:not(.light-mode) a.hero-btn, 
+body:not(.light-mode) #allrecords a.hero-btn { 
+    background: transparent !important; 
+    border: 2px solid #01f7f6; 
+    color: #ffffff !important; /* Гарантированный белый */
+    box-shadow: 0 0 15px rgba(1, 247, 246, 0.15); 
+}
+body:not(.light-mode) a.hero-btn:hover { 
+    background: #01f7f6 !important; 
+    color: #000000 !important; 
+    box-shadow: 0 0 30px rgba(1, 247, 246, 0.5); 
+}
+
+/* МОБИЛЬНАЯ ВЕРСИЯ */
+@media (max-width: 960px) {
+    /* Сбрасываем высоту трека, чтобы на мобилках скролл был естественным */
+    .hero-scroll-track { height: auto; padding-bottom: 80px; } 
+    .hero-sticky-viewport { position: relative; height: auto; top: auto; display: block; padding: 120px 20px 50px 20px; }
+    
+    .hero-grid { display: flex; flex-direction: column; gap: 15px; height: auto; transform-origin: top center; }
+    
+    .bento-card { min-height: auto; padding: 25px; flex-direction: row; align-items: center; justify-content: flex-start; }
+    
+    /* Переходы для плавного переключения активности */
+    .bento-card { transition: transform 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease; }
+    
+    .bento-icon { margin-bottom: 0; margin-right: 20px; width: 40px; height: 40px; }
+    .card-main { order: 1; flex-direction: column; text-align: center; padding: 40px 20px; }
+    .card-main h1 { font-size: 28px; }
+    .card-main p { font-size: 15px; }
+    .card-text-mobile { text-align: left; flex-grow: 1; }
+    .card-text-mobile .bento-title { font-size: 18px; margin-bottom: 4px; }
+    .card-text-mobile .bento-desc { font-size: 13px; }
+    .card-auto { order: 2; } .card-check { order: 3; } .card-mentor { order: 4; }
+    .arrow-icon { display: none; }
+}
+</style>
+
+<div class="hero-container">
+    <div class="hero-scroll-track js-scroll-track">
+        <div class="hero-sticky-viewport">
+            <div class="hero-grid js-hero-grid">
+                <div class="bento-card card-main">
+                    <h1>Бизнес-Эволюция</h1>
+                    <p>Системный подход к росту бизнеса.</p>
+                    <a href="#popup:myform" class="hero-btn">Начать</a>
+                </div>
+
+                <a href="#automation" class="bento-card horizontal-card card-auto">
+                    <div class="bento-icon"><i data-feather="cpu"></i></div>
+                    <div class="text-wrap card-text-mobile">
+                        <div class="bento-title">Автоматизация</div>
+                        <div class="bento-desc">CRM и AI боты</div>
+                    </div>
+                    <div class="arrow-icon"><i data-feather="arrow-right"></i></div>
+                </a>
+
+                <a href="#education" class="bento-card card-check">
+                    <div class="bento-icon"><i data-feather="layers"></i></div>
+                    <div class="card-text-mobile">
+                        <div class="bento-title">База Знаний</div>
+                        <div class="bento-desc">Пошаговые гайды</div>
+                    </div>
+                </a>
+
+                <a href="#about" class="bento-card card-mentor">
+                    <div class="bento-icon"><i data-feather="users"></i></div>
+                    <div class="card-text-mobile">
+                        <div class="bento-title">Менторство</div>
+                        <div class="bento-desc">Личная работа</div>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<script>
+feather.replace();
+document.addEventListener("DOMContentLoaded", function() {
+    var tracks = document.querySelectorAll('.js-scroll-track');
+    
+    // DESKTOP MOUSE
+    if (window.innerWidth > 960) {
+        for (var i = 0; tracks.length > i; i++) {
+            var cards = tracks[i].querySelectorAll('.bento-card');
+            for (var c = 0; cards.length > c; c++) {
+                cards[c].addEventListener('mousemove', function(e) {
+                    var r = this.getBoundingClientRect();
+                    this.style.setProperty('--x', (e.clientX - r.left) + 'px');
+                    this.style.setProperty('--y', (e.clientY - r.top) + 'px');
+                });
+            }
+        }
+    }
+
+    function onScrollAnim() {
+        var scrollY = window.scrollY;
+        var winHeight = window.innerHeight;
+
+        for (var i = 0; tracks.length > i; i++) {
+            var track = tracks[i];
+            var grid = track.querySelector('.js-hero-grid');
+            var trackRect = track.getBoundingClientRect();
+            var trackTop = trackRect.top;
+            
+            // DESKTOP: SLOW FADE
+            if (window.innerWidth > 960) {
+                if (0 >= trackTop) {
+                    var scrolledInside = Math.abs(trackTop);
+                    var totalDistance = trackRect.height - winHeight;
+                    
+                    if (totalDistance > 0) {
+                        var p = scrolledInside / totalDistance;
+                        
+                        // Пауза 30%
+                        var pausePoint = 0.3;
+                        var effectiveP = 0;
+                        if (p > pausePoint) {
+                            effectiveP = (p - pausePoint) / (1 - pausePoint);
+                        }
+                        
+                        if (effectiveP > 1) effectiveP = 1;
+                        if (0 > effectiveP) effectiveP = 0;
+
+                        // Медленное увеличение и растворение
+                        var scale = 1 + (effectiveP * 0.2); 
+                        var opacity = 1 - effectiveP;       
+                        var blur = effectiveP * 20;
+
+                        grid.style.transform = 'scale(' + scale + ')';
+                        grid.style.opacity = opacity;
+                        grid.style.filter = 'blur(' + blur + 'px)';
+                    }
+                } else {
+                    grid.style.transform = 'scale(1)';
+                    grid.style.opacity = 1;
+                    grid.style.filter = 'blur(0px)';
+                }
+            }
+
+            // MOBILE: FIXED TRIGGER LOGIC
+            if (960 >= window.innerWidth) {
+                var cards = track.querySelectorAll('.bento-card');
+                
+                // Триггер: 30% от верха экрана (выше центра, как просили)
+                var triggerLine = winHeight * 0.3; 
+                
+                var activeSet = false;
+                
+                for (var j = 0; cards.length > j; j++) {
+                    var card = cards[j];
+                    var rect = card.getBoundingClientRect();
+                    
+                    // Сбрасываем
+                    card.classList.remove('mob-active');
+                    
+                    if (!activeSet) {
+                        // Логика: если центр карточки пересек линию триггера
+                        var cardCenter = rect.top + (rect.height / 2);
+                        
+                        // Если карточка находится в зоне фокуса (вокруг линии 30%)
+                        // Или если это самая первая карточка и она еще не уехала
+                        // Ищем первую карточку, чей низ еще не ушел выше линии триггера
+                        if (rect.bottom > triggerLine) {
+                            card.classList.add('mob-active');
+                            activeSet = true; // Нашли активную, остальные не трогаем
+                        }
+                    }
+                }
+            }
+        }
+    }
+    window.addEventListener('scroll', onScrollAnim);
+    onScrollAnim();
+});
+</script>

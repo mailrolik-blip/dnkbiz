@@ -1,0 +1,704 @@
+<script src="https://unpkg.com/feather-icons"></script>
+
+<style>
+/* =========================
+   NQ BLOCK (standalone)
+   Prefix: nq-
+   ========================= */
+
+/* БАЗА */
+.nq-container, .nq-container *{
+  box-sizing:border-box;
+  font-family:'TildaSans', Arial, sans-serif !important;
+  outline:none;
+}
+
+/* ТРЕК */
+.nq-scroll-track{ width:100%; height:200vh; position:relative; z-index:20; }
+.nq-sticky-viewport{
+  position:-webkit-sticky; position:sticky; top:0;
+  width:100%; height:100vh;
+  display:flex; align-items:center; justify-content:center;
+  overflow:hidden;
+}
+
+/* ГРУППА */
+.nq-content-group{
+  width:100%; max-width:1200px;
+  display:flex; flex-direction:column; justify-content:center;
+  gap:20px; padding:20px;
+  transform-origin:center center;
+  will-change:transform, opacity, filter;
+}
+
+/* ЗАГОЛОВОК */
+.nq-section-header{ display:flex; align-items:baseline; gap:15px; margin:0 0 0 10px; font-weight:700; font-size:42px; line-height:1; }
+.nq-title-main{ opacity:.3; color:#fff; }
+.nq-title-divider{ opacity:.3; font-weight:300; color:#fff; }
+.nq-title-course{ color:#fff; }
+body.light-mode .nq-title-main,
+body.light-mode .nq-title-divider,
+body.light-mode .nq-title-course{ color:#222; }
+
+/* ПАНЕЛИ */
+.nq-glass, .nq-card{
+  position:relative;
+  border-radius:24px;
+  background:rgba(30,30,30,.4);
+  border:1px solid rgba(255,255,255,.1);
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  overflow:hidden;
+  transition:transform .3s ease, box-shadow .3s ease;
+}
+
+/* GLOW фон */
+.nq-glass::before, .nq-card::before{
+  content:"";
+  position:absolute; inset:0;
+  z-index:-2;
+  background:radial-gradient(600px circle at var(--x, 50%) var(--y, 50%), rgba(1,247,246,.15), transparent 40%);
+  opacity:0; transition:opacity .3s; pointer-events:none;
+}
+
+/* GLOW рамка */
+.nq-glass::after, .nq-card::after{
+  content:"";
+  position:absolute; inset:-2px;
+  border-radius:26px;
+  z-index:-1;
+  background:radial-gradient(400px circle at var(--x, 50%) var(--y, 50%), #01f7f6, transparent 40%);
+  opacity:0; transition:opacity .3s; pointer-events:none;
+
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  padding:2px;
+}
+
+@media (min-width:961px){
+  .nq-glass:hover::before, .nq-glass:hover::after,
+  .nq-card:hover::before, .nq-card:hover::after{ opacity:1; }
+  .nq-card:hover{ transform:translateY(-5px); }
+}
+
+body.light-mode .nq-glass, body.light-mode .nq-card{
+  background:rgba(255,255,255,.6);
+  border-color:rgba(0,0,0,.1);
+  color:#222;
+}
+body.light-mode .nq-glass::before, body.light-mode .nq-card::before{
+  background:radial-gradient(600px circle at var(--x, 50%) var(--y, 50%), rgba(1,247,246,.3), transparent 40%);
+}
+
+/* LAYOUT */
+.nq-wrapper{ display:grid; grid-template-columns:2fr 1fr; gap:20px; height:520px; }
+.nq-main{ padding:30px; display:flex; flex-direction:column; position:relative; overflow:hidden; }
+.nq-scroll-area{ overflow-y:auto; padding-right:10px; height:100%; }
+.nq-scroll-area::-webkit-scrollbar{ width:4px; }
+.nq-scroll-area::-webkit-scrollbar-thumb{ background:rgba(128,128,128,.3); border-radius:4px; }
+
+.nq-tag{ color:#01f7f6; font-size:12px; font-weight:700; text-transform:uppercase; margin-bottom:10px; }
+.nq-h1{ font-size:28px; font-weight:700; margin:0 0 10px 0; line-height:1.2; color:#fff; }
+.nq-desc{ font-size:15px; line-height:1.5; margin-bottom:18px; color:#ccc; }
+body.light-mode .nq-h1{ color:#222; }
+body.light-mode .nq-desc{ color:#555; }
+
+/* KPI */
+.nq-kpi{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:14px; }
+.nq-kpi-item{
+  border-radius:16px;
+  padding:14px;
+  border:1px solid rgba(255,255,255,.06);
+  background:rgba(0,0,0,.18);
+}
+body.light-mode .nq-kpi-item{ background:rgba(255,255,255,.55); border-color:rgba(0,0,0,.06); }
+.nq-kpi-title{ font-size:12px; opacity:.75; color:#ccc; }
+body.light-mode .nq-kpi-title{ color:#555; }
+.nq-kpi-value{ margin-top:6px; font-size:14px; font-weight:800; color:#fff; line-height:1.25; }
+body.light-mode .nq-kpi-value{ color:#222; }
+
+/* STEPS */
+.nq-steps{ display:flex; flex-direction:column; gap:10px; }
+.nq-step{
+  display:flex; gap:12px; align-items:flex-start;
+  padding:14px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.06);
+  background:rgba(255,255,255,.03);
+}
+body.light-mode .nq-step{ background:rgba(0,0,0,.03); border-color:rgba(0,0,0,.06); }
+.nq-step-num{
+  width:28px; height:28px; border-radius:10px;
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(1,247,246,.14);
+  color:#01f7f6; font-weight:800;
+  flex-shrink:0;
+}
+.nq-step-ttl{ font-weight:800; color:#fff; }
+body.light-mode .nq-step-ttl{ color:#222; }
+.nq-step-desc{ font-size:14px; line-height:1.45; color:#cfcfcf; opacity:.95; }
+body.light-mode .nq-step-desc{ color:#555; }
+
+/* CTA */
+.nq-cta{
+  margin-top:14px;
+  display:flex; flex-direction:column; gap:10px;
+  padding:18px;
+  border-radius:18px;
+  border:1px solid rgba(0,255,136,.35);
+  background:rgba(0,255,136,.08);
+}
+.nq-cta-title{ font-weight:900; color:#fff; font-size:15px; }
+body.light-mode .nq-cta-title{ color:#222; }
+.nq-cta-desc{ font-size:13px; color:#cfcfcf; line-height:1.45; }
+body.light-mode .nq-cta-desc{ color:#555; }
+.nq-cta-btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  padding:12px 16px;
+  border-radius:12px;
+  background:#00ff88;
+  color:#000;
+  font-weight:900;
+  text-decoration:none;
+  box-shadow:0 0 18px rgba(0,255,136,.25);
+  border:none;
+  cursor:pointer;
+}
+.nq-cta-btn:hover{ filter:brightness(1.05); transform:translateY(-1px); }
+
+/* SIDEBAR */
+.nq-sidebar{ padding:25px; display:flex; flex-direction:column; gap:12px; overflow:hidden; }
+.nq-mini{
+  border-radius:16px;
+  padding:16px;
+  border:1px solid rgba(255,255,255,.06);
+  background:rgba(255,255,255,.03);
+}
+body.light-mode .nq-mini{ background:rgba(0,0,0,.03); border-color:rgba(0,0,0,.06); }
+.nq-mini h4{ margin:0 0 10px 0; font-size:14px; font-weight:900; color:#fff; }
+body.light-mode .nq-mini h4{ color:#222; }
+.nq-list{ margin:0; padding-left:18px; color:#cfcfcf; font-size:13px; line-height:1.5; }
+body.light-mode .nq-list{ color:#555; }
+
+.nq-ai-btn{
+  margin-top:auto;
+  width:100%;
+  padding:12px;
+  background:linear-gradient(45deg, #01f7f6, #0088cc);
+  border:none;
+  border-radius:12px;
+  color:#000;
+  font-weight:700;
+  font-size:14px;
+  cursor:pointer;
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  transition:.3s;
+}
+.nq-ai-btn:hover{ filter:brightness(1.2); box-shadow:0 0 15px rgba(1,247,246,.4); }
+
+/* FAQ */
+.nq-qa{
+  border-radius:16px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.06);
+  background:rgba(255,255,255,.03);
+}
+body.light-mode .nq-qa{ background:rgba(0,0,0,.03); border-color:rgba(0,0,0,.06); }
+.nq-q{
+  width:100%;
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  background:transparent; border:0;
+  padding:14px;
+  cursor:pointer;
+  color:#fff;
+  font-weight:800;
+  text-align:left;
+  font-size:13px;
+}
+body.light-mode .nq-q{ color:#222; }
+.nq-q .icon{
+  display:flex; align-items:center; justify-content:center;
+  width:22px; height:22px;
+  border-radius:8px;
+  background:rgba(1,247,246,.10);
+  color:#01f7f6;
+  flex-shrink:0;
+}
+.nq-a{
+  display:none;
+  padding:0 14px 14px 14px;
+  color:#cfcfcf;
+  font-size:13px;
+  line-height:1.5;
+}
+body.light-mode .nq-a{ color:#555; }
+
+/* ===== POPUP LEAD (для кнопки "Оставить заявку") ===== */
+.nq-lead-overlay{
+  position:fixed; inset:0;
+  background:rgba(0,0,0,.6);
+  backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
+  z-index:999999;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  opacity:0;
+  visibility:hidden;
+  transition:opacity .25s, visibility .25s;
+}
+.nq-lead-overlay.open{ opacity:1; visibility:visible; }
+
+.nq-lead-modal{
+  width:90%;
+  max-width:520px;
+  border-radius:24px;
+  background:rgba(30,30,30,.65);
+  border:1px solid rgba(255,255,255,.10);
+  backdrop-filter:blur(22px);
+  -webkit-backdrop-filter:blur(22px);
+  box-shadow:0 20px 55px rgba(0,0,0,.55);
+  overflow:hidden;
+  transform:scale(.96);
+  transition:transform .25s cubic-bezier(.175,.885,.32,1.275);
+  position:relative;
+}
+body.light-mode .nq-lead-modal{
+  background:rgba(255,255,255,.85);
+  border-color:rgba(0,0,0,.10);
+}
+.nq-lead-overlay.open .nq-lead-modal{ transform:scale(1); }
+
+.nq-lead-head{
+  padding:18px 18px 0 18px;
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+}
+.nq-lead-title{
+  margin:0;
+  font-size:18px;
+  font-weight:900;
+  color:#fff;
+}
+body.light-mode .nq-lead-title{ color:#222; }
+.nq-lead-sub{
+  margin:8px 0 0 0;
+  font-size:13px;
+  line-height:1.45;
+  color:#cfcfcf;
+}
+body.light-mode .nq-lead-sub{ color:#555; }
+
+.nq-lead-close{
+  width:40px; height:40px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(255,255,255,.05);
+  color:#fff;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition:.2s;
+}
+body.light-mode .nq-lead-close{
+  border-color:rgba(0,0,0,.10);
+  background:rgba(0,0,0,.03);
+  color:#222;
+}
+.nq-lead-close:hover{
+  border-color:#01f7f6;
+  color:#01f7f6;
+  transform:translateY(-1px);
+}
+
+.nq-lead-body{ padding:18px; padding-top:12px; }
+.nq-field{
+  width:100%;
+  padding:12px 14px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(0,0,0,.22);
+  color:#fff;
+  font-size:14px;
+  margin-bottom:10px;
+}
+body.light-mode .nq-field{
+  background:#fff;
+  border-color:rgba(0,0,0,.10);
+  color:#222;
+}
+.nq-field:focus{ border-color:#01f7f6; }
+
+.nq-lead-actions{
+  display:flex;
+  gap:10px;
+  margin-top:6px;
+}
+.nq-lead-submit{
+  flex:1;
+  padding:12px 14px;
+  border-radius:12px;
+  border:none;
+  background:#00ff88;
+  color:#000;
+  font-weight:900;
+  cursor:pointer;
+  box-shadow:0 0 18px rgba(0,255,136,.25);
+  transition:.2s;
+}
+.nq-lead-submit:hover{ filter:brightness(1.05); transform:translateY(-1px); }
+
+.nq-lead-note{
+  margin-top:12px;
+  font-size:12px;
+  color:#8d8d8d;
+  line-height:1.45;
+}
+body.light-mode .nq-lead-note{ color:#777; }
+
+/* MOB */
+@media (max-width:900px){
+  .nq-scroll-track{ height:auto; padding-bottom:80px; }
+  .nq-sticky-viewport{ position:relative; height:auto; top:auto; display:block; overflow:visible; }
+  .nq-content-group{ height:auto; transform:none !important; opacity:1 !important; filter:none !important; padding:40px 10px; }
+  .nq-section-header{ font-size:32px; flex-direction:column; gap:5px; }
+  .nq-title-divider{ display:none; }
+  .nq-wrapper{ grid-template-columns:1fr; height:auto; }
+  .nq-main{ min-height:420px; max-height:680px; }
+  .nq-kpi{ grid-template-columns:1fr; }
+}
+</style>
+
+<div class="nq-container" id="nqBlock">
+  <div class="nq-scroll-track js-nq-track">
+    <div class="nq-sticky-viewport">
+      <div class="nq-content-group js-nq-anim">
+
+        <div id="nq" style="position:absolute; top:-100px;"></div>
+
+        <div class="nq-section-header">
+          <span class="nq-title-main">Оценка</span>
+          <span class="nq-title-divider">/</span>
+          <span class="nq-title-course">Независимая оценка квалификации строителей</span>
+        </div>
+
+        <div class="nq-wrapper">
+          <!-- MAIN -->
+          <div class="nq-glass nq-main glow-target">
+            <div class="nq-scroll-area">
+              <div class="nq-tag">НОК / профессиональный экзамен</div>
+              <h3 class="nq-h1">Проведение НОК: как проходит и что вы получаете</h3>
+              <div class="nq-desc">
+                НОК — официальная процедура подтверждения квалификации через Центр оценки квалификаций (ЦОК).
+                Экзамен состоит из теоретической и практической частей. При успешной сдаче выдаётся свидетельство о квалификации.
+              </div>
+
+              <div class="nq-kpi">
+                <div class="nq-kpi-item">
+                  <div class="nq-kpi-title">Формат</div>
+                  <div class="nq-kpi-value">Теория + практика</div>
+                </div>
+                <div class="nq-kpi-item">
+                  <div class="nq-kpi-title">Где проходит</div>
+                  <div class="nq-kpi-value">В аккредитованном ЦОК</div>
+                </div>
+                <div class="nq-kpi-item">
+                  <div class="nq-kpi-title">Результат</div>
+                  <div class="nq-kpi-value">Свидетельство (при успешной сдаче)</div>
+                </div>
+              </div>
+
+              <div class="nq-steps">
+                <div class="nq-step">
+                  <div class="nq-step-num">1</div>
+                  <div>
+                    <div class="nq-step-ttl">Определяем квалификацию</div>
+                    <div class="nq-step-desc">Подбираем нужную квалификацию под вашу роль/функции и требования проекта.</div>
+                  </div>
+                </div>
+
+                <div class="nq-step">
+                  <div class="nq-step-num">2</div>
+                  <div>
+                    <div class="nq-step-ttl">Собираем пакет документов</div>
+                    <div class="nq-step-desc">Паспорт, образование, подтверждение стажа — точный перечень зависит от выбранной квалификации и регламента ЦОК.</div>
+                  </div>
+                </div>
+
+                <div class="nq-step">
+                  <div class="nq-step-num">3</div>
+                  <div>
+                    <div class="nq-step-ttl">Запись на экзамен</div>
+                    <div class="nq-step-desc">Согласуем дату/площадку, фиксируем заявку, проверяем допуск по документам.</div>
+                  </div>
+                </div>
+
+                <div class="nq-step">
+                  <div class="nq-step-num">4</div>
+                  <div>
+                    <div class="nq-step-ttl">Профэкзамен</div>
+                    <div class="nq-step-desc">Теоретическая часть (знания) и практическая часть (навыки) по оценочным средствам квалификации.</div>
+                  </div>
+                </div>
+
+                <div class="nq-step">
+                  <div class="nq-step-num">5</div>
+                  <div>
+                    <div class="nq-step-ttl">Результат и документы</div>
+                    <div class="nq-step-desc">Оформление результата. При необходимости — апелляция по процедуре ЦОК.</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="nq-cta">
+                <div class="nq-cta-title">Нужно сопровождение “под ключ”?</div>
+                <div class="nq-cta-desc">Поможем выбрать квалификацию, проверить документы и записаться на НОК в ЦОК на удобную дату.</div>
+                <!-- ВОТ ТУТ: открываем попап -->
+                <button class="nq-cta-btn" type="button" onclick="nqOpenLead()"><i data-feather="send"></i> Оставить заявку</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- SIDEBAR -->
+          <div class="nq-glass nq-sidebar glow-target">
+            <div class="nq-mini">
+              <h4>Кому это нужно</h4>
+              <ul class="nq-list">
+                <li>ключевым специалистам стройки (под требования проектов/заказчиков)</li>
+                <li>кандидатам для официального подтверждения компетенций</li>
+                <li>работодателям для снижения рисков</li>
+              </ul>
+            </div>
+
+            <div class="nq-mini">
+              <h4>FAQ</h4>
+              <div style="display:flex;flex-direction:column;gap:10px;" id="nq-faq">
+                <div class="nq-qa">
+                  <button class="nq-q" type="button"><span>Сколько длится НОК?</span><span class="icon"><i data-feather="plus"></i></span></button>
+                  <div class="nq-a">Зависит от квалификации и ЦОК. Обычно уточняется после проверки документов и записи на дату экзамена.</div>
+                </div>
+                <div class="nq-qa">
+                  <button class="nq-q" type="button"><span>Что будет, если не сдал?</span><span class="icon"><i data-feather="plus"></i></span></button>
+                  <div class="nq-a">Возможна пересдача по правилам ЦОК. При спорной оценке предусмотрена апелляция.</div>
+                </div>
+                <div class="nq-qa">
+                  <button class="nq-q" type="button"><span>Какие документы нужны?</span><span class="icon"><i data-feather="plus"></i></span></button>
+                  <div class="nq-a">Паспорт, документы об образовании и подтверждение стажа. Точный перечень зависит от квалификации и регламента ЦОК.</div>
+                </div>
+              </div>
+            </div>
+
+            <button class="nq-ai-btn" onclick="nqToggleChat(true)"><i data-feather="message-square"></i> Задать вопрос</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- POPUP LEAD (открывается по кнопке "Оставить заявку") -->
+<div class="nq-lead-overlay" id="nq-lead" aria-hidden="true">
+  <div class="nq-lead-modal nq-glass glow-target" role="dialog" aria-modal="true">
+    <div class="nq-lead-head">
+      <div>
+        <h3 class="nq-lead-title">Заявка на НОК</h3>
+        <div class="nq-lead-sub">Оставьте контакты — свяжемся и подберём квалификацию/дату.</div>
+      </div>
+      <button class="nq-lead-close" type="button" onclick="nqCloseLead()"><i data-feather="x"></i></button>
+    </div>
+
+    <div class="nq-lead-body">
+      <form id="nq-lead-form">
+        <input class="nq-field" type="text" name="name" placeholder="Ваше имя" required>
+        <input class="nq-field" type="tel"  name="phone" placeholder="Телефон" required>
+        <div class="nq-lead-actions">
+          <button class="nq-lead-submit" type="submit">Отправить</button>
+        </div>
+        <div class="nq-lead-note">Нажимая «Отправить», вы соглашаетесь на обработку персональных данных.</div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL (локально для этого блока) -->
+<div class="ai-modal-overlay" id="nq-ai-modal" style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,.4);backdrop-filter:blur(15px);-webkit-backdrop-filter:blur(15px);z-index:99999;display:none;align-items:center;justify-content:center;opacity:0;transition:opacity .3s;">
+  <div class="ai-chat-window" style="width:90%;max-width:450px;height:60vh;background:#1a1a1a;border:1px solid rgba(255,255,255,.1);border-radius:24px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.5);transform:scale(.9);transition:transform .3s;">
+    <div class="chat-header" style="padding:15px 20px;background:rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.1);display:flex;justify-content:space-between;align-items:center;color:#fff;font-weight:700;">
+      <span>AI Ассистент</span>
+      <div style="cursor:pointer;opacity:.7;" onclick="nqToggleChat(false)"><i data-feather="x"></i></div>
+    </div>
+    <div class="chat-body" id="nq-chat-body" style="flex-grow:1;padding:20px;overflow-y:auto;display:flex;flex-direction:column;gap:15px;">
+      <div class="chat-msg msg-ai" style="max-width:80%;padding:10px 15px;border-radius:12px;font-size:14px;line-height:1.4;align-self:flex-start;background:rgba(255,255,255,.1);color:#fff;">
+        Привет! Я AI-помощник по НОК. Что уточнить?
+      </div>
+    </div>
+    <div class="chat-footer" style="padding:15px;border-top:1px solid rgba(255,255,255,.1);display:flex;gap:10px;">
+      <input type="text" id="nq-chat-input" placeholder="Введите вопрос..." style="flex-grow:1;background:rgba(255,255,255,.05);border:none;padding:10px;border-radius:8px;color:#fff;">
+      <button onclick="nqSendAiMsg()" style="background:#01f7f6;border:none;width:40px;height:40px;border-radius:8px;color:#000;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+        <i data-feather="arrow-up"></i>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  feather.replace();
+
+  // ===== LEAD POPUP OPEN/CLOSE =====
+  var lead = document.getElementById('nq-lead');
+  var leadForm = document.getElementById('nq-lead-form');
+
+  window.nqOpenLead = function(){
+    if(!lead) return;
+    lead.classList.add('open');
+    lead.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    feather.replace();
+  };
+
+  window.nqCloseLead = function(){
+    if(!lead) return;
+    lead.classList.remove('open');
+    lead.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  };
+
+  if(lead){
+    lead.addEventListener('click', function(e){
+      if(e.target === lead) window.nqCloseLead();
+    });
+    document.addEventListener('keydown', function(e){
+      if(e.key === 'Escape' && lead.classList.contains('open')) window.nqCloseLead();
+    });
+  }
+
+  // Заглушка отправки (попап закрываем, чтобы ты видел что все работает)
+  if(leadForm){
+    leadForm.addEventListener('submit', function(e){
+      e.preventDefault();
+      window.nqCloseLead();
+    });
+  }
+
+  // Glow follow mouse (desktop only)
+  var root = document.getElementById('nqBlock');
+  var targets = root ? root.querySelectorAll('.glow-target') : [];
+  if (window.innerWidth > 960 && targets.length){
+    document.addEventListener('mousemove', function(e){
+      for (var i=0;i<targets.length;i++){
+        var r = targets[i].getBoundingClientRect();
+        targets[i].style.setProperty('--x', (e.clientX - r.left) + 'px');
+        targets[i].style.setProperty('--y', (e.clientY - r.top) + 'px');
+      }
+    });
+  }
+
+  // FAQ accordion
+  function initFaq(){
+    var faq = document.getElementById('nq-faq');
+    if(!faq) return;
+    var items = faq.querySelectorAll('.nq-qa');
+    for (var i=0;i<items.length;i++){
+      (function(card){
+        var btn = card.querySelector('.nq-q');
+        var ans = card.querySelector('.nq-a');
+        var icon = card.querySelector('.icon');
+        btn.addEventListener('click', function(){
+          var opened = ans.style.display === 'block';
+          for (var j=0;j<items.length;j++){
+            items[j].querySelector('.nq-a').style.display = 'none';
+            var ic = items[j].querySelector('.icon');
+            if(ic) ic.innerHTML = '<i data-feather="plus"></i>';
+          }
+          if(!opened){
+            ans.style.display = 'block';
+            if(icon) icon.innerHTML = '<i data-feather="minus"></i>';
+          }
+          feather.replace();
+        });
+      })(items[i]);
+    }
+  }
+  initFaq();
+
+  // Scroll animation (same logic as your block)
+  var track = document.querySelector('#nqBlock .js-nq-track');
+  var group = document.querySelector('#nqBlock .js-nq-anim');
+
+  function onScroll(){
+    if(!track || !group) return;
+    if(window.innerWidth <= 960) return;
+
+    var rect = track.getBoundingClientRect();
+    if(rect.top <= 0){
+      var dist = rect.height - window.innerHeight;
+      if(dist > 0){
+        var p = Math.abs(rect.top) / dist;
+        var effP = (p > 0.2) ? (p - 0.2) / 0.8 : 0;
+        if(effP > 1) effP = 1;
+
+        group.style.transform = 'scale(' + (1 + effP * 0.2) + ')';
+        group.style.opacity = (1 - effP);
+        group.style.filter = 'blur(' + (effP * 20) + 'px)';
+      }
+    } else {
+      group.style.transform = 'scale(1)';
+      group.style.opacity = 1;
+      group.style.filter = 'blur(0px)';
+    }
+  }
+
+  window.addEventListener('scroll', onScroll, { passive:true });
+  onScroll();
+
+  // Chat modal
+  window.nqToggleChat = function(show){
+    var modal = document.getElementById('nq-ai-modal');
+    if(!modal) return;
+    if(show){
+      modal.style.display = 'flex';
+      requestAnimationFrame(function(){
+        modal.style.opacity = '1';
+        var win = modal.querySelector('.ai-chat-window');
+        if(win) win.style.transform = 'scale(1)';
+      });
+    } else {
+      modal.style.opacity = '0';
+      var win2 = modal.querySelector('.ai-chat-window');
+      if(win2) win2.style.transform = 'scale(.9)';
+      setTimeout(function(){ modal.style.display='none'; }, 250);
+    }
+    feather.replace();
+  };
+
+  window.nqSendAiMsg = function(){
+    var input = document.getElementById('nq-chat-input');
+    var body = document.getElementById('nq-chat-body');
+    if(!input || !body) return;
+    var txt = input.value;
+    if(!txt) return;
+
+    var user = document.createElement('div');
+    user.className = 'chat-msg msg-user';
+    user.style.cssText = 'max-width:80%;padding:10px 15px;border-radius:12px;font-size:14px;line-height:1.4;align-self:flex-end;background:#01f7f6;color:#000;';
+    user.textContent = txt;
+    body.appendChild(user);
+    input.value = '';
+
+    setTimeout(function(){
+      var ai = document.createElement('div');
+      ai.className = 'chat-msg msg-ai';
+      ai.style.cssText = 'max-width:80%;padding:10px 15px;border-radius:12px;font-size:14px;line-height:1.4;align-self:flex-start;background:rgba(255,255,255,.1);color:#fff;';
+      ai.textContent = 'Это демо-ответ. Подключите API, чтобы ассистент отвечал по реальным данным НОК.';
+      body.appendChild(ai);
+      body.scrollTop = body.scrollHeight;
+    }, 700);
+  };
+})();
+</script>

@@ -1,0 +1,311 @@
+<script src="https://unpkg.com/feather-icons"></script>
+
+<style>
+/* БАЗА */
+.footer-wrapper * { box-sizing: border-box; font-family: 'TildaSans', Arial, sans-serif !important; outline: none; }
+
+/* 1. БЛОК ОТЗЫВОВ */
+.reviews-section {
+    width: 100%; padding: 80px 0;
+    background: #111;
+    position: relative; z-index: 20;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    overflow: hidden;
+}
+body.light-mode .reviews-section { background: #f5f5f5; border-color: rgba(0,0,0,0.1); }
+
+.reviews-header {
+    max-width: 1200px; margin: 0 auto 40px auto; padding: 0 20px;
+    display: flex; justify-content: space-between; align-items: center;
+}
+.rev-title { font-size: 32px; font-weight: 700; color: #fff; opacity: 0.8; }
+body.light-mode .rev-title { color: #222; }
+
+.rev-btn {
+    padding: 10px 20px; border-radius: 30px; border: 1px solid #01f7f6;
+    color: #01f7f6; font-size: 13px; font-weight: 600; cursor: pointer;
+    background: transparent; transition: 0.3s;
+}
+.rev-btn:hover { background: #01f7f6; color: #000; }
+
+/* ОБЕРТКА ЛЕНТЫ (МАСКА) */
+.reviews-tape-mask {
+    width: 100%; overflow: hidden; position: relative;
+    -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+    mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+}
+
+/* САМА ЛЕНТА */
+.reviews-tape {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 20px;
+    width: max-content;
+    animation: scrollRev 60s linear infinite;
+    padding-left: 20px;
+}
+.reviews-tape:hover { animation-play-state: paused; }
+
+@keyframes scrollRev {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+}
+
+/* КАРТОЧКА */
+.review-card {
+    min-width: 320px; max-width: 320px;
+    background: rgba(30, 30, 30, 0.4);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px; padding: 25px; flex-shrink: 0;
+    transition: 0.3s;
+    height: auto;
+}
+body.light-mode .review-card { background: rgba(255, 255, 255, 0.6); border-color: rgba(0,0,0,0.1); }
+
+.review-card:hover { transform: translateY(-5px); border-color: #01f7f6; box-shadow: 0 10px 30px rgba(1, 247, 246, 0.15); }
+
+.rev-user { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
+.rev-avatar {
+    width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.1);
+    display: flex; align-items: center; justify-content: center; font-weight: 700; color: #fff; font-size: 14px;
+}
+body.light-mode .rev-avatar { background: rgba(0,0,0,0.1); color: #222; }
+
+.rev-name { font-size: 16px; font-weight: 700; color: #fff; }
+.rev-role { font-size: 12px; color: #888; }
+body.light-mode .rev-name { color: #222; }
+
+.rev-text { font-size: 14px; color: #ccc; line-height: 1.5; }
+body.light-mode .rev-text { color: #555; }
+
+/* 2. ФУТЕР */
+.footer-section {
+    width: 100%; background: #111; padding: 60px 40px 40px 40px; color: #fff; position: relative; z-index: 20;
+}
+body.light-mode .footer-section { background: #f5f5f5; color: #222; }
+
+.footer-container { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 60px; }
+.footer-grid { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 40px; }
+
+/* BRAND */
+.footer-brand { display: flex; flex-direction: column; gap: 20px; }
+.footer-logo { font-size: 24px; font-weight: 700; color: #01f7f6; display: flex; align-items: center; gap: 10px; }
+.footer-desc { font-size: 14px; opacity: 0.6; line-height: 1.6; max-width: 300px; }
+
+/* ✅ ДОБАВЛЕНО: АДРЕС */
+.footer-address {
+    display: flex; flex-direction: column; gap: 6px;
+    padding: 14px 16px;
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.03);
+}
+body.light-mode .footer-address { background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.06); }
+.addr-title { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: #01f7f6; }
+.addr-line { font-size: 14px; line-height: 1.35; color: #ccc; opacity: 0.95; }
+body.light-mode .addr-line { color: #555; }
+
+.footer-socials { display: flex; gap: 15px; margin-top: 10px; }
+.social-link { width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; color: #fff; transition: 0.3s; text-decoration: none; }
+body.light-mode .social-link { background: rgba(0,0,0,0.05); color: #222; }
+.social-link:hover { background: #01f7f6; color: #000; transform: translateY(-3px); }
+
+/* LINKS */
+.footer-col-title { font-size: 16px; font-weight: 700; margin-bottom: 20px; color: #fff; }
+body.light-mode .footer-col-title { color: #000; }
+.footer-links { display: flex; flex-direction: column; gap: 12px; }
+.footer-link { font-size: 14px; color: #ccc; text-decoration: none; transition: 0.2s; }
+body.light-mode .footer-link { color: #555; }
+.footer-link:hover { color: #01f7f6; padding-left: 5px; }
+
+/* BOTTOM */
+.footer-bottom { border-top: 1px solid rgba(255,255,255,0.1); padding-top: 30px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #666; }
+body.light-mode .footer-bottom { border-color: rgba(0,0,0,0.1); }
+.footer-docs { display: flex; gap: 20px; }
+.footer-docs a { color: inherit; text-decoration: none; transition: 0.2s; }
+.footer-docs a:hover { color: #fff; }
+body.light-mode .footer-docs a:hover { color: #000; }
+
+/* MODAL */
+.rev-modal {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.8); backdrop-filter: blur(10px);
+    z-index: 99999; display: none; align-items: center; justify-content: center;
+    opacity: 0; transition: 0.3s;
+}
+.rev-modal.open { display: flex; opacity: 1; }
+.rev-content {
+    background: #1a1a1a; padding: 30px; border-radius: 20px; width: 90%; max-width: 400px;
+    border: 1px solid rgba(255,255,255,0.1); text-align: center;
+    transform: scale(0.9); transition: 0.3s;
+}
+.rev-modal.open .rev-content { transform: scale(1); }
+body.light-mode .rev-content { background: #fff; color: #222; }
+
+.rev-input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); color: inherit; }
+.rev-submit { width: 100%; padding: 12px; background: #01f7f6; color: #000; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; margin-top: 10px; }
+
+@media (max-width: 900px) {
+    .footer-section { padding: 60px 20px; }
+    .footer-grid { grid-template-columns: 1fr; gap: 40px; }
+    .footer-bottom { flex-direction: column-reverse; gap: 20px; text-align: center; }
+    .footer-docs { flex-direction: column; gap: 10px; }
+    .reviews-header { flex-direction: column; align-items: flex-start; gap: 15px; }
+}
+</style>
+
+<div class="footer-wrapper">
+
+    <!-- ОТЗЫВЫ -->
+    <div id="reviews" style="position: absolute; margin-top: -100px;"></div>
+    <div class="reviews-section">
+        <div class="reviews-header">
+            <div class="rev-title">Опыт внедрения</div>
+            <button class="rev-btn" onclick="openReviewModal()">Оставить отзыв</button>
+        </div>
+
+        <div class="reviews-tape-mask">
+            <div class="reviews-tape" id="reviews-tape">
+                <div class="review-card">
+                    <div class="rev-user"><div class="rev-avatar" style="background:#ff4444">AK</div><div><div class="rev-name">Алексей К.</div><div class="rev-role">Студия звукозаписи</div></div></div>
+                    <div class="rev-text">Внедрили CRM за неделю. Потерянных лидов стало 0. Выручка выросла на 20% в первый месяц.</div>
+                </div>
+                <div class="review-card">
+                    <div class="rev-user"><div class="rev-avatar" style="background:#01f7f6;color:#000">MP</div><div><div class="rev-name">Мария П.</div><div class="rev-role">Онлайн-школа</div></div></div>
+                    <div class="rev-text">Чат-бот снял с менеджеров всю рутину. Теперь они занимаются только продажами.</div>
+                </div>
+                <div class="review-card">
+                    <div class="rev-user"><div class="rev-avatar" style="background:#ffbb33;color:#000">DS</div><div><div class="rev-name">Дмитрий С.</div><div class="rev-role">Строительство</div></div></div>
+                    <div class="rev-text">Наконец-то вижу реальные цифры в P&L. Понял, где теряли деньги годами. Спасибо за систему!</div>
+                </div>
+                <div class="review-card">
+                    <div class="rev-user"><div class="rev-avatar" style="background:#999">EL</div><div><div class="rev-name">Елена Л.</div><div class="rev-role">Салон красоты</div></div></div>
+                    <div class="rev-text">Автоматическая запись клиентов - это спасение. Администратор теперь занимается сервисом.</div>
+                </div>
+
+                <!-- ДУБЛИКАТЫ -->
+                <div class="review-card">
+                    <div class="rev-user"><div class="rev-avatar" style="background:#ff4444">AK</div><div><div class="rev-name">Алексей К.</div><div class="rev-role">Студия звукозаписи</div></div></div>
+                    <div class="rev-text">Внедрили CRM за неделю. Потерянных лидов стало 0. Выручка выросла на 20% в первый месяц.</div>
+                </div>
+                <div class="review-card">
+                    <div class="rev-user"><div class="rev-avatar" style="background:#01f7f6;color:#000">MP</div><div><div class="rev-name">Мария П.</div><div class="rev-role">Онлайн-школа</div></div></div>
+                    <div class="rev-text">Чат-бот снял с менеджеров всю рутину. Теперь они занимаются только продажами.</div>
+                </div>
+                <div class="review-card">
+                    <div class="rev-user"><div class="rev-avatar" style="background:#ffbb33;color:#000">DS</div><div><div class="rev-name">Дмитрий С.</div><div class="rev-role">Строительство</div></div></div>
+                    <div class="rev-text">Наконец-то вижу реальные цифры в P&L. Понял, где теряли деньги годами. Спасибо за систему!</div>
+                </div>
+                <div class="review-card">
+                    <div class="rev-user"><div class="rev-avatar" style="background:#999">EL</div><div><div class="rev-name">Елена Л.</div><div class="rev-role">Салон красоты</div></div></div>
+                    <div class="rev-text">Автоматическая запись клиентов - это спасение. Администратор теперь занимается сервисом.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ФУТЕР -->
+    <footer class="footer-section">
+        <div id="contacts" style="position: absolute; top: -100px;"></div>
+        <div class="footer-container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <div class="footer-logo"><i data-feather="cpu"></i> БИЗНЕС ШКОЛА ДНК</div>
+                    <div class="footer-desc">Платформа для систематизации и автоматизации бизнеса. Внедряем технологии, обучаем команду, масштабируем результат.</div>
+
+                    <!-- ✅ ВСТАВЛЕНО: АДРЕС -->
+                    <div class="footer-address">
+                        <div class="addr-title">Адрес</div>
+                        <div class="addr-line">Красноярский край</div>
+                        <div class="addr-line">г. Норильск</div>
+                        <div class="addr-line">ул. Московская, 19, оф. 401</div>
+                    </div>
+
+                    <div class="footer-socials">
+                        <a href="https://t.me/kodeksia" target="_blank" class="social-link"><i data-feather="send" style="width:18px;"></i></a>
+                        <a href="https://instagram.com/irino4ka_berdnikova" target="_blank" class="social-link"><i data-feather="instagram" style="width:18px;"></i></a>
+                        <a href="tel:+79039898181" class="social-link"><i data-feather="phone" style="width:18px;"></i></a>
+                    </div>
+                </div>
+                <div class="footer-col">
+                    <div class="footer-col-title">Платформа</div>
+                    <div class="footer-links">
+                        <a href="#education" class="footer-link">Обучение</a>
+                        <a href="#checklists" class="footer-link">Диагностика</a>
+                        <a href="#automation" class="footer-link">Конструктор</a>
+                        <a href="#pricing" class="footer-link">Тарифы</a>
+                    </div>
+                </div>
+                <div class="footer-col">
+                    <div class="footer-col-title">Компания</div>
+                    <div class="footer-links">
+                        <a href="#about" class="footer-link">О нас</a>
+                        <a href="#reviews" class="footer-link">Кейсы</a>
+                        <a href="#news" class="footer-link">Блог</a>
+                        <a href="#contacts" class="footer-link">Контакты</a>
+                    </div>
+                </div>
+                <div class="footer-col">
+                    <div class="footer-col-title">Личный кабинет</div>
+                    <div class="footer-links">
+                        <a href="#login" class="footer-link">Войти</a>
+                        <a href="#login" class="footer-link">Регистрация</a>
+                        <a href="#" class="footer-link">Помощь</a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <div class="footer-copy">© 2024 Бизнес Школа ДНК. Все права защищены.</div>
+                <div class="footer-docs">
+                    <a href="#">Договор оферты</a>
+                    <a href="#">Политика конфиденциальности</a>
+                    <a href="#">Реквизиты</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+</div>
+
+<!-- MODAL -->
+<div class="rev-modal" id="rev-modal">
+    <div class="rev-content">
+        <h3>Ваш отзыв</h3>
+        <input type="text" id="rev-name-input" class="rev-input" placeholder="Ваше имя и ниша">
+        <textarea id="rev-text-input" class="rev-input" rows="3" placeholder="Расскажите о впечатлениях..."></textarea>
+        <button class="rev-submit" onclick="submitReview()">Отправить</button>
+        <div style="margin-top:10px; font-size:12px; cursor:pointer; opacity:0.6;" onclick="closeReviewModal()">Закрыть</div>
+    </div>
+</div>
+
+<script>
+feather.replace();
+
+function openReviewModal() {
+    document.getElementById('rev-modal').classList.add('open');
+}
+function closeReviewModal() {
+    document.getElementById('rev-modal').classList.remove('open');
+}
+
+function submitReview() {
+    var name = document.getElementById('rev-name-input').value;
+    var text = document.getElementById('rev-text-input').value;
+    if(!name || !text) return;
+
+    var card = document.createElement('div');
+    card.className = 'review-card';
+    card.innerHTML = `
+        <div class="rev-user"><div class="rev-avatar" style="background:#01f7f6;color:#000">${name[0]}</div><div><div class="rev-name">${name}</div><div class="rev-role">Новый отзыв</div></div></div>
+        <div class="rev-text">${text}</div>
+    `;
+
+    var tape = document.getElementById('reviews-tape');
+    tape.insertBefore(card, tape.firstChild);
+
+    closeReviewModal();
+    document.getElementById('rev-name-input').value = '';
+    document.getElementById('rev-text-input').value = '';
+}
+</script>

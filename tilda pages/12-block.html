@@ -1,0 +1,340 @@
+<script src="https://unpkg.com/feather-icons"></script>
+
+<style>
+/* ===== POPUP BASE ===== */
+.news-popup-overlay, .news-popup-overlay *{
+  box-sizing:border-box !important;
+  font-family:'TildaSans', Arial, sans-serif !important;
+}
+
+.news-popup-overlay{
+  position:fixed; inset:0;
+  background:rgba(0,0,0,0.7);
+  backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+  display:none; align-items:center; justify-content:center;
+  z-index:99999; opacity:0; transition:opacity .3s;
+}
+.news-popup-overlay.open{ display:flex; opacity:1; }
+
+.news-popup-content{
+  width:min(92vw, 820px);
+  max-height:90vh;
+  background:rgba(26,26,26,0.92);
+  border:1px solid rgba(255,255,255,0.10);
+  border-radius:26px;
+  overflow:hidden;
+  display:flex; flex-direction:column;
+  transform:scale(.95);
+  transition:transform .3s cubic-bezier(.175,.885,.32,1.275);
+  box-shadow:0 25px 70px rgba(0,0,0,.65);
+}
+.news-popup-overlay.open .news-popup-content{ transform:scale(1); }
+
+body.light-mode .news-popup-content{
+  background:rgba(255,255,255,0.92);
+  border-color:rgba(0,0,0,0.10);
+  color:#222;
+}
+
+/* HEADER */
+.popup-header{
+  height:240px;
+  position:relative;
+  flex-shrink:0;
+  overflow:hidden;
+  border-bottom:1px solid rgba(255,255,255,0.08);
+}
+body.light-mode .popup-header{ border-bottom-color:rgba(0,0,0,0.08); }
+
+.popup-img{ width:100%; height:100%; object-fit:cover; display:block; }
+
+.popup-header::after{
+  content:"";
+  position:absolute; inset:0;
+  background:linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.45) 65%, rgba(0,0,0,0.85) 100%);
+  pointer-events:none;
+}
+
+.popup-close{
+  position:absolute; top:16px; right:16px;
+  width:44px; height:44px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,0.14);
+  background:rgba(0,0,0,0.35);
+  backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer;
+  transition:.2s;
+  z-index:5;
+}
+.popup-close svg{ width:18px; height:18px; stroke-width:2.5; color:#fff; }
+.popup-close:hover{
+  border-color:#01f7f6;
+  background:rgba(1,247,246,0.14);
+  transform:translateY(-1px);
+}
+.popup-close:hover svg{ color:#01f7f6; }
+
+body.light-mode .popup-close{
+  background:rgba(255,255,255,0.55);
+  border-color:rgba(0,0,0,0.12);
+}
+body.light-mode .popup-close svg{ color:#222; }
+
+/* BODY */
+.popup-body{
+  padding:26px;
+  overflow:auto;
+  max-height:calc(90vh - 240px);
+}
+.popup-date{
+  color:#01f7f6;
+  font-weight:900;
+  margin-bottom:10px;
+  font-size:12px;
+  text-transform:uppercase;
+  letter-spacing:1px;
+}
+.popup-title{
+  font-size:28px;
+  font-weight:900;
+  margin:0 0 18px 0;
+  line-height:1.15;
+  color:#fff;
+}
+.popup-text{
+  font-size:15px;
+  line-height:1.65;
+  color:#d8d8d8;
+}
+.popup-text p{ margin:0 0 14px 0; }
+body.light-mode .popup-title{ color:#222; }
+body.light-mode .popup-text{ color:#444; }
+
+.popup-body::-webkit-scrollbar{ width:6px; }
+.popup-body::-webkit-scrollbar-thumb{ background:rgba(128,128,128,0.3); border-radius:6px; }
+
+/* ===== TILDA FORM SKIN (НЕ ЛОМАЕТ ОТПРАВКУ) ===== */
+.popup-form{
+  margin-top:18px;
+  padding:18px;
+  border-radius:18px;
+  border:1px solid rgba(1,247,246,0.18);
+  background:rgba(1,247,246,0.06);
+  overflow:hidden;
+}
+
+/* гарантируем, что элементы тильды не вылезут */
+.popup-form .t-form{ width:100% !important; max-width:100% !important; }
+.popup-form .t-form__inputsbox{ width:100% !important; max-width:100% !important; }
+.popup-form .t-input-group{ width:100% !important; max-width:100% !important; min-width:0 !important; }
+.popup-form .t-input-block{ width:100% !important; max-width:100% !important; }
+.popup-form .t-input{
+  width:100% !important;
+  max-width:100% !important;
+  min-width:0 !important;
+  display:block !important;
+
+  padding:12px 14px !important;
+  border-radius:12px !important;
+  border:1px solid rgba(255,255,255,0.14) !important;
+  background:rgba(0,0,0,0.28) !important;
+  color:#fff !important;
+  font-size:14px !important;
+  line-height:1.2 !important;
+  outline:none !important;
+}
+.popup-form .t-input:focus{ border-color:#01f7f6 !important; }
+
+body.light-mode .popup-form .t-input{
+  background:#fff !important;
+  color:#222 !important;
+  border-color:rgba(0,0,0,0.12) !important;
+}
+
+.popup-form .t-form__submit{ width:100% !important; }
+.popup-form .t-submit{
+  width:100% !important;
+  padding:12px 16px !important;
+  border-radius:14px !important;
+  border:0 !important;
+  background:#00ff88 !important;
+  color:#000 !important;
+  font-weight:900 !important;
+  cursor:pointer !important;
+  transition:.2s !important;
+  box-shadow:0 0 18px rgba(0,255,136,0.25) !important;
+}
+.popup-form .t-submit:hover{ filter:brightness(1.05); transform:translateY(-1px); }
+
+.popup-form .t-input-error,
+.popup-form .t-form__errorbox-wrapper,
+.popup-form .t-form__successbox{ font-size:12px !important; }
+
+@media (max-width:900px){
+  .popup-header{ height:200px; }
+  .popup-body{ padding:18px; max-height:calc(90vh - 200px); }
+  .popup-title{ font-size:24px; }
+}
+</style>
+
+<!-- POPUP -->
+<div class="news-popup-overlay" id="news-popup">
+  <div class="news-popup-content">
+    <div class="popup-header">
+      <img src="" class="popup-img" id="popup-img" />
+      <button class="popup-close" type="button" onclick="window.closeNews()">
+        <i data-feather="x"></i>
+      </button>
+    </div>
+
+    <div class="popup-body">
+      <div class="popup-date" id="popup-date">DATA</div>
+      <div class="popup-title" id="popup-title">Title</div>
+      <div class="popup-text" id="popup-text">Text</div>
+
+      <!-- ВАЖНО: здесь именно стандартная форма Tilda (как ты прислал) -->
+      <div class="popup-form">
+        <form id="form1936640491" name="form1936640491" role="form" action="#" method="POST"
+          data-formactiontype="2" data-inputbox=".t-input-group"
+          class="t-form js-form-proccess t-form_inputs-total_3"
+          data-success-callback="t702_onSuccess" data-success-popup="y">
+
+          <input type="hidden" name="formservices[]" value="73f110f25de0c48852483b8fb2acc211" class="js-formaction-services">
+
+          <div class="js-successbox t-form__successbox t-text t-text_md t-form-success-popup" aria-live="polite" style="display:none;"></div>
+
+          <div class="t-form__inputsbox t-form__inputsbox_vertical-form t-form__inputsbox_inrow">
+
+            <div class="t-input-group t-input-group_em" data-input-lid="7925215262380" data-field-type="em" data-field-name="Email">
+              <div class="t-input-block" style="border-radius:5px;">
+                <input type="email" autocomplete="email" name="Email" id="input_7925215262380"
+                  class="t-input js-tilda-rule" value="" placeholder="Email"
+                  data-tilda-rule="email" aria-describedby="error_7925215262380"
+                  style="color:#000000;border:1px solid #c9c9c9;border-radius:5px;">
+              </div>
+              <div class="t-input-error" aria-live="polite" id="error_7925215262380"></div>
+            </div>
+
+            <div class="t-input-group t-input-group_nm" data-input-lid="9925215262381" data-field-type="nm" data-field-name="Name">
+              <div class="t-input-block" style="border-radius:5px;">
+                <input type="text" autocomplete="name" name="Name" id="input_9925215262381"
+                  class="t-input js-tilda-rule" value="" placeholder="Name"
+                  data-tilda-rule="name" aria-describedby="error_9925215262381"
+                  style="color:#000000;border:1px solid #c9c9c9;border-radius:5px;">
+              </div>
+              <div class="t-input-error" aria-live="polite" id="error_9925215262381"></div>
+            </div>
+
+            <div class="t-input-group t-input-group_ph" data-input-lid="1925215262382" data-field-type="ph" data-field-name="Phone">
+              <div class="t-input-block" style="border-radius:5px;">
+                <input type="tel" autocomplete="tel" name="Phone" id="input_1925215262382"
+                  class="t-input js-tilda-rule" value="" placeholder="Phone"
+                  data-tilda-rule="phone" pattern="[0-9]*" aria-describedby="error_1925215262382"
+                  style="color:#000000;border:1px solid #c9c9c9;border-radius:5px;">
+              </div>
+              <div class="t-input-error" aria-live="polite" id="error_1925215262382"></div>
+            </div>
+
+            <div class="t-form__errorbox-middle">
+              <!--noindex-->
+              <div class="js-errorbox-all t-form__errorbox-wrapper" style="display:none;" data-nosnippet="" tabindex="-1" aria-label="Ошибки при заполнении формы">
+                <ul role="list" class="t-form__errorbox-text t-text t-text_md">
+                  <li class="t-form__errorbox-item js-rule-error js-rule-error-all"></li>
+                  <li class="t-form__errorbox-item js-rule-error js-rule-error-req"></li>
+                  <li class="t-form__errorbox-item js-rule-error js-rule-error-email"></li>
+                  <li class="t-form__errorbox-item js-rule-error js-rule-error-name"></li>
+                  <li class="t-form__errorbox-item js-rule-error js-rule-error-phone"></li>
+                  <li class="t-form__errorbox-item js-rule-error js-rule-error-minlength"></li>
+                  <li class="t-form__errorbox-item js-rule-error js-rule-error-string"></li>
+                </ul>
+              </div>
+              <!--/noindex-->
+            </div>
+
+            <div class="t-form__submit">
+              <button class="t-submit t-btnflex t-btnflex_type_submit t-btnflex_md" type="submit">
+                <span class="t-btnflex__text">Отправить</span>
+              </button>
+            </div>
+
+          </div>
+
+          <div class="t-form__errorbox-bottom">
+            <!--noindex-->
+            <div class="js-errorbox-all t-form__errorbox-wrapper" style="display:none;" data-nosnippet="" tabindex="-1" aria-label="Ошибки при заполнении формы">
+              <ul role="list" class="t-form__errorbox-text t-text t-text_md">
+                <li class="t-form__errorbox-item js-rule-error js-rule-error-all"></li>
+                <li class="t-form__errorbox-item js-rule-error js-rule-error-req"></li>
+                <li class="t-form__errorbox-item js-rule-error js-rule-error-email"></li>
+                <li class="t-form__errorbox-item js-rule-error js-rule-error-name"></li>
+                <li class="t-form__errorbox-item js-rule-error js-rule-error-phone"></li>
+                <li class="t-form__errorbox-item js-rule-error js-rule-error-minlength"></li>
+                <li class="t-form__errorbox-item js-rule-error js-rule-error-string"></li>
+              </ul>
+            </div>
+            <!--/noindex-->
+          </div>
+
+          <div style="position:absolute; left:-5000px; bottom:0; display:none;">
+            <input type="text" name="form-spec-comments" value="Its good" class="js-form-spec-comments" tabindex="-1">
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  feather.replace();
+
+  function initTildaFormsIn(node) {
+    // правила/валидация/маски
+    if (window.tildaForm) { try { window.tildaForm.init(node); } catch(e) {} }
+
+    // попап-сабмит/успех (если подключен)
+    if (window.t702_initPopup) { try { window.t702_initPopup(); } catch(e) {} }
+
+    // общий рескан форм tilda
+    if (window.t_onFuncLoad) {
+      try {
+        window.t_onFuncLoad('t_forms__init', function () {
+          if (window.t_forms__init) window.t_forms__init(node);
+        });
+      } catch(e) {}
+    }
+  }
+
+  window.nqInitPopupForm = function () {
+    var popup = document.getElementById('news-popup');
+    if (!popup) return;
+    initTildaFormsIn(popup);
+  };
+
+  window.openNews = function () {
+    document.getElementById('popup-img').src =
+      "https://static.tildacdn.com/tild3764-3466-4863-a430-633239663238/d1dca196-bcc0-4c27-b.png";
+    document.getElementById('popup-date').innerText = "Заявка";
+    document.getElementById('popup-title').innerText = "Оставить заявку";
+    document.getElementById('popup-text').innerHTML = "<p>Оставьте контакты — мы свяжемся с вами.</p>";
+
+    document.getElementById('news-popup').classList.add('open');
+    document.body.style.overflow = 'hidden';
+
+    // ВАЖНО: инициализация tilda-формы сразу после открытия
+    if (window.nqInitPopupForm) setTimeout(window.nqInitPopupForm, 0);
+
+    feather.replace();
+  };
+
+  window.closeNews = function () {
+    document.getElementById('news-popup').classList.remove('open');
+    document.body.style.overflow = '';
+  };
+
+  document.getElementById('news-popup').addEventListener('click', function (e) {
+    if (e.target === this) window.closeNews();
+  });
+})();
+</script>

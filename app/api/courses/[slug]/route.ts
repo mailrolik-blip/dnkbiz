@@ -9,7 +9,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
   const user = await getOptionalCurrentUser();
 
   if (!user) {
-    return Response.json({ error: 'Unauthorized.' }, { status: 401 });
+    return Response.json({ error: 'Требуется авторизация.' }, { status: 401 });
   }
 
   const { slug } = await params;
@@ -61,7 +61,10 @@ export async function GET(_request: Request, { params }: RouteParams) {
   });
 
   if (!course) {
-    return Response.json({ error: 'Course access denied.' }, { status: 403 });
+    return Response.json(
+      { error: 'Доступ к этому курсу не открыт.' },
+      { status: 403 }
+    );
   }
 
   return Response.json({

@@ -5,7 +5,7 @@ export async function GET() {
   const user = await getOptionalCurrentUser();
 
   if (!user) {
-    return Response.json({ error: 'Unauthorized.' }, { status: 401 });
+    return Response.json({ error: 'Требуется авторизация.' }, { status: 401 });
   }
 
   const courses = await prisma.enrollment.findMany({

@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 
 import DashboardClient from '@/components/dashboard-client';
 import { getOptionalCurrentUser } from '@/lib/auth';
+import { getOrderCheckoutUrl } from '@/lib/orders';
 import prisma from '@/lib/prisma';
 
 export default async function DashboardPage() {
@@ -103,10 +104,16 @@ export default async function DashboardPage() {
   ]);
 
   const ownedCourseIds = new Set(courses.map((item) => item.course.id));
-  const pendingTariffIds = new Set(
+  const pendingOrdersByTariffId = new Map(
     orders
       .filter((order) => order.status === 'PENDING')
-      .map((order) => order.tariffId)
+      .map((order) => [
+        order.tariffId,
+        {
+          id: order.id,
+          checkoutUrl: getOrderCheckoutUrl(order.id),
+        },
+      ])
   );
 
   return (
@@ -125,6 +132,8 @@ export default async function DashboardPage() {
         amount: order.amount,
         createdAt: order.createdAt.toISOString(),
         paidAt: order.paidAt?.toISOString() ?? null,
+        checkoutUrl:
+          order.status === 'PENDING' ? getOrderCheckoutUrl(order.id) : null,
         tariffTitle: order.tariff.title,
         courseTitle: order.tariff.course.title,
       }))}
@@ -137,7 +146,7 @@ export default async function DashboardPage() {
         courseSlug: tariff.course.slug,
         courseDescription: tariff.course.description,
         isOwned: ownedCourseIds.has(tariff.course.id),
-        hasPendingOrder: pendingTariffIds.has(tariff.id),
+        pendingOrder: pendingOrdersByTariffId.get(tariff.id) ?? null,
       }))}
       user={{
         email: user.email,

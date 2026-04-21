@@ -1,0 +1,323 @@
+<script src="https://unpkg.com/feather-icons"></script>
+
+<style>
+/* БАЗА */
+.news-wrapper, .news-wrapper * { box-sizing: border-box; font-family: 'TildaSans', Arial, sans-serif !important; outline: none; }
+
+/* ТРЕК */
+.news-scroll-track { width: 100%; height: 200vh; position: relative; z-index: 20; }
+.news-sticky { position: -webkit-sticky; position: sticky; top: 0; width: 100%; height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+
+/* ГРУППА (УМЕНЬШЕНА ВЫСОТА) */
+.news-group {
+    width: 100%; max-width: 1200px;
+    padding: 10px 20px 10px 80px; /* Еще меньше отступы */
+    display: flex; flex-direction: column; gap: 15px; 
+    transform-origin: center center; will-change: transform, opacity, filter;
+    height: 80vh; /* 80% высоты экрана */
+    justify-content: center;
+}
+@media (max-width: 900px) { .news-group { padding: 40px 20px; justify-content: flex-start; height: auto; } }
+
+/* ЗАГОЛОВОК */
+.news-header { display: flex; align-items: baseline; gap: 15px; margin-bottom: 0; margin-left: 10px; flex-shrink: 0; }
+.news-title-main { font-size: 36px; font-weight: 700; opacity: 0.3; color: #fff; }
+.news-divider { font-size: 36px; font-weight: 300; opacity: 0.3; color: #fff; }
+.news-title-sub { font-size: 36px; font-weight: 700; color: #fff; }
+body.light-mode .news-title-main, body.light-mode .news-divider, body.light-mode .news-title-sub { color: #222; }
+@media (max-width: 900px) { .news-header { font-size: 28px; flex-direction: column; gap: 5px; } .title-divider { display: none; } }
+
+/* СЕТКА НОВОСТЕЙ (КОМПАКТНЕЕ) */
+.news-grid {
+    display: grid; 
+    grid-template-columns: repeat(3, 1fr); 
+    grid-template-rows: 220px 220px; /* Уменьшена высота до 220px */
+    gap: 15px;
+    height: 100%;
+}
+.news-item-big { grid-column: 1 / 3; grid-row: 1 / 3; }
+
+/* КАРТОЧКА */
+.news-card {
+    position: relative; height: 100%; width: 100%;
+    border-radius: 20px; overflow: hidden;
+    background: rgba(30, 30, 30, 0.4); border: 1px solid rgba(255, 255, 255, 0.1); 
+    backdrop-filter: blur(25px); cursor: pointer;
+    transition: transform 0.3s, box-shadow 0.3s, border-color 0.3s, opacity 0.3s;
+    display: flex; flex-direction: column;
+}
+body.light-mode .news-card { background: rgba(255, 255, 255, 0.6); border-color: rgba(0,0,0,0.1); }
+
+.news-card:hover { transform: translateY(-3px); border-color: #01f7f6; box-shadow: 0 10px 30px rgba(1, 247, 246, 0.15); }
+
+/* ПРОЧИТАННАЯ */
+.news-card.read { opacity: 0.6; border-color: rgba(255,255,255,0.05); }
+.news-card.read:hover { opacity: 1; border-color: #01f7f6; }
+
+/* БЕЙДЖ "ПРОЧИТАНО" */
+.read-badge {
+    position: absolute; top: 15px; right: 15px;
+    padding: 4px 10px; border-radius: 20px;
+    background: rgba(1, 247, 246, 0.2); 
+    color: #01f7f6; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+    display: none; align-items: center; justify-content: center;
+    z-index: 5; border: 1px solid #01f7f6;
+}
+.news-card.read .read-badge { display: flex; }
+
+/* Изображение */
+.news-img {
+    width: 100%; height: 110px; object-fit: cover;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    background: #222; /* Заглушка цвета */
+}
+.news-item-big .news-img { height: 60%; } 
+
+/* Контент */
+.news-body { padding: 15px; display: flex; flex-direction: column; flex-grow: 1; }
+.news-date { font-size: 10px; color: #888; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px; }
+.news-card-title { font-size: 15px; font-weight: 700; color: #fff; line-height: 1.3; margin-bottom: 5px; }
+.news-excerpt { font-size: 12px; color: #ccc; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+body.light-mode .news-card-title { color: #222; } body.light-mode .news-excerpt { color: #555; }
+
+/* КНОПКА ВСЕ НОВОСТИ */
+.more-news-card {
+    background: rgba(1, 247, 246, 0.1); border: 1px dashed #01f7f6;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-decoration: none; height: 100%; min-height: 220px;
+    transition: 0.3s;
+}
+.more-news-card:hover { background: #01f7f6; }
+.more-news-icon { 
+    width: 40px; height: 40px; border-radius: 50%; background: #01f7f6; color: #000;
+    display: flex; align-items: center; justify-content: center; margin-bottom: 10px;
+    transition: 0.3s;
+}
+.more-news-card:hover .more-news-icon { background: #fff; color: #01f7f6; transform: scale(1.1); }
+.more-news-text { font-size: 14px; font-weight: 700; color: #fff; }
+body.light-mode .more-news-text { color: #222; }
+.more-news-card:hover .more-news-text { color: #000; }
+
+
+/* POPUP */
+.news-popup-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.8); backdrop-filter: blur(10px);
+    z-index: 99999; display: none; align-items: center; justify-content: center;
+    opacity: 0; transition: opacity 0.3s;
+}
+.news-popup-overlay.open { display: flex; opacity: 1; }
+
+.news-popup-content {
+    width: 90%; max-width: 800px; max-height: 90vh;
+    background: #1a1a1a; border-radius: 24px; border: 1px solid rgba(255,255,255,0.1);
+    display: flex; flex-direction: column; overflow: hidden;
+    transform: scale(0.95); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+}
+.news-popup-overlay.open .news-popup-content { transform: scale(1); }
+body.light-mode .news-popup-content { background: #fff; color: #222; }
+
+.popup-header { height: 250px; position: relative; flex-shrink: 0; }
+.popup-img { width: 100%; height: 100%; object-fit: cover; }
+.popup-close {
+    position: absolute; top: 20px; right: 20px;
+    width: 40px; height: 40px; border-radius: 50%;
+    background: rgba(0,0,0,0.5); backdrop-filter: blur(5px);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; cursor: pointer; transition: 0.2s; border: none;
+}
+.popup-close:hover { background: #01f7f6; color: #000; }
+
+.popup-body { padding: 30px; overflow-y: auto; }
+.popup-date { color: #01f7f6; font-weight: 700; margin-bottom: 10px; font-size: 14px; }
+.popup-title { font-size: 28px; font-weight: 700; margin-bottom: 20px; line-height: 1.2; color: #fff; }
+.popup-text { font-size: 16px; line-height: 1.6; color: #ddd; }
+.popup-text p { margin-bottom: 15px; }
+body.light-mode .popup-title { color: #222; } body.light-mode .popup-text { color: #444; }
+
+.popup-body::-webkit-scrollbar { width: 6px; }
+.popup-body::-webkit-scrollbar-thumb { background: rgba(128,128,128,0.3); border-radius: 4px; }
+
+@media (max-width: 900px) {
+    .news-grid { grid-template-columns: 1fr; grid-template-rows: auto; height: auto; display: flex; flex-direction: column; }
+    .news-item-big .news-img { height: 200px; }
+    .news-card { min-height: auto; }
+    .more-news-card { min-height: 80px; flex-direction: row; gap: 20px; padding: 20px; }
+    .more-news-icon { margin-bottom: 0; width: 40px; height: 40px; }
+    .popup-header { height: 200px; }
+    .popup-body { padding: 20px; }
+    .popup-title { font-size: 24px; }
+}
+</style>
+
+<div class="news-wrapper">
+    <div class="news-scroll-track js-news-track">
+        <div class="news-sticky">
+            
+            <div id="news" style="position: absolute; top: -100px;"></div>
+
+            <div class="news-group js-news-anim">
+                
+                <div class="news-header">
+                    <span class="news-title-main">Блог</span>
+                    <span class="news-divider">/</span>
+                    <span class="news-title-sub">Новости платформы</span>
+                </div>
+
+                <div class="news-grid" id="news-container">
+                    <!-- Новости генерируются JS -->
+                </div>
+                
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- POPUP -->
+<div class="news-popup-overlay" id="news-popup">
+    <div class="news-popup-content">
+        <div class="popup-header">
+            <img src="" class="popup-img" id="popup-img">
+            <div class="popup-close" onclick="window.closeNews()"><i data-feather="x"></i></div>
+        </div>
+        <div class="popup-body">
+            <div class="popup-date" id="popup-date">DATA</div>
+            <div class="popup-title" id="popup-title">Title</div>
+            <div class="popup-text" id="popup-text">Text</div>
+        </div>
+    </div>
+</div>
+
+<script>
+feather.replace();
+
+const newsData = [
+    {
+        id: 1,
+        title: "AI-Аналитик 2026: Прогноз будущего вашего бизнеса",
+        date: "12 Января 2026",
+        img: "https://static.tildacdn.com/tild3764-3466-4863-a430-633239663238/d1dca196-bcc0-4c27-b.png",
+        text: "<p>Мы запустили модуль предиктивной аналитики. Теперь система не просто показывает графики, но и предсказывает кассовые разрывы за 3 месяца до их появления.</p><p>В новой версии мы внедрили алгоритмы предиктивного анализа. Это значит, что вы сможете видеть прогноз выручки на следующий месяц с точностью до 90%. Система анализирует сезонность, праздники и даже погоду.</p><p>Также добавлена интеграция с новыми рекламными кабинетами. Теперь данные из VK Ads и Telegram Ads подтягиваются автоматически.</p>"
+    },
+    {
+        id: 2,
+        title: "Голосовой ассистент для CRM: Управление голосом",
+        date: "08 Января 2026",
+        img: "https://static.tildacdn.com/tild3837-6233-4734-a336-373161386363/ChatGPT_Image_3__202.png",
+        text: "<p>Больше не нужно печатать комментарии к сделкам. Просто надиктуйте итоги встречи боту, и он сам разнесет данные по полям CRM, поставит задачи и отправит фоллоу-ап клиенту.</p><p>Это экономит до 2 часов рабочего времени менеджера в день. Технология распознавания речи работает даже в шумных условиях.</p><p>Ассистент понимает контекст и может напомнить о договоренностях, которые вы могли забыть.</p>"
+    },
+    {
+        id: 3,
+        title: "Автоматический найм: HR-бот 3.0 проводит собеседования",
+        date: "25 Декабря 2025",
+        img: "https://static.tildacdn.com/tild3761-3165-4531-a632-663561616438/edf7e86c-f302-42ea-9.png",
+        text: "<p>Теперь бот проводит полноценное видео-интервью с кандидатами, анализирует их мимику и ответы, и выдает вам скоринг-балл. Вы тратите время только на финалистов.</p><p>Это позволяет обрабатывать сотни откликов за минуты без участия живого рекрутера на первом этапе.</p><p>Система также автоматически проверяет тестовые задания и сортирует кандидатов по релевантности опыта.</p>"
+    },
+    {
+        id: 4,
+        title: "Интеграция с нейро-интерфейсами Neuralink",
+        date: "15 Декабря 2025",
+        img: "https://static.tildacdn.com/tild3665-6634-4535-b431-633437313361/ChatGPT_Image_3__202.png",
+        text: "<p>Управляйте дашбордом силой мысли. Экспериментальная поддержка Neuralink теперь доступна в бета-версии для тарифа Enterprise.</p><p>Мы первые на рынке, кто внедрил прямой нейро-контроль бизнес-процессов.</p><p>Теперь для принятия ключевых решений достаточно просто подумать о них. Система сама подготовит документы и отправит их на подпись.</p>"
+    },
+    {
+        id: 5,
+        title: "Финансовая безопасность: Блокчейн-аудит",
+        date: "01 Декабря 2025",
+        img: "https://static.tildacdn.com/tild6337-3234-4432-b331-653964356532/153e4547-6056-4abd-b.png",
+        text: "<p>Каждая транзакция теперь записывается в частный блокчейн. Подделать отчетность невозможно. Полная прозрачность для инвесторов и партнеров.</p><p>Система автоматически сверяет данные с банками и налоговой, исключая человеческий фактор.</p><p>Ваши финансовые потоки под надежной защитой криптографии.</p>"
+    }
+];
+
+// ID текущей открытой новости
+var currentNewsId = null;
+
+function renderNews() {
+    const container = document.getElementById('news-container');
+    container.innerHTML = '';
+    
+    newsData.forEach((item, index) => {
+        const div = document.createElement('div');
+        div.className = index === 0 ? 'news-item-big' : 'news-item';
+        div.innerHTML = `
+            <div class="news-card" id="card-${item.id}" onclick="window.openNews(${item.id})">
+                <div class="read-badge">Прочитано</div>
+                <img src="${item.img}" class="news-img" loading="lazy">
+                <div class="news-body">
+                    <div class="news-date">${item.date}</div>
+                    <div class="news-card-title">${item.title}</div>
+                    <div class="news-excerpt">${item.text.replace(/<[^>]*>?/gm, '')}</div>
+                </div>
+            </div>
+        `;
+        container.appendChild(div);
+    });
+    
+    // КНОПКА ПОСЛЕДНЕЙ КАРТОЧКОЙ
+    const moreBtn = document.createElement('a');
+    moreBtn.href = "#blog";
+    moreBtn.className = "news-card more-news-card";
+    moreBtn.innerHTML = `
+        <div class="more-news-icon"><i data-feather="arrow-right"></i></div>
+        <div class="more-news-text">Все новости платформы</div>
+    `;
+    container.appendChild(moreBtn);
+    
+    feather.replace();
+}
+
+window.openNews = function(id) {
+    currentNewsId = id;
+    const news = newsData.find(n => n.id === id);
+    if(!news) return;
+    
+    document.getElementById('popup-img').src = news.img;
+    document.getElementById('popup-date').innerText = news.date;
+    document.getElementById('popup-title').innerText = news.title;
+    document.getElementById('popup-text').innerHTML = news.text;
+    
+    document.getElementById('news-popup').classList.add('open');
+    document.body.style.overflow = 'hidden';
+};
+
+window.closeNews = function() {
+    document.getElementById('news-popup').classList.remove('open');
+    document.body.style.overflow = '';
+    
+    if(currentNewsId) {
+        var card = document.getElementById('card-' + currentNewsId);
+        if(card) card.classList.add('read');
+    }
+};
+
+document.getElementById('news-popup').addEventListener('click', function(e) {
+    if(e.target === this) window.closeNews();
+});
+
+document.addEventListener("DOMContentLoaded", function() {
+    renderNews();
+    
+    // SCROLL ANIMATION
+    var track = document.querySelector('.js-news-track');
+    var group = document.querySelector('.js-news-anim');
+    
+    window.addEventListener('scroll', function() {
+        if(window.innerWidth <= 960) return;
+        var rect = track.getBoundingClientRect();
+        if (rect.top <= 0) {
+            var dist = rect.height - window.innerHeight;
+            if (dist > 0) {
+                var p = Math.abs(rect.top) / dist;
+                var effP = (p > 0.2) ? (p - 0.2) / 0.8 : 0;
+                if(effP > 1) effP = 1;
+                group.style.transform = `scale(${1 + effP * 0.2})`;
+                group.style.opacity = 1 - effP;
+                group.style.filter = `blur(${effP * 20}px)`;
+            }
+        } else {
+            group.style.transform = 'scale(1)'; group.style.opacity = 1; group.style.filter = 'blur(0px)';
+        }
+    });
+});
+</script>

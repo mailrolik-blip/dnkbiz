@@ -1,0 +1,221 @@
+<script src="https://unpkg.com/feather-icons"></script>
+
+<style>
+/* БАЗА */
+.about-wrapper, .about-wrapper * { box-sizing: border-box; font-family: 'TildaSans', Arial, sans-serif !important; outline: none; }
+
+/* ТРЕК */
+.about-scroll-track { width: 100%; height: 200vh; position: relative; z-index: 20; }
+.about-sticky { position: -webkit-sticky; position: sticky; top: 0; width: 100%; height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+
+/* ГРУППА (ЦЕНТР) */
+.about-group {
+    width: 100%; max-width: 1200px;
+    padding: 20px 20px 20px 80px; 
+    display: flex; flex-direction: column; gap: 20px; 
+    transform-origin: center center; will-change: transform, opacity, filter;
+    height: 90vh; 
+    justify-content: center; /* Центрирование по вертикали */
+}
+@media (max-width: 900px) { .about-group { padding: 40px 20px; justify-content: flex-start; height: auto; overflow-y: auto; } }
+
+/* ЗАГОЛОВОК */
+.about-header { display: flex; align-items: baseline; gap: 15px; margin-left: 10px; margin-bottom: 10px; flex-shrink: 0; }
+.about-title-main { font-size: 42px; font-weight: 700; opacity: 0.3; color: #fff; }
+.about-divider { font-size: 42px; font-weight: 300; opacity: 0.3; color: #fff; }
+.about-title-sub { font-size: 42px; font-weight: 700; color: #fff; }
+body.light-mode .about-title-main, body.light-mode .about-divider, body.light-mode .about-title-sub { color: #222; }
+@media (max-width: 900px) { .about-header { font-size: 32px; flex-direction: column; gap: 5px; } .title-divider { display: none; } }
+
+/* КОНТЕНТ */
+.about-content {
+    display: flex; gap: 20px; height: 450px; width: 100%;
+    align-items: stretch; margin-bottom: 20px; /* Отступ до бегущей строки */
+}
+
+/* МАНИФЕСТ */
+.manifesto-card {
+    flex: 0 0 350px; position: relative; border-radius: 24px;
+    background: rgba(30, 30, 30, 0.4); border: 1px solid rgba(255, 255, 255, 0.1); 
+    backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+    padding: 30px; display: flex; flex-direction: column; justify-content: center;
+    transition: 0.3s;
+}
+body.light-mode .manifesto-card { background: rgba(255, 255, 255, 0.6); border-color: rgba(0, 0, 0, 0.1); }
+.manifesto-card:hover { border-color: #01f7f6; box-shadow: 0 10px 40px rgba(1, 247, 246, 0.15); }
+
+.man-subtitle { color: #01f7f6; text-transform: uppercase; font-weight: 700; font-size: 12px; margin-bottom: 15px; letter-spacing: 1px; }
+.man-text { font-size: 22px; font-weight: 600; line-height: 1.3; color: #fff; margin-bottom: 20px; }
+body.light-mode .man-text { color: #222; }
+.man-desc { font-size: 14px; color: #ccc; line-height: 1.5; }
+body.light-mode .man-desc { color: #555; }
+
+/* СЛАЙДЕР */
+.team-slider {
+    flex-grow: 1; display: flex; gap: 20px; overflow-x: auto;
+    padding-bottom: 10px; scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(to right, black 90%, transparent 100%);
+    mask-image: linear-gradient(to right, black 90%, transparent 100%);
+}
+.team-slider::-webkit-scrollbar { display: none; }
+
+.team-card {
+    min-width: 260px; max-width: 260px;
+    position: relative; border-radius: 24px; overflow: hidden;
+    background: rgba(30, 30, 30, 0.4); border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(25px); cursor: pointer;
+    transition: 0.3s; display: flex; flex-direction: column;
+}
+body.light-mode .team-card { background: rgba(255, 255, 255, 0.6); border-color: rgba(0, 0, 0, 0.1); }
+.team-card:hover { transform: translateY(-5px); border-color: #01f7f6; }
+
+.team-img {
+    width: 100%; height: 250px; object-fit: cover;
+    filter: grayscale(100%); transition: 0.3s;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.team-card:hover .team-img { filter: grayscale(0%); }
+
+.team-info { padding: 20px; flex-grow: 1; display: flex; flex-direction: column; justify-content: center; }
+.team-role { font-size: 10px; color: #01f7f6; text-transform: uppercase; margin-bottom: 4px; font-weight: 700; }
+.team-name { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 10px; line-height: 1.2; }
+body.light-mode .team-name { color: #222; }
+
+/* SKILL */
+.skill-wrap { display: flex; align-items: center; gap: 8px; font-size: 10px; color: #ccc; }
+.skill-bar { flex-grow: 1; height: 3px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; }
+.skill-fill { height: 100%; background: #01f7f6; width: 0%; transition: width 1s ease 0.5s; }
+
+/* CAT */
+.cat-card .team-img { object-fit: contain; padding: 40px; background: #000; }
+.cat-card:hover .team-img { filter: none; }
+
+/* БЕГУЩАЯ СТРОКА */
+.stats-ticker {
+    width: 100%; overflow: hidden; border-top: 1px solid rgba(255,255,255,0.1); 
+    padding-top: 15px; position: relative; margin-top: 0; /* Убрал auto */
+}
+body.light-mode .stats-ticker { border-color: rgba(0,0,0,0.1); }
+
+.ticker-track {
+    display: flex; gap: 50px; white-space: nowrap;
+    animation: ticker 30s linear infinite;
+    width: max-content;
+}
+/* Цвет текста белый в темной теме */
+.ticker-item { font-size: 13px; color: #fff !important; font-weight: 600; display: flex; align-items: center; gap: 10px; opacity: 0.8; }
+body.light-mode .ticker-item { color: #555 !important; }
+.ticker-item i { color: #01f7f6; width: 14px; }
+
+@keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+
+@media (max-width: 900px) {
+    .about-content { flex-direction: column; height: auto; }
+    .manifesto-card { flex: none; min-height: auto; }
+    .team-slider { overflow-x: auto; padding-bottom: 20px; }
+}
+</style>
+
+<div class="about-wrapper">
+    <div class="about-scroll-track js-about-track">
+        <div class="about-sticky">
+            
+            <div id="about" style="position: absolute; top: -100px;"></div>
+
+            <div class="about-group js-about-anim">
+                
+                <div class="about-header">
+                    <span class="about-title-main">О нас</span>
+                    <span class="about-divider">/</span>
+                    <span class="about-title-sub">Команда</span>
+                </div>
+
+                <div class="about-content">
+                    
+                    <!-- 1. МАНИФЕСТ -->
+                    <div class="manifesto-card glow-target">
+                        <div class="man-subtitle">Философия</div>
+                        <div class="man-text">Мы объединяем бизнес-экспертизу и цифровые технологии.</div>
+                        <div class="man-desc">Каждый участник команды — это элемент единой системы. Мы не просто учим, мы внедряем изменения в ДНК вашего бизнеса.</div>
+                    </div>
+
+                    <!-- 2. СЛАЙДЕР -->
+                    <div class="team-slider" id="team-slider">
+                        
+                        <div class="team-card glow-target">
+                            <img src="https://static.tildacdn.com/tild6461-3964-4865-b561-316133393638/photo_2026-01-18_13-.jpg" class="team-img">
+                            <div class="team-info"><div class="team-role">Генеральный директор</div><div class="team-name">Бердникова Ирина</div><div class="skill-wrap"><span>Стратегия</span><div class="skill-bar"><div class="skill-fill" style="width: 100%"></div></div></div></div>
+                        </div>
+
+                        <div class="team-card glow-target">
+                            <img src="https://static.tildacdn.com/tild3931-6665-4333-b433-626634356637/photo_2025-12-12_16-.jpg" class="team-img">
+                            <div class="team-info"><div class="team-role">Эксперт БШ ДНК</div><div class="team-name">Гордеева Юлия</div><div class="skill-wrap"><span>Методология</span><div class="skill-bar"><div class="skill-fill" style="width: 95%"></div></div></div></div>
+                        </div>
+
+                        <div class="team-card glow-target">
+                            <img src="https://static.tildacdn.com/tild3235-3337-4534-b633-376239376238/photo_2025-12-15_17-.jpg" class="team-img">
+                            <div class="team-info"><div class="team-role">Преподаватель</div><div class="team-name">Ольга Туркина</div><div class="skill-wrap"><span>Обучение</span><div class="skill-bar"><div class="skill-fill" style="width: 98%"></div></div></div></div>
+                        </div>
+
+                        <div class="team-card cat-card glow-target">
+                            <img src="https://img.icons8.com/nolan/96/00C6FF/cat.png" class="team-img">
+                            <div class="team-info"><div class="team-role">AI Помощник</div><div class="team-name">BLACK Cat</div><div class="skill-wrap"><span>Код & Дизайн</span><div class="skill-bar"><div class="skill-fill" style="width: 100%; background: linear-gradient(90deg, #01f7f6, #ff00ff);"></div></div></div></div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- ТИКЕР -->
+                <div class="stats-ticker">
+                    <div class="ticker-track">
+                        <div class="ticker-item"><i data-feather="check-circle"></i> 500+ Внедренных систем</div>
+                        <div class="ticker-item"><i data-feather="clock"></i> 10,000 Часов сэкономлено</div>
+                        <div class="ticker-item"><i data-feather="trending-up"></i> +40% Средний рост прибыли</div>
+                        <div class="ticker-item"><i data-feather="users"></i> 1,200 Студентов в сообществе</div>
+                        <!-- Дубликат -->
+                        <div class="ticker-item"><i data-feather="check-circle"></i> 500+ Внедренных систем</div>
+                        <div class="ticker-item"><i data-feather="clock"></i> 10,000 Часов сэкономлено</div>
+                        <div class="ticker-item"><i data-feather="trending-up"></i> +40% Средний рост прибыли</div>
+                        <div class="ticker-item"><i data-feather="users"></i> 1,200 Студентов в сообществе</div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+feather.replace();
+
+document.addEventListener("DOMContentLoaded", function() {
+    
+    const slider = document.getElementById('team-slider');
+    let isDown = false; let startX; let scrollLeft;
+    slider.addEventListener('mousedown', function(e){ isDown=true; startX=e.pageX - slider.offsetLeft; scrollLeft=slider.scrollLeft; });
+    slider.addEventListener('mouseleave', function(){ isDown=false; });
+    slider.addEventListener('mouseup', function(){ isDown=false; });
+    slider.addEventListener('mousemove', function(e){ if(!isDown)return; e.preventDefault(); const x=e.pageX - slider.offsetLeft; const walk=(x-startX)*2; slider.scrollLeft=scrollLeft-walk; });
+
+    var track = document.querySelector('.js-about-track');
+    var group = document.querySelector('.js-about-anim');
+    
+    window.addEventListener('scroll', function() {
+        if(window.innerWidth <= 960) return;
+        var rect = track.getBoundingClientRect();
+        if (rect.top <= 0) {
+            var dist = rect.height - window.innerHeight;
+            if (dist > 0) {
+                var p = Math.abs(rect.top) / dist;
+                var effP = (p > 0.2) ? (p - 0.2) / 0.8 : 0;
+                if(effP > 1) effP = 1;
+                group.style.transform = `scale(${1 + effP * 0.2})`;
+                group.style.opacity = 1 - effP;
+                group.style.filter = `blur(${effP * 20}px)`;
+            }
+        } else {
+            group.style.transform = 'scale(1)'; group.style.opacity = 1; group.style.filter = 'blur(0px)';
+        }
+    });
+});
+</script>

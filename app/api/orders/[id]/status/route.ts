@@ -1,5 +1,5 @@
 import { getOptionalCurrentUser } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import { updateOrderStatus } from '@/lib/orders';
 
 type RouteParams = {
   params: Promise<{ id: string }>;
@@ -15,11 +15,14 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   const user = await getOptionalCurrentUser();
 
   if (!user) {
-    return Response.json({ error: 'Unauthorized.' }, { status: 401 });
+    return Response.json({ error: 'Требуется авторизация.' }, { status: 401 });
   }
 
   if (user.role !== 'ADMIN') {
-    return Response.json({ error: 'Admin access required.' }, { status: 403 });
+    return Response.json(
+      { error: 'Маршрут доступен только администратору.' },
+      { status: 403 }
+    );
   }
 
   const { id } = await params;
@@ -30,105 +33,23 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   const status = normalizeStatus(body?.status);
 
   if (!Number.isInteger(orderId) || orderId <= 0) {
-    return Response.json({ error: 'Invalid order id.' }, { status: 400 });
-  }
-
-  if (!status) {
     return Response.json(
-      { error: 'Status must be PENDING, PAID, or CANCELED.' },
+      { error: 'Некорректный идентификатор заказа.' },
       { status: 400 }
     );
   }
 
-  const updatedOrder = await prisma.$transaction(async (tx) => {
-    const order = await tx.order.findUnique({
-      where: {
-        id: orderId,
-      },
-      include: {
-        tariff: {
-          select: {
-            courseId: true,
-            title: true,
-            course: {
-              select: {
-                title: true,
-                slug: true,
-              },
-            },
-          },
-        },
-      },
-    });
+  if (!status) {
+    return Response.json(
+      { error: 'Статус должен быть PENDING, PAID или CANCELED.' },
+      { status: 400 }
+    );
+  }
 
-    if (!order) {
-      return null;
-    }
-
-    await tx.order.update({
-      where: {
-        id: orderId,
-      },
-      data: {
-        status,
-        paidAt: status === 'PAID' ? order.paidAt ?? new Date() : null,
-      },
-    });
-
-    if (status === 'PAID') {
-      await tx.enrollment.upsert({
-        where: {
-          userId_courseId: {
-            userId: order.userId,
-            courseId: order.tariff.courseId,
-          },
-        },
-        update: {
-          orderId: order.id,
-        },
-        create: {
-          userId: order.userId,
-          courseId: order.tariff.courseId,
-          orderId: order.id,
-        },
-      });
-    } else {
-      await tx.enrollment.deleteMany({
-        where: {
-          orderId: order.id,
-        },
-      });
-    }
-
-    return tx.order.findUnique({
-      where: {
-        id: orderId,
-      },
-      select: {
-        id: true,
-        userId: true,
-        status: true,
-        amount: true,
-        paidAt: true,
-        createdAt: true,
-        updatedAt: true,
-        tariff: {
-          select: {
-            title: true,
-            course: {
-              select: {
-                title: true,
-                slug: true,
-              },
-            },
-          },
-        },
-      },
-    });
-  });
+  const updatedOrder = await updateOrderStatus(orderId, status);
 
   if (!updatedOrder) {
-    return Response.json({ error: 'Order not found.' }, { status: 404 });
+    return Response.json({ error: 'Заказ не найден.' }, { status: 404 });
   }
 
   return Response.json({ order: updatedOrder });

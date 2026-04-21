@@ -28,7 +28,10 @@ type TariffCard = {
   courseSlug: string;
   courseDescription: string | null;
   isOwned: boolean;
-  hasPendingOrder: boolean;
+  pendingOrder: {
+    id: number;
+    checkoutUrl: string;
+  } | null;
 };
 
 type OrderCard = {
@@ -37,6 +40,7 @@ type OrderCard = {
   amount: number;
   createdAt: string;
   paidAt: string | null;
+  checkoutUrl: string | null;
   tariffTitle: string;
   courseTitle: string;
 };
@@ -49,15 +53,15 @@ type DashboardClientProps = {
 };
 
 function formatMoney(value: number) {
-  return `${value.toLocaleString('en-US')} RUB`;
+  return `${value.toLocaleString('ru-RU')} ₽`;
 }
 
 function formatDateTime(value: string | null) {
   if (!value) {
-    return 'Not paid yet';
+    return 'ещё не оплачено';
   }
 
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat('ru-RU', {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
@@ -73,6 +77,26 @@ function getStatusClass(status: OrderCard['status']) {
   }
 
   return 'badge badge-pending';
+}
+
+function getStatusLabel(status: OrderCard['status']) {
+  if (status === 'PAID') {
+    return 'Оплачен';
+  }
+
+  if (status === 'CANCELED') {
+    return 'Отменён';
+  }
+
+  return 'Ожидает оплаты';
+}
+
+function formatInterval(value: string | null) {
+  if (!value || value === 'one-time') {
+    return 'разовый доступ';
+  }
+
+  return value;
 }
 
 export default function DashboardClient({
@@ -102,7 +126,7 @@ export default function DashboardClient({
         const payload = (await response.json().catch(() => null)) as
           | { error?: string }
           | null;
-        throw new Error(payload?.error || 'Logout failed.');
+        throw new Error(payload?.error || 'Не удалось завершить сессию.');
       }
 
       router.push('/login');
@@ -111,7 +135,9 @@ export default function DashboardClient({
       setFeedback({
         tone: 'error',
         message:
-          logoutError instanceof Error ? logoutError.message : 'Logout failed.',
+          logoutError instanceof Error
+            ? logoutError.message
+            : 'Не удалось завершить сессию.',
       });
       setLogoutPending(false);
       return;
@@ -136,16 +162,26 @@ export default function DashboardClient({
       });
 
       const payload = (await response.json().catch(() => null)) as
-        | { error?: string; order?: { id: number } }
+        | {
+            error?: string;
+            order?: { id: number };
+            checkoutUrl?: string;
+          }
         | null;
 
+      if (payload?.checkoutUrl) {
+        router.push(payload.checkoutUrl);
+        router.refresh();
+        return;
+      }
+
       if (!response.ok) {
-        throw new Error(payload?.error || 'Order creation failed.');
+        throw new Error(payload?.error || 'Не удалось создать заказ.');
       }
 
       setFeedback({
         tone: 'success',
-        message: `Order #${payload?.order?.id ?? 'new'} created with PENDING status.`,
+        message: `Заказ #${payload?.order?.id ?? ''} создан.`,
       });
       router.refresh();
     } catch (orderError) {
@@ -154,7 +190,7 @@ export default function DashboardClient({
         message:
           orderError instanceof Error
             ? orderError.message
-            : 'Order creation failed.',
+            : 'Не удалось создать заказ.',
       });
     } finally {
       setBuyingTariffId(null);
@@ -166,7 +202,7 @@ export default function DashboardClient({
       <div className="top-nav">
         <Link href="/" className="brand">
           <span className="brand-mark" />
-          <span>Course MVP</span>
+          <span>БИЗНЕС ШКОЛА ДНК</span>
         </Link>
         <div className="row-actions" style={{ marginTop: 0 }}>
           <button
@@ -175,25 +211,28 @@ export default function DashboardClient({
             onClick={handleLogout}
             type="button"
           >
-            {logoutPending ? 'Logging out...' : 'Logout'}
+            {logoutPending ? 'Выходим...' : 'Выйти'}
           </button>
         </div>
       </div>
 
       <section className="stack-grid">
         <article className="panel">
-          <span className="eyebrow">Personal cabinet</span>
+          <span className="eyebrow">Личный кабинет</span>
           <div className="panel-head" style={{ marginTop: '0.9rem' }}>
             <div>
               <h1>{user.name || user.email}</h1>
               <p className="panel-copy" style={{ marginTop: '0.75rem' }}>
-                Signed in as <span className="mono">{user.email}</span> with role{' '}
-                <span className="mono">{user.role}</span>.
+                Аккаунт <span className="mono">{user.email}</span>. Роль:{' '}
+                <span className="mono">
+                  {user.role === 'ADMIN' ? 'администратор' : 'пользователь'}
+                </span>
+                .
               </p>
             </div>
             <div className="badge-row" style={{ marginTop: 0 }}>
-              <span className="badge badge-paid">{courses.length} active courses</span>
-              <span className="badge badge-pending">{orders.length} orders</span>
+              <span className="badge badge-paid">{courses.length} курсов</span>
+              <span className="badge badge-pending">{orders.length} заказов</span>
             </div>
           </div>
 
@@ -209,11 +248,13 @@ export default function DashboardClient({
 
           {user.role === 'ADMIN' ? (
             <div className="course-card" style={{ marginTop: '1rem' }}>
-              <h2 style={{ marginBottom: '0.5rem' }}>Manual payment flow</h2>
+              <h2 style={{ marginBottom: '0.5rem' }}>Резервный admin flow</h2>
               <p className="muted-text">
-                As admin, use <span className="mono">PATCH /api/orders/{'{id}'}/status</span>{' '}
-                with body <span className="mono">{'{"status":"PAID"}'}</span> to grant course
-                access for an order.
+                Основной пользовательский путь идёт через `checkout/test`. Этот PATCH оставлен
+                как вторичный инструмент локальной отладки:{' '}
+                <span className="mono">PATCH /api/orders/{'{id}'}/status</span> с телом{' '}
+                <span className="mono">{'{"status":"PAID"}'}</span>. После этого создаётся
+                Enrollment и курс становится доступен пользователю.
               </p>
             </div>
           ) : null}
@@ -221,39 +262,37 @@ export default function DashboardClient({
 
         <div className="grid-two">
           <section className="panel">
-            <span className="eyebrow">My courses</span>
-            <h2 style={{ marginTop: '0.9rem' }}>Accessible courses</h2>
+            <span className="eyebrow">Мои курсы</span>
+            <h2 style={{ marginTop: '0.9rem' }}>Открытые программы</h2>
             <p className="panel-copy" style={{ marginTop: '0.75rem' }}>
-              Only courses with an enrollment are shown here.
+              Здесь отображаются только те курсы, по которым уже есть доступ.
             </p>
 
             <div className="course-grid" style={{ marginTop: '1rem' }}>
               {courses.length === 0 ? (
                 <div className="empty-card">
                   <p className="muted-text">
-                    No courses available yet. Create an order and switch it to PAID as admin.
+                    Доступных курсов пока нет. Создайте заказ внизу страницы и дождитесь
+                    подтверждения оплаты.
                   </p>
                 </div>
               ) : (
                 courses.map((course) => (
                   <article key={course.id} className="course-card">
-                    <span className="eyebrow">Course</span>
+                    <span className="eyebrow">Курс</span>
                     <h2 style={{ marginTop: '0.8rem' }}>{course.title}</h2>
                     <p className="muted-text" style={{ marginTop: '0.65rem' }}>
-                      {course.description || 'Protected course page with lesson progress.'}
+                      {course.description || 'Закрытая программа с уроками и сохранением прогресса.'}
                     </p>
                     <div className="badge-row">
-                      <span className="badge badge-paid">{course.lessonsCount} lessons</span>
+                      <span className="badge badge-paid">{course.lessonsCount} уроков</span>
                       <span className="badge badge-complete">
-                        enrolled {formatDateTime(course.enrolledAt)}
+                        открыт {formatDateTime(course.enrolledAt)}
                       </span>
                     </div>
                     <div className="row-actions">
-                      <Link
-                        className="primary-button"
-                        href={`/courses/${course.slug}`}
-                      >
-                        Open course
+                      <Link className="primary-button" href={`/courses/${course.slug}`}>
+                        Открыть курс
                       </Link>
                     </div>
                   </article>
@@ -263,40 +302,50 @@ export default function DashboardClient({
           </section>
 
           <section className="panel">
-            <span className="eyebrow">Orders</span>
-            <h2 style={{ marginTop: '0.9rem' }}>Your order history</h2>
+            <span className="eyebrow">Заказы</span>
+            <h2 style={{ marginTop: '0.9rem' }}>История покупок</h2>
             <p className="panel-copy" style={{ marginTop: '0.75rem' }}>
-              Pending orders become enrollments after an admin marks them as PAID.
+              Если заказ ещё в статусе PENDING, его можно сразу открыть в test checkout и
+              завершить оплату.
             </p>
 
             <div className="course-grid" style={{ marginTop: '1rem' }}>
               {orders.length === 0 ? (
                 <div className="empty-card">
-                  <p className="muted-text">No orders yet.</p>
+                  <p className="muted-text">У вас пока нет заказов.</p>
                 </div>
               ) : (
                 orders.map((order) => (
                   <article key={order.id} className="order-card">
                     <div className="panel-head">
                       <div>
-                        <h2>Order #{order.id}</h2>
+                        <h2>Заказ #{order.id}</h2>
                         <p className="muted-text" style={{ marginTop: '0.55rem' }}>
-                          {order.tariffTitle} for {order.courseTitle}
+                          {order.tariffTitle} · {order.courseTitle}
                         </p>
                       </div>
-                      <span className={getStatusClass(order.status)}>{order.status}</span>
+                      <span className={getStatusClass(order.status)}>
+                        {getStatusLabel(order.status)}
+                      </span>
                     </div>
                     <div className="badge-row">
                       <span className="badge badge-pending">{formatMoney(order.amount)}</span>
                       <span className="badge badge-complete">
-                        created {formatDateTime(order.createdAt)}
+                        создан {formatDateTime(order.createdAt)}
                       </span>
                       {order.status === 'PAID' ? (
                         <span className="badge badge-paid">
-                          paid {formatDateTime(order.paidAt)}
+                          оплачено {formatDateTime(order.paidAt)}
                         </span>
                       ) : null}
                     </div>
+                    {order.checkoutUrl ? (
+                      <div className="row-actions" style={{ marginTop: '1rem' }}>
+                        <Link href={order.checkoutUrl} className="secondary-button">
+                          Продолжить оплату
+                        </Link>
+                      </div>
+                    ) : null}
                   </article>
                 ))
               )}
@@ -305,60 +354,64 @@ export default function DashboardClient({
         </div>
 
         <section className="panel">
-          <span className="eyebrow">Tariffs</span>
-          <h2 style={{ marginTop: '0.9rem' }}>Buy access</h2>
+          <span className="eyebrow">Тарифы</span>
+          <h2 style={{ marginTop: '0.9rem' }}>Оформить доступ</h2>
           <p className="panel-copy" style={{ marginTop: '0.75rem' }}>
-            The MVP uses manual payment confirmation. Orders are created as PENDING.
+            Основной путь: выбрать тариф, попасть в test checkout, оплатить тестово и сразу
+            открыть курс.
           </p>
 
           <div className="tariff-grid" style={{ marginTop: '1rem' }}>
             {tariffs.length === 0 ? (
               <div className="empty-card">
-                <p className="muted-text">No active tariffs found.</p>
+                <p className="muted-text">Активные тарифы не найдены.</p>
               </div>
             ) : (
               tariffs.map((tariff) => (
                 <article key={tariff.id} className="tariff-card">
-                  <span className="eyebrow">Tariff</span>
+                  <span className="eyebrow">Тариф</span>
                   <h2 style={{ marginTop: '0.8rem' }}>{tariff.title}</h2>
                   <p className="muted-text" style={{ marginTop: '0.65rem' }}>
                     {tariff.courseTitle}
                   </p>
                   <div className="badge-row">
-                    <span className="badge badge-pending">
-                      {formatMoney(tariff.price)}
-                    </span>
-                    {tariff.interval ? (
-                      <span className="badge badge-complete">{tariff.interval}</span>
-                    ) : null}
+                    <span className="badge badge-pending">{formatMoney(tariff.price)}</span>
+                    <span className="badge badge-complete">{formatInterval(tariff.interval)}</span>
                     {tariff.isOwned ? (
-                      <span className="badge badge-paid">already unlocked</span>
+                      <span className="badge badge-paid">доступ уже открыт</span>
                     ) : null}
-                    {tariff.hasPendingOrder ? (
-                      <span className="badge badge-pending">pending order exists</span>
+                    {tariff.pendingOrder ? (
+                      <span className="badge badge-pending">
+                        заказ #{tariff.pendingOrder.id} ожидает оплаты
+                      </span>
                     ) : null}
                   </div>
                   <p className="muted-text" style={{ marginTop: '0.9rem' }}>
                     {tariff.courseDescription ||
-                      'Access to the protected course page after payment confirmation.'}
+                      'После оплаты курс откроется на защищённой странице, а прогресс будет сохраняться по пользователю.'}
                   </p>
                   <div className="row-actions">
                     {tariff.isOwned ? (
                       <Link className="secondary-button" href={`/courses/${tariff.courseSlug}`}>
-                        Open course
+                        Открыть курс
+                      </Link>
+                    ) : tariff.pendingOrder ? (
+                      <Link
+                        className="secondary-button"
+                        href={tariff.pendingOrder.checkoutUrl}
+                      >
+                        Продолжить оплату
                       </Link>
                     ) : (
                       <button
                         className="primary-button"
-                        disabled={buyingTariffId === tariff.id || tariff.hasPendingOrder}
+                        disabled={buyingTariffId === tariff.id}
                         onClick={() => handleCreateOrder(tariff.id)}
                         type="button"
                       >
                         {buyingTariffId === tariff.id
-                          ? 'Creating order...'
-                          : tariff.hasPendingOrder
-                            ? 'Pending order exists'
-                            : 'Create order'}
+                          ? 'Создаём заказ...'
+                          : 'Купить доступ'}
                       </button>
                     )}
                   </div>
