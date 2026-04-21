@@ -5,6 +5,18 @@ type RouteParams = {
   params: Promise<{ slug: string }>;
 };
 
+function normalizeHomeworkOptions(value: unknown) {
+  if (!Array.isArray(value)) {
+    return null;
+  }
+
+  const options = value.filter(
+    (item): item is string => typeof item === 'string' && item.trim().length > 0
+  );
+
+  return options.length > 0 ? options : null;
+}
+
 export async function GET(_request: Request, { params }: RouteParams) {
   const user = await getOptionalCurrentUser();
 
@@ -42,6 +54,12 @@ export async function GET(_request: Request, { params }: RouteParams) {
           slug: true,
           description: true,
           content: true,
+          videoUrl: true,
+          videoProvider: true,
+          homeworkTitle: true,
+          homeworkPrompt: true,
+          homeworkType: true,
+          homeworkOptions: true,
           position: true,
           progress: {
             where: {
@@ -79,13 +97,19 @@ export async function GET(_request: Request, { params }: RouteParams) {
         slug: lesson.slug,
         description: lesson.description,
         content: lesson.content,
+        videoUrl: lesson.videoUrl,
+        videoProvider: lesson.videoProvider,
+        homeworkTitle: lesson.homeworkTitle,
+        homeworkPrompt: lesson.homeworkPrompt,
+        homeworkType: lesson.homeworkType,
+        homeworkOptions: normalizeHomeworkOptions(lesson.homeworkOptions),
         position: lesson.position,
         progress: lesson.progress[0]
           ? {
               completed: lesson.progress[0].completed,
               answer: lesson.progress[0].answer,
-              lastViewedAt: lesson.progress[0].lastViewedAt,
-              updatedAt: lesson.progress[0].updatedAt,
+              lastViewedAt: lesson.progress[0].lastViewedAt?.toISOString() ?? null,
+              updatedAt: lesson.progress[0].updatedAt.toISOString(),
             }
           : null,
       })),

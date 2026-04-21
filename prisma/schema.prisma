@@ -53,6 +53,12 @@ model Lesson {
   slug        String
   description String?
   content     String?
+  videoUrl    String?
+  videoProvider String?
+  homeworkTitle String?
+  homeworkPrompt String?
+  homeworkType String?
+  homeworkOptions Json?
   position    Int
   isPublished Boolean  @default(false)
   createdAt   DateTime @default(now())

@@ -4,6 +4,18 @@ import CoursePlayer from '@/components/course-player';
 import { getOptionalCurrentUser } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 
+function normalizeHomeworkOptions(value: unknown) {
+  if (!Array.isArray(value)) {
+    return null;
+  }
+
+  const options = value.filter(
+    (item): item is string => typeof item === 'string' && item.trim().length > 0
+  );
+
+  return options.length > 0 ? options : null;
+}
+
 export default async function CoursePage({
   params,
 }: {
@@ -44,6 +56,12 @@ export default async function CoursePage({
           slug: true,
           description: true,
           content: true,
+          videoUrl: true,
+          videoProvider: true,
+          homeworkTitle: true,
+          homeworkPrompt: true,
+          homeworkType: true,
+          homeworkOptions: true,
           position: true,
           progress: {
             where: {
@@ -78,6 +96,12 @@ export default async function CoursePage({
           slug: lesson.slug,
           description: lesson.description,
           content: lesson.content,
+          videoUrl: lesson.videoUrl,
+          videoProvider: lesson.videoProvider,
+          homeworkTitle: lesson.homeworkTitle,
+          homeworkPrompt: lesson.homeworkPrompt,
+          homeworkType: lesson.homeworkType,
+          homeworkOptions: normalizeHomeworkOptions(lesson.homeworkOptions),
           position: lesson.position,
           progress: lesson.progress[0]
             ? {

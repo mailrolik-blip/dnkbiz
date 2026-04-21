@@ -8,6 +8,7 @@ import {
   dnkFeaturedPrograms,
   dnkProgramCatalog,
   dnkSectionLinks,
+  dnkShowcaseCourses,
   dnkTeamMembers,
   dnkTeamStats,
   dnkTestimonials,
@@ -62,6 +63,30 @@ function formatInterval(value: string | null) {
   }
 
   return value;
+}
+
+function getShowcaseStatusLabel(status: 'ACTIVE' | 'SHOWCASE' | 'SOON') {
+  if (status === 'ACTIVE') {
+    return 'Доступен';
+  }
+
+  if (status === 'SHOWCASE') {
+    return 'Витрина';
+  }
+
+  return 'Скоро';
+}
+
+function getShowcaseStatusClass(status: 'ACTIVE' | 'SHOWCASE' | 'SOON') {
+  if (status === 'ACTIVE') {
+    return 'badge badge-paid';
+  }
+
+  if (status === 'SHOWCASE') {
+    return 'badge badge-complete';
+  }
+
+  return 'badge badge-pending';
 }
 
 function CpuIcon() {
@@ -560,6 +585,91 @@ export default function LandingClient({
                     <span>{formatMoney(program.price)}</span>
                   </div>
                 ))}
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section id="catalog" className="dnk-section">
+        <div className="section-heading">
+          <span className="section-heading__main">Каталог</span>
+          <span className="section-heading__divider">/</span>
+          <span className="section-heading__sub">Реальные курсы</span>
+        </div>
+
+        <div className="feature-split">
+          <article className="panel panel--feature">
+            <span className="eyebrow">Рабочий курс платформы</span>
+            <h2>{featuredCourse?.title ?? 'Платформа ДНК: стартовый курс'}</h2>
+            <p className="panel-copy">
+              {featuredCourse?.description ||
+                'Именно этот курс сейчас подключён к рабочему checkout-flow, прогрессу, доступу по Enrollment и внутреннему lesson-view на базе 03-block.'}
+            </p>
+            <div className="feature-metrics">
+              <div>
+                <dt>Статус</dt>
+                <dd>active</dd>
+              </div>
+              <div>
+                <dt>Уроков</dt>
+                <dd>{featuredCourse?.lessonsCount ?? 0}</dd>
+              </div>
+              <div>
+                <dt>Доступ</dt>
+                <dd>через test checkout</dd>
+              </div>
+              <div>
+                <dt>Формат</dt>
+                <dd>полноценный MVP</dd>
+              </div>
+            </div>
+            <div className="row-actions" style={{ marginTop: '1rem' }}>
+              {primaryTariff?.isOwned ? (
+                <Link href={`/courses/${primaryTariff.courseSlug}`} className="primary-button">
+                  Продолжить обучение
+                </Link>
+              ) : (
+                renderHeroPrimaryAction()
+              )}
+            </div>
+          </article>
+
+          <article className="panel panel--aside">
+            <span className="eyebrow">Следующий набор программ</span>
+            <div className="status-stack" style={{ marginTop: '1rem' }}>
+              <div className="status-card">
+                <strong>Из таблицы пользователя</strong>
+                <p>Добавлен ограниченный набор реальных курсов без запуска отдельной LMS для каждого.</p>
+              </div>
+              <div className="status-card">
+                <strong>Без усложнения архитектуры</strong>
+                <p>Новые программы пока работают как витрина: названия, цены, статусы и карточки в интерфейсе.</p>
+              </div>
+              <div className="status-card">
+                <strong>Практический flow не тронут</strong>
+                <p>`practical-course` остаётся основным полностью рабочим сценарием: покупка, доступ, уроки и прогресс.</p>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <div className="catalog-grid" style={{ marginTop: '1rem' }}>
+          {dnkShowcaseCourses.map((course) => (
+            <article key={course.slug} className="program-highlight-card showcase-course-card">
+              <div className="badge-row" style={{ marginTop: 0 }}>
+                <span className="badge badge-complete">{course.category}</span>
+                <span className={getShowcaseStatusClass(course.status)}>
+                  {getShowcaseStatusLabel(course.status)}
+                </span>
+              </div>
+              <h3>{course.title}</h3>
+              <p>{course.description}</p>
+              <div className="showcase-course-card__footer">
+                <span className="showcase-course-card__price">{formatMoney(course.price)}</span>
+                <button className="ghost-button" disabled type="button">
+                  {course.status === 'SOON' ? 'Скоро' : 'В разработке'}
+                </button>
               </div>
             </article>
           ))}

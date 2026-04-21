@@ -63,6 +63,14 @@ npm run db:seed
 - `GET /api/courses/:slug`
 - `POST /api/lessons/:id/progress`
 
+### Content model урока
+
+- В `Lesson.description` хранится краткое summary урока.
+- В `Lesson.content` хранится основной body урока в текстовом формате с поддержкой секций `##`, списков и цитат.
+- `Lesson.videoUrl` и `Lesson.videoProvider` управляют video block внутри курса.
+- `Lesson.homeworkTitle`, `Lesson.homeworkPrompt`, `Lesson.homeworkType`, `Lesson.homeworkOptions` управляют домашним заданием урока.
+- Для `homeworkType=CHECKLIST` выбранные пункты и текст ответа сохраняются в существующее поле `LessonProgress.answer` в JSON-строке. Для остальных типов используется обычный текстовый ответ.
+
 ### Основной пользовательский flow
 
 1. Пользователь регистрируется или входит в аккаунт.
@@ -73,6 +81,18 @@ npm run db:seed
 6. После `PAID` автоматически создаётся или переиспользуется `Enrollment`.
 7. Пользователь сразу попадает в `/courses/:slug`, где открывается курс-фронт на базе `03-block.html`.
 8. Прогресс и домашка сохраняются через `POST /api/lessons/:id/progress`.
+
+### Тестовый курс
+
+- `npm run db:seed` пересоздаёт основной demo-course `practical-course` на 10 русскоязычных уроков.
+- В seed уже включены summary, content body, домашние задания и demo-video ссылки для части уроков.
+- Seed не строит админку и не добавляет новые сущности: курс остаётся на текущей MVP-модели.
+
+### Video block и demo-части
+
+- Если у урока есть `videoUrl`, курс показывает встроенное видео или embed-блок в зависимости от `videoProvider` и формата ссылки.
+- Если видео нет или ссылка не встраивается, курс показывает аккуратный fallback с возможностью открыть источник отдельно.
+- AI modal в курсе остаётся demo-блоком без реальной AI-интеграции.
 
 ### Secondary path
 

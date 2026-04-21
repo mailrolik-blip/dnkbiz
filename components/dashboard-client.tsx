@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
+import { dnkShowcaseCourses } from '@/lib/dnk-content';
+
 type DashboardUser = {
   email: string;
   name: string | null;
@@ -16,6 +18,9 @@ type EnrolledCourse = {
   slug: string;
   description: string | null;
   lessonsCount: number;
+  completedLessonsCount: number;
+  progressPercent: number;
+  nextLessonTitle: string | null;
   enrolledAt: string;
 };
 
@@ -99,6 +104,30 @@ function formatInterval(value: string | null) {
   return value;
 }
 
+function getShowcaseStatusLabel(status: 'ACTIVE' | 'SHOWCASE' | 'SOON') {
+  if (status === 'ACTIVE') {
+    return 'Доступен';
+  }
+
+  if (status === 'SHOWCASE') {
+    return 'Витрина';
+  }
+
+  return 'Скоро';
+}
+
+function getShowcaseStatusClass(status: 'ACTIVE' | 'SHOWCASE' | 'SOON') {
+  if (status === 'ACTIVE') {
+    return 'badge badge-paid';
+  }
+
+  if (status === 'SHOWCASE') {
+    return 'badge badge-complete';
+  }
+
+  return 'badge badge-pending';
+}
+
 export default function DashboardClient({
   user,
   courses,
@@ -112,6 +141,7 @@ export default function DashboardClient({
     tone: 'error' | 'success';
     message: string;
   } | null>(null);
+  const ownedCourseSlugs = new Set(courses.map((course) => course.slug));
 
   async function handleLogout() {
     setFeedback(null);
@@ -287,12 +317,29 @@ export default function DashboardClient({
                     <div className="badge-row">
                       <span className="badge badge-paid">{course.lessonsCount} уроков</span>
                       <span className="badge badge-complete">
+                        {course.completedLessonsCount}/{course.lessonsCount} пройдено
+                      </span>
+                      <span className="badge badge-complete">
                         открыт {formatDateTime(course.enrolledAt)}
                       </span>
                     </div>
+                    <div className="progress-box" style={{ marginTop: '1rem', paddingBottom: 0, borderBottom: 'none' }}>
+                      <div className="progress-info" style={{ marginBottom: '0.55rem' }}>
+                        <span>Прогресс по курсу</span>
+                        <span>{course.progressPercent}%</span>
+                      </div>
+                      <div className="progress-line">
+                        <div className="progress-fill" style={{ width: `${course.progressPercent}%` }} />
+                      </div>
+                    </div>
+                    <p className="muted-text" style={{ marginTop: '0.9rem' }}>
+                      {course.nextLessonTitle
+                        ? `Следующий урок: ${course.nextLessonTitle}.`
+                        : 'Все уроки завершены, можно вернуться к материалам в любой момент.'}
+                    </p>
                     <div className="row-actions">
                       <Link className="primary-button" href={`/courses/${course.slug}`}>
-                        Открыть курс
+                        Продолжить обучение
                       </Link>
                     </div>
                   </article>
@@ -418,6 +465,46 @@ export default function DashboardClient({
                 </article>
               ))
             )}
+          </div>
+        </section>
+
+        <section className="panel">
+          <span className="eyebrow">Каталог</span>
+          <h2 style={{ marginTop: '0.9rem' }}>Другие программы</h2>
+          <p className="panel-copy" style={{ marginTop: '0.75rem' }}>
+            Ниже показан ограниченный набор реальных курсов из пользовательской таблицы. Сейчас
+            они работают как витрина без отдельного checkout-flow для каждого направления.
+          </p>
+
+          <div className="program-grid" style={{ marginTop: '1rem' }}>
+            {dnkShowcaseCourses.map((course) => {
+              const isOwned = ownedCourseSlugs.has(course.slug);
+
+              return (
+                <article key={course.slug} className="program-highlight-card showcase-course-card">
+                  <div className="badge-row" style={{ marginTop: 0 }}>
+                    <span className="badge badge-complete">{course.category}</span>
+                    <span className={getShowcaseStatusClass(course.status)}>
+                      {getShowcaseStatusLabel(course.status)}
+                    </span>
+                  </div>
+                  <h3>{course.title}</h3>
+                  <p>{course.description}</p>
+                  <div className="showcase-course-card__footer">
+                    <span className="showcase-course-card__price">{formatMoney(course.price)}</span>
+                    {isOwned ? (
+                      <Link className="secondary-button" href={`/courses/${course.slug}`}>
+                        Продолжить обучение
+                      </Link>
+                    ) : (
+                      <button className="ghost-button" disabled type="button">
+                        {course.status === 'SOON' ? 'Скоро' : 'В разработке'}
+                      </button>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
           </div>
         </section>
       </section>

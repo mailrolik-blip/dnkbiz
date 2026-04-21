@@ -5,19 +5,27 @@ import { useEffect, useRef, useState } from 'react';
 
 import { dnkFeaturedPrograms } from '@/lib/dnk-content';
 
+type LessonProgress = {
+  completed: boolean;
+  answer: string | null;
+  lastViewedAt: string | null;
+  updatedAt: string;
+} | null;
+
 type LessonItem = {
   id: number;
   title: string;
   slug: string;
   description: string | null;
   content: string | null;
+  videoUrl: string | null;
+  videoProvider: string | null;
+  homeworkTitle: string | null;
+  homeworkPrompt: string | null;
+  homeworkType: string | null;
+  homeworkOptions: string[] | null;
   position: number;
-  progress: {
-    completed: boolean;
-    answer: string | null;
-    lastViewedAt: string | null;
-    updatedAt: string;
-  } | null;
+  progress: LessonProgress;
 };
 
 type CourseData = {
@@ -36,6 +44,37 @@ type ChatMessage = {
   role: 'ai' | 'user';
   text: string;
 };
+
+type HomeworkType = 'TEXT' | 'CHECKLIST' | 'ACTION_PLAN';
+
+type HomeworkDraft = {
+  text: string;
+  selectedOptions: string[];
+};
+
+type ContentBlock =
+  | { type: 'heading'; text: string }
+  | { type: 'paragraph'; text: string }
+  | { type: 'list'; items: string[] }
+  | { type: 'ordered-list'; items: string[] }
+  | { type: 'quote'; text: string };
+
+type VideoPresentation =
+  | {
+      kind: 'iframe';
+      src: string;
+      providerLabel: string;
+    }
+  | {
+      kind: 'video';
+      src: string;
+      providerLabel: string;
+    }
+  | {
+      kind: 'link';
+      src: string;
+      providerLabel: string;
+    };
 
 function formatDateTime(value: string | null) {
   if (!value) {
@@ -57,18 +96,282 @@ function isCourseCompleted(lessons: LessonItem[]) {
 }
 
 function getNextLessonId(lessons: LessonItem[], currentLessonId?: number) {
-  if (
-    currentLessonId &&
-    lessons.some((lesson) => lesson.id === currentLessonId)
-  ) {
+  if (currentLessonId && lessons.some((lesson) => lesson.id === currentLessonId)) {
     return currentLessonId;
   }
 
-  return (
-    lessons.find((lesson) => !lesson.progress?.completed)?.id ??
-    lessons[0]?.id ??
-    0
-  );
+  return lessons.find((lesson) => !lesson.progress?.completed)?.id ?? lessons[0]?.id ?? 0;
+}
+
+function normalizeHomeworkType(value: string | null | undefined): HomeworkType {
+  if (!value) {
+    return 'TEXT';
+  }
+
+  const normalized = value.trim().toUpperCase();
+
+  if (normalized === 'CHECKLIST') {
+    return 'CHECKLIST';
+  }
+
+  if (normalized === 'ACTION_PLAN') {
+    return 'ACTION_PLAN';
+  }
+
+  return 'TEXT';
+}
+
+function getHomeworkTypeLabel(type: HomeworkType) {
+  if (type === 'CHECKLIST') {
+    return 'Чек-лист действия';
+  }
+
+  if (type === 'ACTION_PLAN') {
+    return 'План внедрения';
+  }
+
+  return 'Рабочий ответ';
+}
+
+function getHomeworkPlaceholder(type: HomeworkType) {
+  if (type === 'ACTION_PLAN') {
+    return 'Опишите шаги, сроки, ответственных и ожидаемый результат...';
+  }
+
+  if (type === 'CHECKLIST') {
+    return 'Коротко зафиксируйте выводы по выбранным пунктам и следующий шаг...';
+  }
+
+  return 'Ответ, заметки или план действий по уроку...';
+}
+
+function parseHomeworkAnswer(lesson: LessonItem): HomeworkDraft {
+  const type = normalizeHomeworkType(lesson.homeworkType);
+  const rawAnswer = lesson.progress?.answer;
+
+  if (!rawAnswer) {
+    return { text: '', selectedOptions: [] };
+  }
+
+  if (type !== 'CHECKLIST') {
+    return {
+      text: rawAnswer,
+      selectedOptions: [],
+    };
+  }
+
+  try {
+    const parsed = JSON.parse(rawAnswer) as {
+      text?: unknown;
+      selectedOptions?: unknown;
+    };
+
+    return {
+      text: typeof parsed.text === 'string' ? parsed.text : '',
+      selectedOptions: Array.isArray(parsed.selectedOptions)
+        ? parsed.selectedOptions.filter(
+            (item): item is string => typeof item === 'string' && item.trim().length > 0
+          )
+        : [],
+    };
+  } catch {
+    return {
+      text: rawAnswer,
+      selectedOptions: [],
+    };
+  }
+}
+
+function serializeHomeworkAnswer(lesson: LessonItem, draft: HomeworkDraft) {
+  const type = normalizeHomeworkType(lesson.homeworkType);
+
+  if (type === 'CHECKLIST') {
+    if (draft.text.trim().length === 0 && draft.selectedOptions.length === 0) {
+      return null;
+    }
+
+    return JSON.stringify({
+      text: draft.text.trim(),
+      selectedOptions: draft.selectedOptions,
+    });
+  }
+
+  const normalized = draft.text.trim();
+  return normalized.length > 0 ? normalized : null;
+}
+
+function parseContentBlocks(content: string): ContentBlock[] {
+  return content
+    .replace(/\r\n/g, '\n')
+    .split(/\n{2,}/)
+    .map((block) => block.trim())
+    .filter(Boolean)
+    .map((block) => {
+      if (block.startsWith('## ')) {
+        return {
+          type: 'heading',
+          text: block.replace(/^##\s+/, '').trim(),
+        } satisfies ContentBlock;
+      }
+
+      if (block.startsWith('> ')) {
+        return {
+          type: 'quote',
+          text: block
+            .split('\n')
+            .map((line) => line.replace(/^>\s?/, '').trim())
+            .join(' '),
+        } satisfies ContentBlock;
+      }
+
+      const lines = block.split('\n').map((line) => line.trim()).filter(Boolean);
+
+      if (lines.length > 0 && lines.every((line) => /^-\s+/.test(line))) {
+        return {
+          type: 'list',
+          items: lines.map((line) => line.replace(/^-\s+/, '').trim()),
+        } satisfies ContentBlock;
+      }
+
+      if (lines.length > 0 && lines.every((line) => /^\d+\.\s+/.test(line))) {
+        return {
+          type: 'ordered-list',
+          items: lines.map((line) => line.replace(/^\d+\.\s+/, '').trim()),
+        } satisfies ContentBlock;
+      }
+
+      return {
+        type: 'paragraph',
+        text: block,
+      } satisfies ContentBlock;
+    });
+}
+
+function normalizeVideoProvider(url: string | null, provider: string | null) {
+  const normalizedProvider = provider?.trim().toLowerCase();
+
+  if (normalizedProvider) {
+    return normalizedProvider;
+  }
+
+  if (!url) {
+    return null;
+  }
+
+  if (url.includes('youtube.com') || url.includes('youtu.be')) {
+    return 'youtube';
+  }
+
+  if (url.includes('rutube.ru')) {
+    return 'rutube';
+  }
+
+  if (url.includes('vimeo.com')) {
+    return 'vimeo';
+  }
+
+  if (/\.(mp4|webm|ogg)(\?|#|$)/i.test(url)) {
+    return 'file';
+  }
+
+  return 'link';
+}
+
+function extractYouTubeId(url: string) {
+  try {
+    const parsed = new URL(url);
+
+    if (parsed.hostname.includes('youtu.be')) {
+      return parsed.pathname.replace(/^\/+/, '').split('/')[0] || null;
+    }
+
+    return parsed.searchParams.get('v');
+  } catch {
+    return null;
+  }
+}
+
+function extractRutubeId(url: string) {
+  const match = url.match(/rutube\.ru\/video\/([a-zA-Z0-9_-]+)/);
+  return match?.[1] ?? null;
+}
+
+function extractVimeoId(url: string) {
+  const match = url.match(/vimeo\.com\/(\d+)/);
+  return match?.[1] ?? null;
+}
+
+function getVideoPresentation(lesson: LessonItem): VideoPresentation | null {
+  if (!lesson.videoUrl) {
+    return null;
+  }
+
+  const provider = normalizeVideoProvider(lesson.videoUrl, lesson.videoProvider);
+
+  if (provider === 'youtube') {
+    const videoId = extractYouTubeId(lesson.videoUrl);
+    if (!videoId) {
+      return {
+        kind: 'link',
+        src: lesson.videoUrl,
+        providerLabel: 'Внешняя ссылка',
+      };
+    }
+
+    return {
+      kind: 'iframe',
+      src: `https://www.youtube.com/embed/${videoId}`,
+      providerLabel: 'YouTube',
+    };
+  }
+
+  if (provider === 'rutube') {
+    const videoId = extractRutubeId(lesson.videoUrl);
+    if (!videoId) {
+      return {
+        kind: 'link',
+        src: lesson.videoUrl,
+        providerLabel: 'Внешняя ссылка',
+      };
+    }
+
+    return {
+      kind: 'iframe',
+      src: `https://rutube.ru/play/embed/${videoId}`,
+      providerLabel: 'Rutube',
+    };
+  }
+
+  if (provider === 'vimeo') {
+    const videoId = extractVimeoId(lesson.videoUrl);
+    if (!videoId) {
+      return {
+        kind: 'link',
+        src: lesson.videoUrl,
+        providerLabel: 'Внешняя ссылка',
+      };
+    }
+
+    return {
+      kind: 'iframe',
+      src: `https://player.vimeo.com/video/${videoId}`,
+      providerLabel: 'Vimeo',
+    };
+  }
+
+  if (provider === 'file') {
+    return {
+      kind: 'video',
+      src: lesson.videoUrl,
+      providerLabel: 'Встроенное видео',
+    };
+  }
+
+  return {
+    kind: 'link',
+    src: lesson.videoUrl,
+    providerLabel: 'Внешняя ссылка',
+  };
 }
 
 function CheckIcon() {
@@ -114,13 +417,142 @@ function ArrowUpIcon() {
   );
 }
 
+function LessonContent({ content }: { content: string }) {
+  const blocks = parseContentBlocks(content);
+
+  return (
+    <div className="lesson-content lesson-content--lms lesson-rich-content">
+      {blocks.map((block, index) => {
+        if (block.type === 'heading') {
+          return (
+            <h3 key={`heading-${index}`} className="lesson-rich-content__heading">
+              {block.text}
+            </h3>
+          );
+        }
+
+        if (block.type === 'list') {
+          return (
+            <ul key={`list-${index}`} className="lesson-rich-content__list">
+              {block.items.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          );
+        }
+
+        if (block.type === 'ordered-list') {
+          return (
+            <ol key={`ordered-${index}`} className="lesson-rich-content__ordered-list">
+              {block.items.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ol>
+          );
+        }
+
+        if (block.type === 'quote') {
+          return (
+            <blockquote key={`quote-${index}`} className="lesson-rich-content__quote">
+              {block.text}
+            </blockquote>
+          );
+        }
+
+        return (
+          <p key={`paragraph-${index}`} className="lesson-rich-content__paragraph">
+            {block.text}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
+function VideoBlock({ lesson }: { lesson: LessonItem }) {
+  const presentation = getVideoPresentation(lesson);
+
+  if (!presentation) {
+    return (
+      <div className="video-placeholder lesson-video lesson-video--fallback">
+        <div className="video-placeholder__icon">
+          <PlayIcon />
+        </div>
+        <div className="lesson-video__meta">
+          <strong>Видео к уроку пока не добавлено</strong>
+          <p>
+            Этот урок можно пройти в текстовом формате: изучите материал, выполните практику и
+            сохраните прогресс в блоке домашнего задания.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="lesson-video">
+      <div className="lesson-video__media">
+        {presentation.kind === 'iframe' ? (
+          <iframe
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+            className="lesson-video__frame"
+            referrerPolicy="strict-origin-when-cross-origin"
+            src={presentation.src}
+            title={`Видео урока: ${lesson.title}`}
+          />
+        ) : presentation.kind === 'video' ? (
+          <video className="lesson-video__native" controls preload="metadata" src={presentation.src}>
+            Ваш браузер не поддерживает встроенное видео.
+          </video>
+        ) : (
+          <div className="video-placeholder lesson-video__link-fallback">
+            <div className="video-placeholder__icon">
+              <PlayIcon />
+            </div>
+            <div className="lesson-video__meta">
+              <strong>Видео доступно по ссылке</strong>
+              <p>Откройте материал во внешнем окне и затем вернитесь к уроку для практики.</p>
+              <a
+                className="secondary-button"
+                href={presentation.src}
+                rel="noreferrer"
+                target="_blank"
+              >
+                Открыть видео
+              </a>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {presentation.kind !== 'link' ? (
+        <div className="lesson-video__meta">
+          <div className="badge-row">
+            <span className="badge badge-complete">Видео урока</span>
+            <span className="badge badge-pending">{presentation.providerLabel}</span>
+          </div>
+          {lesson.videoUrl ? (
+            <a
+              className="lesson-video__source"
+              href={lesson.videoUrl}
+              rel="noreferrer"
+              target="_blank"
+            >
+              Открыть источник в новой вкладке
+            </a>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export default function CoursePlayer({ course }: CoursePlayerProps) {
   const initialCourseComplete = isCourseCompleted(course.lessons);
   const [courseState, setCourseState] = useState(course);
   const [lessons, setLessons] = useState(course.lessons);
-  const [currentLessonId, setCurrentLessonId] = useState(() =>
-    getNextLessonId(course.lessons)
-  );
+  const [currentLessonId, setCurrentLessonId] = useState(() => getNextLessonId(course.lessons));
   const [pendingLessonId, setPendingLessonId] = useState<number | null>(null);
   const [message, setMessage] = useState<{
     tone: 'error' | 'success';
@@ -134,7 +566,7 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
     {
       id: 1,
       role: 'ai',
-      text: 'Привет! Я AI-ассистент курса. Сейчас это demo-блок без реального backend-ответчика, но я покажу, как будет выглядеть диалог.',
+      text: 'Привет! Я AI-ассистент курса. Сейчас это demo-блок без реального backend-ответчика, но я показываю, как будет выглядеть диалог внутри платформы.',
     },
   ]);
   const chatBodyRef = useRef<HTMLDivElement | null>(null);
@@ -172,9 +604,7 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
 
         setCourseState(payload.course);
         setLessons(payload.course.lessons);
-        setCurrentLessonId((current) =>
-          getNextLessonId(payload.course?.lessons ?? [], current)
-        );
+        setCurrentLessonId((current) => getNextLessonId(payload.course?.lessons ?? [], current));
         setSyncError(null);
       } catch {
         if (!cancelled) {
@@ -220,9 +650,7 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
       return;
     }
 
-    const targets = Array.from(
-      document.querySelectorAll<HTMLElement>('.glow-target')
-    );
+    const targets = Array.from(document.querySelectorAll<HTMLElement>('.glow-target'));
 
     function handleMouseMove(event: MouseEvent) {
       for (const target of targets) {
@@ -239,20 +667,34 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
     };
   }, []);
 
-  const currentLesson =
-    lessons.find((lesson) => lesson.id === currentLessonId) ?? lessons[0] ?? null;
+  const currentLesson = lessons.find((lesson) => lesson.id === currentLessonId) ?? lessons[0] ?? null;
   const completedCount = lessons.filter((lesson) => lesson.progress?.completed).length;
-  const progressPercent =
-    lessons.length > 0 ? Math.round((completedCount / lessons.length) * 100) : 0;
+  const progressPercent = lessons.length > 0 ? Math.round((completedCount / lessons.length) * 100) : 0;
   const courseFinished = isCourseCompleted(lessons);
+  const currentHomeworkDraft = currentLesson ? parseHomeworkAnswer(currentLesson) : { text: '', selectedOptions: [] };
+  const currentHomeworkType = currentLesson ? normalizeHomeworkType(currentLesson.homeworkType) : 'TEXT';
+  const currentHomeworkOptions = currentLesson?.homeworkOptions ?? [];
 
-  function updateLesson(
-    lessonId: number,
-    updater: (lesson: LessonItem) => LessonItem
-  ) {
+  function updateLesson(lessonId: number, updater: (lesson: LessonItem) => LessonItem) {
     setLessons((current) =>
       current.map((lesson) => (lesson.id === lessonId ? updater(lesson) : lesson))
     );
+  }
+
+  function patchCurrentLessonAnswer(nextAnswer: string | null) {
+    if (!currentLesson) {
+      return;
+    }
+
+    updateLesson(currentLesson.id, (lesson) => ({
+      ...lesson,
+      progress: {
+        completed: lesson.progress?.completed ?? false,
+        answer: nextAnswer,
+        lastViewedAt: lesson.progress?.lastViewedAt ?? null,
+        updatedAt: new Date().toISOString(),
+      },
+    }));
   }
 
   function openLesson(lessonId: number) {
@@ -263,20 +705,34 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
     }
   }
 
-  function handleAnswerChange(answer: string) {
+  function handleHomeworkTextChange(text: string) {
     if (!currentLesson) {
       return;
     }
 
-    updateLesson(currentLesson.id, (lesson) => ({
-      ...lesson,
-      progress: {
-        completed: lesson.progress?.completed ?? false,
-        answer,
-        lastViewedAt: lesson.progress?.lastViewedAt ?? null,
-        updatedAt: lesson.progress?.updatedAt ?? new Date().toISOString(),
-      },
-    }));
+    patchCurrentLessonAnswer(
+      serializeHomeworkAnswer(currentLesson, {
+        ...currentHomeworkDraft,
+        text,
+      })
+    );
+  }
+
+  function handleHomeworkOptionToggle(option: string) {
+    if (!currentLesson) {
+      return;
+    }
+
+    const selectedOptions = currentHomeworkDraft.selectedOptions.includes(option)
+      ? currentHomeworkDraft.selectedOptions.filter((item) => item !== option)
+      : [...currentHomeworkDraft.selectedOptions, option];
+
+    patchCurrentLessonAnswer(
+      serializeHomeworkAnswer(currentLesson, {
+        ...currentHomeworkDraft,
+        selectedOptions,
+      })
+    );
   }
 
   function handleCompletedToggle(completed: boolean) {
@@ -331,11 +787,9 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
         throw new Error(payload?.error || 'Не удалось сохранить прогресс.');
       }
 
-      const nextProgress = payload.progress;
-
       updateLesson(currentLesson.id, (lesson) => ({
         ...lesson,
-        progress: nextProgress,
+        progress: payload.progress ?? null,
       }));
 
       setMessage({
@@ -413,7 +867,7 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
             <p className="course-stage__eyebrow">{courseState.title}</p>
             <p className="course-stage__copy">
               {courseState.description ||
-                'Закрытый курс с живыми уроками, test checkout и сохранением прогресса по пользователю.'}
+                'Закрытый курс с живыми уроками, встроенными видео, домашними заданиями и сохранением прогресса по пользователю.'}
             </p>
           </div>
           <div className="badge-row" style={{ marginTop: 0 }}>
@@ -462,74 +916,93 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
               </div>
             ) : null}
 
-            <div
-              className="lms-scroll-area"
-              style={{ display: successOpen ? 'none' : undefined }}
-            >
+            <div className="lms-scroll-area" style={{ display: successOpen ? 'none' : undefined }}>
               {currentLesson ? (
                 <>
                   <div className="lms-tag">
                     Урок <span>{currentLesson.position}</span>
                   </div>
                   <h2 className="lms-title">{currentLesson.title}</h2>
-                  {currentLesson.description ? (
-                    <p className="lms-desc">{currentLesson.description}</p>
-                  ) : null}
+                  {currentLesson.description ? <p className="lms-desc">{currentLesson.description}</p> : null}
 
-                  <div className="video-placeholder">
-                    <div className="video-placeholder__icon">
-                      <PlayIcon />
-                    </div>
-                    <div>
-                      <strong>Медиа-блок DNK сохранён</strong>
-                      <p>
-                        В текущем MVP это визуальный контейнер урока из 03-block, подключённый
-                        к реальным lesson data и progress API.
-                      </p>
-                    </div>
-                  </div>
+                  <VideoBlock lesson={currentLesson} />
 
-                  {currentLesson.content ? (
-                    <div className="lesson-content lesson-content--lms">
-                      {currentLesson.content}
-                    </div>
-                  ) : null}
+                  {currentLesson.content ? <LessonContent content={currentLesson.content} /> : null}
 
                   <div className="homework-box">
                     <div className="hw-header">
-                      <span className="hw-label">Домашняя практика</span>
+                      <div className="hw-header__copy">
+                        <span className="hw-label">Домашняя практика</span>
+                        <h3 className="hw-title">
+                          {currentLesson.homeworkTitle || 'Закрепление материала'}
+                        </h3>
+                      </div>
                       <span className="muted-text">
                         Последнее сохранение:{' '}
                         {formatDateTime(
-                          currentLesson.progress?.updatedAt ??
-                            currentLesson.progress?.lastViewedAt ??
-                            null
+                          currentLesson.progress?.updatedAt ?? currentLesson.progress?.lastViewedAt ?? null
                         )}
                       </span>
                     </div>
 
-                    <div className="hw-task">
-                      Зафиксируйте ключевую мысль урока или короткий рабочий ответ по
-                      материалу. После этого сохраните прогресс и при необходимости отметьте
-                      урок завершённым.
+                    <div className="badge-row">
+                      <span className="badge badge-complete">
+                        {getHomeworkTypeLabel(currentHomeworkType)}
+                      </span>
+                      {currentHomeworkOptions.length > 0 ? (
+                        <span className="badge badge-pending">
+                          {currentHomeworkOptions.length} пунктов практики
+                        </span>
+                      ) : null}
                     </div>
 
-                    <textarea
-                      className="hw-input"
-                      onChange={(event) => handleAnswerChange(event.target.value)}
-                      placeholder="Ответ, заметки или план действий по уроку..."
-                      rows={5}
-                      value={currentLesson.progress?.answer ?? ''}
-                    />
+                    <div className="hw-task">
+                      {currentLesson.homeworkPrompt ||
+                        'Зафиксируйте ключевую мысль урока, сформулируйте рабочее решение и сохраните результат в прогресс.'}
+                    </div>
+
+                    {currentHomeworkOptions.length > 0 ? (
+                      <div className="hw-options-grid hw-options-grid--checklist">
+                        {currentHomeworkOptions.map((option) => {
+                          const checked = currentHomeworkDraft.selectedOptions.includes(option);
+
+                          return (
+                            <label
+                              key={option}
+                              className={`hw-checkbox ${checked ? 'hw-checkbox--checked' : ''}`}
+                            >
+                              <input
+                                checked={checked}
+                                onChange={() => handleHomeworkOptionToggle(option)}
+                                type="checkbox"
+                              />
+                              <span className="checkmark">
+                                <CheckIcon />
+                              </span>
+                              <span className="hw-checkbox__copy">{option}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+
+                    <label className="field" style={{ gap: '0.55rem' }}>
+                      <span className="hw-textarea-label">Ответ по уроку</span>
+                      <textarea
+                        className="hw-input"
+                        onChange={(event) => handleHomeworkTextChange(event.target.value)}
+                        placeholder={getHomeworkPlaceholder(currentHomeworkType)}
+                        rows={6}
+                        value={currentHomeworkDraft.text}
+                      />
+                    </label>
 
                     <div className="hw-options-grid hw-options-grid--single">
                       <label className="hw-checkbox">
                         <input
                           checked={currentLesson.progress?.completed ?? false}
                           disabled={pendingLessonId === currentLesson.id}
-                          onChange={(event) =>
-                            handleCompletedToggle(event.target.checked)
-                          }
+                          onChange={(event) => handleCompletedToggle(event.target.checked)}
                           type="checkbox"
                         />
                         <span className="checkmark">
@@ -546,27 +1019,21 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
                         onClick={persistProgress}
                         type="button"
                       >
-                        {pendingLessonId === currentLesson.id
-                          ? 'Сохраняем...'
-                          : 'Сохранить прогресс'}
+                        {pendingLessonId === currentLesson.id ? 'Сохраняем...' : 'Сохранить прогресс'}
                       </button>
                     </div>
 
                     {message ? (
                       <p
                         className={`feedback ${
-                          message.tone === 'success'
-                            ? 'feedback-success'
-                            : 'feedback-error'
+                          message.tone === 'success' ? 'feedback-success' : 'feedback-error'
                         }`}
                       >
                         {message.text}
                       </p>
                     ) : null}
 
-                    {syncError ? (
-                      <p className="feedback feedback-error">{syncError}</p>
-                    ) : null}
+                    {syncError ? <p className="feedback feedback-error">{syncError}</p> : null}
                   </div>
                 </>
               ) : (
@@ -602,7 +1069,14 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
                   onClick={() => openLesson(lesson.id)}
                   type="button"
                 >
-                  <span>{lesson.position}. {lesson.title}</span>
+                  <span className="lesson-btn__body">
+                    <span className="lesson-btn__title">
+                      {lesson.position}. {lesson.title}
+                    </span>
+                    <span className="lesson-btn__meta">
+                      {lesson.description || 'Откройте урок, чтобы посмотреть содержание и практику.'}
+                    </span>
+                  </span>
                   <span className="check-icon">
                     <CheckIcon />
                   </span>
@@ -650,11 +1124,7 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
           <div className="ai-chat-window">
             <div className="chat-header">
               <span>AI Ассистент</span>
-              <button
-                className="close-chat"
-                onClick={() => setAssistantOpen(false)}
-                type="button"
-              >
+              <button className="close-chat" onClick={() => setAssistantOpen(false)} type="button">
                 <CloseIcon />
               </button>
             </div>
@@ -663,9 +1133,7 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
               {chatMessages.map((chatMessage) => (
                 <div
                   key={chatMessage.id}
-                  className={`chat-msg ${
-                    chatMessage.role === 'ai' ? 'msg-ai' : 'msg-user'
-                  }`}
+                  className={`chat-msg ${chatMessage.role === 'ai' ? 'msg-ai' : 'msg-user'}`}
                 >
                   {chatMessage.text}
                 </div>
