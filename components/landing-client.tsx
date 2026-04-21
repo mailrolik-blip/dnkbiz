@@ -2,82 +2,45 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { type MouseEvent, useState } from 'react';
+import { useState } from 'react';
 
 import {
-  dnkFeaturedPrograms,
-  dnkProgramCatalog,
-  dnkSectionLinks,
+  dnkFunnelCatalogShelves,
+  dnkFunnelHeroPoints,
+  dnkFunnelProofPoints,
+  dnkFunnelScenarios,
   dnkShowcaseCourses,
-  dnkTeamMembers,
-  dnkTeamStats,
-  dnkTestimonials,
 } from '@/lib/dnk-content';
+import type { ShowcaseCourse, ShowcaseCourseStatus } from '@/lib/dnk-content';
+import type { LandingPageData, LandingTariff } from '@/lib/landing';
 
-type LandingUser = {
-  email: string;
-  name: string | null;
-} | null;
+type LandingClientProps = LandingPageData;
 
-type FeaturedCourse = {
-  title: string;
-  slug: string;
-  description: string | null;
-  lessonsCount: number;
-  lessons: Array<{
-    id: number;
-    title: string;
-    position: number;
-  }>;
-} | null;
-
-type LandingTariff = {
-  id: number;
-  title: string;
-  price: number;
-  interval: string | null;
-  courseTitle: string;
-  courseSlug: string;
-  courseDescription: string | null;
-  lessonsCount: number;
-  isOwned: boolean;
-  pendingOrder: {
-    id: number;
-    checkoutUrl: string;
-  } | null;
-};
-
-type LandingClientProps = {
-  user: LandingUser;
-  featuredCourse: FeaturedCourse;
-  tariffs: LandingTariff[];
+type AccessActionLabels = {
+  create: string;
+  guest: string;
+  loading: string;
+  owned: string;
+  pending: string;
 };
 
 function formatMoney(value: number) {
   return `${value.toLocaleString('ru-RU')} ₽`;
 }
 
-function formatInterval(value: string | null) {
-  if (!value || value === 'one-time') {
-    return 'разовый доступ';
-  }
-
-  return value;
-}
-
-function getShowcaseStatusLabel(status: 'ACTIVE' | 'SHOWCASE' | 'SOON') {
+function getShowcaseStatusLabel(status: ShowcaseCourseStatus) {
   if (status === 'ACTIVE') {
     return 'Доступен';
   }
 
   if (status === 'SHOWCASE') {
-    return 'Витрина';
+    return 'В каталоге';
   }
 
   return 'Скоро';
 }
 
-function getShowcaseStatusClass(status: 'ACTIVE' | 'SHOWCASE' | 'SOON') {
+function getShowcaseStatusClass(status: ShowcaseCourseStatus) {
   if (status === 'ACTIVE') {
     return 'badge badge-paid';
   }
@@ -89,42 +52,31 @@ function getShowcaseStatusClass(status: 'ACTIVE' | 'SHOWCASE' | 'SOON') {
   return 'badge badge-pending';
 }
 
-function CpuIcon() {
+function CheckIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="7" y="7" width="10" height="10" rx="2" />
-      <path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 14h3M1 9h3M1 14h3" />
+      <path d="m5 12 5 5L20 7" />
     </svg>
   );
 }
 
-function LayersIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M12 3 2 8l10 5 10-5-10-5Z" />
-      <path d="m2 12 10 5 10-5" />
-      <path d="m2 16 10 5 10-5" />
-    </svg>
-  );
-}
+type CourseCardActionProps = {
+  course: ShowcaseCourse;
+};
 
-function UsersIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2" />
-      <circle cx="9.5" cy="7" r="4" />
-      <path d="M20 8v6" />
-      <path d="M23 11h-6" />
-    </svg>
-  );
-}
+function ShowcaseCourseAction({ course }: CourseCardActionProps) {
+  if (course.status === 'SOON') {
+    return (
+      <button className="ghost-button" disabled type="button">
+        Скоро
+      </button>
+    );
+  }
 
-function ArrowRightIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M5 12h14" />
-      <path d="m13 5 7 7-7 7" />
-    </svg>
+    <a href="#final-cta" className="secondary-button">
+      Подробнее
+    </a>
   );
 }
 
@@ -142,13 +94,16 @@ export default function LandingClient({
 
   const primaryTariff = tariffs[0] ?? null;
 
-  function handleHeroCardMove(event: MouseEvent<HTMLElement>) {
-    const target = event.currentTarget;
-    const rect = target.getBoundingClientRect();
+  const showcaseCourseMap = new Map(
+    dnkShowcaseCourses.map((course) => [course.slug, course])
+  );
 
-    target.style.setProperty('--x', `${event.clientX - rect.left}px`);
-    target.style.setProperty('--y', `${event.clientY - rect.top}px`);
-  }
+  const directionShelves = dnkFunnelCatalogShelves.map((shelf) => ({
+    ...shelf,
+    courses: shelf.courseSlugs
+      .map((slug) => showcaseCourseMap.get(slug))
+      .filter((course): course is ShowcaseCourse => Boolean(course)),
+  }));
 
   async function handleCreateOrder(tariffId: number) {
     setFeedback(null);
@@ -185,7 +140,7 @@ export default function LandingClient({
 
       setFeedback({
         tone: 'success',
-        message: `Заказ #${payload?.order?.id ?? ''} создан. После подтверждения оплаты курс появится в личном кабинете.`,
+        message: `Заказ #${payload?.order?.id ?? ''} создан. Доступ к курсу откроется сразу после подтверждения оплаты.`,
       });
       router.refresh();
     } catch (orderError) {
@@ -201,66 +156,101 @@ export default function LandingClient({
     }
   }
 
-  function renderHeroPrimaryAction() {
-    if (!primaryTariff) {
+  function renderAccessAction(
+    className: string,
+    labels?: Partial<AccessActionLabels>,
+    tariff: LandingTariff | null = primaryTariff
+  ) {
+    const resolvedLabels: AccessActionLabels = {
+      create: 'Получить доступ',
+      guest: 'Начать обучение',
+      loading: 'Создаем заказ...',
+      owned: 'Открыть курс',
+      pending: 'Продолжить оплату',
+      ...labels,
+    };
+
+    if (!tariff) {
       return (
-        <Link href="/register" className="primary-button">
-          Зарегистрироваться
+        <Link href="/register" className={className} data-access-state="guest">
+          {resolvedLabels.guest}
         </Link>
       );
     }
 
     if (!user) {
       return (
-        <Link href="/register" className="primary-button">
-          Зарегистрироваться
+        <Link href="/register" className={className} data-access-state="guest">
+          {resolvedLabels.guest}
         </Link>
       );
     }
 
-    if (primaryTariff.isOwned) {
+    if (tariff.isOwned) {
       return (
-        <Link href={`/courses/${primaryTariff.courseSlug}`} className="primary-button">
-          Открыть курс
+        <Link
+          href={`/courses/${tariff.courseSlug}`}
+          className={className}
+          data-access-state="owned"
+        >
+          {resolvedLabels.owned}
         </Link>
       );
     }
 
-    if (primaryTariff.pendingOrder) {
+    if (tariff.pendingOrder) {
       return (
-        <Link href={primaryTariff.pendingOrder.checkoutUrl} className="primary-button">
-          Продолжить оплату
+        <Link
+          href={tariff.pendingOrder.checkoutUrl}
+          className={className}
+          data-access-state="pending"
+        >
+          {resolvedLabels.pending}
         </Link>
       );
     }
 
     return (
       <button
-        className="primary-button"
-        disabled={buyingTariffId === primaryTariff.id}
-        onClick={() => handleCreateOrder(primaryTariff.id)}
+        className={className}
+        data-access-state="create"
+        disabled={buyingTariffId === tariff.id}
+        onClick={() => handleCreateOrder(tariff.id)}
         type="button"
       >
-        {buyingTariffId === primaryTariff.id ? 'Создаём заказ...' : 'Купить доступ'}
+        {buyingTariffId === tariff.id
+          ? resolvedLabels.loading
+          : resolvedLabels.create}
       </button>
+    );
+  }
+
+  function renderHeroSecondaryAction() {
+    if (!user) {
+      return (
+        <Link href="/login" className="secondary-button" data-hero-secondary="login">
+          Войти
+        </Link>
+      );
+    }
+
+    if (primaryTariff?.isOwned) {
+      return (
+        <Link href="/lk" className="secondary-button" data-hero-secondary="cabinet">
+          Личный кабинет
+        </Link>
+      );
+    }
+
+    return (
+      <a href="#proof" className="secondary-button" data-hero-secondary="demo">
+        Смотреть демо
+      </a>
     );
   }
 
   return (
     <main className="page-shell">
-      <nav className="floating-nav" aria-label="Навигация по странице">
-        {dnkSectionLinks.map((section) => (
-          <a key={section.id} href={`#${section.id}`} className="floating-nav__item">
-            <span className="floating-nav__dot" />
-            <span>{section.label}</span>
-          </a>
-        ))}
-        <Link href={user ? '/lk' : '/login'} className="floating-nav__item floating-nav__item--cta">
-          <span className="floating-nav__dot" />
-          <span>{user ? 'Кабинет' : 'Вход'}</span>
-        </Link>
-      </nav>
-
       <header className="top-nav">
         <Link href="/" className="brand">
           <span className="brand-mark" />
@@ -285,309 +275,202 @@ export default function LandingClient({
         </div>
       </header>
 
-      <section id="hero" className="hero-container">
-        <div className="hero-scroll-track">
-          <div className="hero-sticky-viewport">
-            <div className="hero-grid">
-              <article className="bento-card card-main" onMouseMove={handleHeroCardMove}>
-                <span className="eyebrow">Бизнес-эволюция</span>
-                <h1>Бизнес-Эволюция</h1>
-                <p className="hero-lead">
-                  Системный подход к росту бизнеса, обучению команды и запуску рабочего
-                  цифрового контура.
-                </p>
-                <p className="hero-text">
-                  Главная страница теперь держит композицию Tilda-блока и одновременно
-                  работает на живом MVP: регистрация, checkout, кабинет и закрытый курс
-                  уже соединены в один пользовательский flow.
-                </p>
+      <section id="hero" className="dnk-section funnel-hero">
+        <article className="panel funnel-hero__main">
+          <span className="eyebrow">DNK Biz</span>
+          <h1 className="funnel-hero__title">
+            Курсы для работы и обязательного обучения в одном кабинете
+          </h1>
+          <p className="funnel-hero__subtitle">
+            1С, Excel, Word, охрана труда, пожарная безопасность,
+            электробезопасность и другие программы с быстрым доступом после
+            оплаты.
+          </p>
 
-                <div className="hero-actions">
-                  {renderHeroPrimaryAction()}
-                  <Link href={user ? '/lk' : '/login'} className="secondary-button">
-                    {user ? 'Открыть кабинет' : 'Войти'}
-                  </Link>
-                </div>
-
-                {feedback ? (
-                  <p
-                    className={`feedback ${
-                      feedback.tone === 'success' ? 'feedback-success' : 'feedback-error'
-                    }`}
-                  >
-                    {feedback.message}
-                  </p>
-                ) : null}
-              </article>
-
-              <a
-                href="#automation"
-                className="bento-card horizontal-card card-auto"
-                onMouseMove={handleHeroCardMove}
-              >
-                <span className="bento-icon">
-                  <CpuIcon />
-                </span>
-                <div className="text-wrap card-text-mobile">
-                  <div className="bento-title">Автоматизация</div>
-                  <div className="bento-desc">
-                    CRM, аналитика и AI-связки под реальные процессы бизнеса.
-                  </div>
-                </div>
-                <span className="arrow-icon" aria-hidden="true">
-                  <ArrowRightIcon />
-                </span>
-              </a>
-
-              <a
-                href="#education"
-                className="bento-card card-check"
-                onMouseMove={handleHeroCardMove}
-              >
-                <span className="bento-icon">
-                  <LayersIcon />
-                </span>
-                <div className="card-text-mobile">
-                  <div className="bento-title">База знаний</div>
-                  <div className="bento-desc">
-                    Закрытый курс, progress API и вход в обучение сразу после checkout.
-                  </div>
-                </div>
-              </a>
-
-              <a
-                href="#about"
-                className="bento-card card-mentor"
-                onMouseMove={handleHeroCardMove}
-              >
-                <span className="bento-icon">
-                  <UsersIcon />
-                </span>
-                <div className="card-text-mobile">
-                  <div className="bento-title">Менторство</div>
-                  <div className="bento-desc">
-                    Методология DNK, сопровождение и единый путь пользователя в курс.
-                  </div>
-                </div>
-              </a>
-            </div>
+          <div className="row-actions">
+            {renderAccessAction('primary-button', {
+              create: 'Получить доступ',
+              owned: 'Открыть курс',
+            })}
+            {renderHeroSecondaryAction()}
           </div>
-        </div>
-      </section>
 
-      <section id="education" className="dnk-section">
-        <div className="section-heading">
-          <span className="section-heading__main">Обучение</span>
-          <span className="section-heading__divider">/</span>
-          <span className="section-heading__sub">Платформа</span>
-        </div>
-
-        <div className="feature-split">
-          <article className="panel panel--feature">
-            <span className="eyebrow">Готовый фронтенд курса</span>
-            <h2>{featuredCourse?.title ?? 'Закрытый курс DNK'}</h2>
-            <p className="panel-copy">
-              {featuredCourse?.description ??
-                'Курс подключён к реальным урокам, доступу по Enrollment и сохранению прогресса.'}
+          {feedback ? (
+            <p
+              className={`feedback ${
+                feedback.tone === 'success'
+                  ? 'feedback-success'
+                  : 'feedback-error'
+              }`}
+            >
+              {feedback.message}
             </p>
+          ) : null}
 
-            <div className="feature-metrics">
-              <div>
-                <dt>Уроков</dt>
-                <dd>{featuredCourse?.lessonsCount ?? 0}</dd>
-              </div>
-              <div>
-                <dt>Доступ</dt>
-                <dd>по оплате</dd>
-              </div>
-              <div>
-                <dt>Прогресс</dt>
-                <dd>по пользователю</dd>
-              </div>
-            </div>
-
-            <div className="feature-list">
-              {(featuredCourse?.lessons ?? []).slice(0, 5).map((lesson) => (
-                <div key={lesson.id} className="feature-list__item">
-                  <span>{lesson.position}.</span>
-                  <span>{lesson.title}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="row-actions">
-              {primaryTariff?.isOwned ? (
-                <Link href={`/courses/${primaryTariff.courseSlug}`} className="primary-button">
-                  Перейти к курсу
-                </Link>
-              ) : (
-                <a href="#pricing" className="primary-button">
-                  Выбрать тариф
-                </a>
-              )}
-            </div>
-          </article>
-
-          <article className="panel panel--aside">
-            <span className="eyebrow">Что уже работает</span>
-            <div className="status-stack">
-              <div className="status-card">
-                <strong>Авторизация</strong>
-                <p>Вход по email и паролю, сессия и защищённые маршруты.</p>
-              </div>
-              <div className="status-card">
-                <strong>Checkout flow</strong>
-                <p>После выбора тарифа пользователь сразу попадает в test checkout и оттуда в курс.</p>
-              </div>
-              <div className="status-card">
-                <strong>Прогресс уроков</strong>
-                <p>Каждый ответ и завершение урока сохраняются в прогрессе пользователя.</p>
-              </div>
-            </div>
-          </article>
-        </div>
-      </section>
-
-      <section id="checklists" className="dnk-section">
-        <div className="section-heading">
-          <span className="section-heading__main">Чек-лист</span>
-          <span className="section-heading__divider">/</span>
-          <span className="section-heading__sub">Стартовый аудит</span>
-        </div>
-
-        <div className="audit-grid">
-          <article className="panel panel--feature">
-            <span className="eyebrow">Реальный DNK-блок</span>
-            <h2>Точка входа в цифровой контур бизнеса.</h2>
-            <p className="panel-copy">
-              Блок перенесён с DNK-лендинга как статический onboarding-экран. Он не
-              подключён к отдельному backend-модулю, но встроен в композицию без слома
-              текущего MVP.
-            </p>
-            <div className="audit-metrics">
-              <div>
-                <span>Финансы</span>
-                <strong>LIVE</strong>
-              </div>
-              <div>
-                <span>Команда</span>
-                <strong>структура</strong>
-              </div>
-              <div>
-                <span>Процессы</span>
-                <strong>диагностика</strong>
-              </div>
-              <div>
-                <span>Базовый контур</span>
-                <strong>0 → 100%</strong>
-              </div>
-            </div>
-            <div className="row-actions">
-              <Link href={user ? '/lk' : '/register'} className="secondary-button">
-                {user ? 'Открыть кабинет' : 'Создать кабинет'}
-              </Link>
-            </div>
-          </article>
-
-          <article className="panel panel--aside">
-            <span className="eyebrow">Ключевые шаги</span>
-            <div className="timeline-list">
-              <div className="timeline-item">
-                <strong>1. Диагностика</strong>
-                <p>Собираем базовые показатели и определяем точку роста.</p>
-              </div>
-              <div className="timeline-item">
-                <strong>2. Приоритеты</strong>
-                <p>Фиксируем, какие процессы переводим в систему в первую очередь.</p>
-              </div>
-              <div className="timeline-item">
-                <strong>3. Доступ к материалам</strong>
-                <p>После оплаты пользователь получает курс и рабочий контур в кабинете.</p>
-              </div>
-            </div>
-          </article>
-        </div>
-      </section>
-
-      <section id="automation" className="dnk-section">
-        <div className="section-heading">
-          <span className="section-heading__main">Автоматизация</span>
-          <span className="section-heading__divider">/</span>
-          <span className="section-heading__sub">Конструктор системы</span>
-        </div>
-
-        <div className="automation-shell">
-          <article className="panel panel--feature">
-            <span className="eyebrow">Конструктор DNK</span>
-            <h2>Собираем рабочую систему из готовых модулей.</h2>
-            <p className="panel-copy">
-              Этот блок сохранён как продуктовый showcase. Он пока статический, но повторяет
-              реальную DNK-композицию и ведёт в рабочие точки входа на курс и в кабинет.
-            </p>
-            <div className="chip-cloud">
-              {[
-                'CRM',
-                'Чат-бот',
-                'Аналитика',
-                'Автопродажи',
-                'Документы',
-                'Телефония',
-                'HR-бот',
-                'Финансы',
-              ].map((item) => (
-                <span key={item} className="chip">
-                  {item}
+          <div className="funnel-hero__points">
+            {dnkFunnelHeroPoints.map((point) => (
+              <div key={point} className="funnel-value">
+                <span className="funnel-value__icon">
+                  <CheckIcon />
                 </span>
-              ))}
-            </div>
-            <div className="row-actions">
-              <a href="#pricing" className="primary-button">
-                Выбрать доступ
-              </a>
-            </div>
-          </article>
+                <span>{point}</span>
+              </div>
+            ))}
+          </div>
+        </article>
 
-          <article className="panel panel--aside">
-            <span className="eyebrow">Результат</span>
-            <div className="status-stack">
-              <div className="status-card">
-                <strong>Единая точка данных</strong>
-                <p>Продажи, команда, процессы и обучение не распадаются на отдельные сервисы.</p>
-              </div>
-              <div className="status-card">
-                <strong>Шаблоны и сценарии</strong>
-                <p>Используем подходы DNK как основу для внедрения и запуска обучения.</p>
-              </div>
-            </div>
-          </article>
+        <aside className="panel funnel-hero__aside">
+          <span className="eyebrow">Что уже работает</span>
+          <div className="funnel-mini-stat">
+            <span>Живой курс</span>
+            <strong>{featuredCourse?.title ?? 'Платформа ДНК'}</strong>
+          </div>
+          <div className="funnel-mini-stat">
+            <span>Уроков внутри LMS</span>
+            <strong>{featuredCourse?.lessonsCount ?? 0}</strong>
+          </div>
+          <div className="funnel-mini-stat">
+            <span>Доступ</span>
+            <strong>сразу после оплаты</strong>
+          </div>
+          <div className="badge-row">
+            <span className="badge badge-paid">обучение в кабинете</span>
+            <span className="badge badge-complete">progress работает</span>
+          </div>
+        </aside>
+      </section>
+
+      <section id="scenarios" className="dnk-section">
+        <div className="section-heading">
+          <span className="section-heading__main">Сценарии</span>
+          <span className="section-heading__divider">/</span>
+          <span className="section-heading__sub">Выберите ваш сценарий</span>
+        </div>
+
+        <div className="funnel-scenarios">
+          {dnkFunnelScenarios.map((scenario) => (
+            <article
+              key={scenario.id}
+              className={`panel funnel-scenario-card ${
+                'isPriority' in scenario && scenario.isPriority
+                  ? 'funnel-scenario-card--priority'
+                  : ''
+              }`}
+            >
+              <span className="eyebrow">Сценарий</span>
+              <h2>{scenario.title}</h2>
+              <p className="panel-copy">{scenario.description}</p>
+              <ul className="funnel-list">
+                {scenario.examples.map((example) => (
+                  <li key={example}>{example}</li>
+                ))}
+              </ul>
+              <a href={scenario.href} className="secondary-button">
+                {scenario.ctaLabel}
+              </a>
+            </article>
+          ))}
         </div>
       </section>
 
-      <section id="programs" className="dnk-section">
+      <section id="proof" className="dnk-section">
         <div className="section-heading">
-          <span className="section-heading__main">Программы</span>
+          <span className="section-heading__main">Платформа</span>
           <span className="section-heading__divider">/</span>
-          <span className="section-heading__sub">Перечень DNK</span>
+          <span className="section-heading__sub">Живой курс уже работает</span>
         </div>
 
-        <div className="program-grid">
-          {dnkProgramCatalog.map((group) => (
-            <article key={group.category} className="panel">
-              <span className="eyebrow">{group.category}</span>
-              <h2>{group.category}</h2>
-              <p className="panel-copy">{group.description}</p>
-              <div className="program-list">
-                {group.items.map((program) => (
-                  <div key={program.title} className="program-list__item">
-                    <div>
-                      <strong>{program.title}</strong>
-                    </div>
-                    <span>{formatMoney(program.price)}</span>
+        <div className="lms-wrapper funnel-proof">
+          <article className="lms-main glass-panel">
+            <div className="lms-scroll-area">
+              <span className="lms-tag">Proof</span>
+              <h2 className="lms-title">
+                {featuredCourse?.title ?? 'Платформа ДНК: стартовый курс'}
+              </h2>
+              <p className="lms-desc">
+                Реальный LMS-поток уже собран: доступ, уроки, домашка и возврат
+                в кабинет без ручной выдачи.
+              </p>
+
+              <div className="feature-metrics">
+                <div>
+                  <dt>Уроков</dt>
+                  <dd>{featuredCourse?.lessonsCount ?? 0}</dd>
+                </div>
+                <div>
+                  <dt>Выдача доступа</dt>
+                  <dd>автоматически</dd>
+                </div>
+                <div>
+                  <dt>Формат</dt>
+                  <dd>живой курс</dd>
+                </div>
+              </div>
+
+              <div className="funnel-proof__points">
+                {dnkFunnelProofPoints.map((point) => (
+                  <div key={point} className="funnel-value">
+                    <span className="funnel-value__icon">
+                      <CheckIcon />
+                    </span>
+                    <span>{point}</span>
                   </div>
                 ))}
               </div>
-            </article>
-          ))}
+
+              <div className="row-actions">
+                {renderAccessAction('primary-button', {
+                  create: 'Открыть доступ',
+                  owned: 'Открыть курс',
+                })}
+                <Link
+                  href={user ? '/lk' : '/register'}
+                  className="secondary-button"
+                >
+                  {user ? 'Перейти в кабинет' : 'Создать кабинет'}
+                </Link>
+              </div>
+            </div>
+          </article>
+
+          <aside className="lms-sidebar glass-panel">
+            <div className="progress-box">
+              <div className="progress-info">
+                <span>Маршрут пользователя</span>
+                <span>готов</span>
+              </div>
+              <div className="progress-line">
+                <div className="progress-fill" style={{ width: '100%' }} />
+              </div>
+            </div>
+
+            <div className="lessons-list">
+              {(featuredCourse?.lessons ?? []).slice(0, 5).map((lesson, index) => (
+                <div
+                  key={lesson.id}
+                  className={`lesson-btn ${
+                    index === 0 ? 'active' : index < 2 ? 'completed' : ''
+                  }`}
+                >
+                  <div className="lesson-btn__body">
+                    <span className="lesson-btn__title">
+                      {lesson.position}. {lesson.title}
+                    </span>
+                    <span className="lesson-btn__meta">
+                      {index === 0
+                        ? 'Текущий модуль'
+                        : index < 2
+                        ? 'Урок завершен'
+                        : 'Доступен после оплаты'}
+                    </span>
+                  </div>
+                  <span className="check-icon">
+                    <CheckIcon />
+                  </span>
+                </div>
+              ))}
+            </div>
+          </aside>
         </div>
       </section>
 
@@ -595,303 +478,90 @@ export default function LandingClient({
         <div className="section-heading">
           <span className="section-heading__main">Каталог</span>
           <span className="section-heading__divider">/</span>
-          <span className="section-heading__sub">Реальные курсы</span>
+          <span className="section-heading__sub">Компактные направления</span>
         </div>
 
-        <div className="feature-split">
-          <article className="panel panel--feature">
-            <span className="eyebrow">Рабочий курс платформы</span>
+        <article className="panel funnel-live-card">
+          <div>
+            <span className="eyebrow">Живой курс платформы</span>
             <h2>{featuredCourse?.title ?? 'Платформа ДНК: стартовый курс'}</h2>
             <p className="panel-copy">
-              {featuredCourse?.description ||
-                'Именно этот курс сейчас подключён к рабочему checkout-flow, прогрессу, доступу по Enrollment и внутреннему lesson-view на базе 03-block.'}
+              Рабочий курс уже ведет пользователя от оплаты до уроков внутри
+              платформы.
             </p>
-            <div className="feature-metrics">
-              <div>
-                <dt>Статус</dt>
-                <dd>active</dd>
-              </div>
-              <div>
-                <dt>Уроков</dt>
-                <dd>{featuredCourse?.lessonsCount ?? 0}</dd>
-              </div>
-              <div>
-                <dt>Доступ</dt>
-                <dd>через test checkout</dd>
-              </div>
-              <div>
-                <dt>Формат</dt>
-                <dd>полноценный MVP</dd>
-              </div>
-            </div>
-            <div className="row-actions" style={{ marginTop: '1rem' }}>
-              {primaryTariff?.isOwned ? (
-                <Link href={`/courses/${primaryTariff.courseSlug}`} className="primary-button">
-                  Продолжить обучение
-                </Link>
-              ) : (
-                renderHeroPrimaryAction()
-              )}
-            </div>
-          </article>
+          </div>
+          <div className="badge-row">
+            <span className="badge badge-paid">active</span>
+            <span className="badge badge-complete">
+              {featuredCourse?.lessonsCount ?? 0} уроков
+            </span>
+            <span className="badge badge-complete">LMS-preview</span>
+          </div>
+          <div className="row-actions">
+            {renderAccessAction('primary-button', {
+              create: 'Получить доступ',
+              owned: 'Открыть курс',
+            })}
+          </div>
+        </article>
 
-          <article className="panel panel--aside">
-            <span className="eyebrow">Следующий набор программ</span>
-            <div className="status-stack" style={{ marginTop: '1rem' }}>
-              <div className="status-card">
-                <strong>Из таблицы пользователя</strong>
-                <p>Добавлен ограниченный набор реальных курсов без запуска отдельной LMS для каждого.</p>
+        <div className="funnel-catalog">
+          {directionShelves.map((shelf) => (
+            <article key={shelf.id} id={shelf.id} className="panel funnel-shelf">
+              <div className="funnel-shelf__head">
+                <span className="eyebrow">{shelf.title}</span>
+                <h2>{shelf.title}</h2>
+                <p className="panel-copy">{shelf.description}</p>
               </div>
-              <div className="status-card">
-                <strong>Без усложнения архитектуры</strong>
-                <p>Новые программы пока работают как витрина: названия, цены, статусы и карточки в интерфейсе.</p>
-              </div>
-              <div className="status-card">
-                <strong>Практический flow не тронут</strong>
-                <p>`practical-course` остаётся основным полностью рабочим сценарием: покупка, доступ, уроки и прогресс.</p>
-              </div>
-            </div>
-          </article>
-        </div>
 
-        <div className="catalog-grid" style={{ marginTop: '1rem' }}>
-          {dnkShowcaseCourses.map((course) => (
-            <article key={course.slug} className="program-highlight-card showcase-course-card">
-              <div className="badge-row" style={{ marginTop: 0 }}>
-                <span className="badge badge-complete">{course.category}</span>
-                <span className={getShowcaseStatusClass(course.status)}>
-                  {getShowcaseStatusLabel(course.status)}
-                </span>
-              </div>
-              <h3>{course.title}</h3>
-              <p>{course.description}</p>
-              <div className="showcase-course-card__footer">
-                <span className="showcase-course-card__price">{formatMoney(course.price)}</span>
-                <button className="ghost-button" disabled type="button">
-                  {course.status === 'SOON' ? 'Скоро' : 'В разработке'}
-                </button>
+              <div className="funnel-shelf__grid">
+                {shelf.courses.map((course) => (
+                  <article
+                    key={course.slug}
+                    className="program-highlight-card showcase-course-card"
+                  >
+                    <div className="badge-row" style={{ marginTop: 0 }}>
+                      <span className="badge badge-complete">
+                        {course.category}
+                      </span>
+                      <span className={getShowcaseStatusClass(course.status)}>
+                        {getShowcaseStatusLabel(course.status)}
+                      </span>
+                    </div>
+                    <h3>{course.title}</h3>
+                    <div className="showcase-course-card__footer">
+                      <span className="showcase-course-card__price">
+                        {formatMoney(course.price)}
+                      </span>
+                      <ShowcaseCourseAction course={course} />
+                    </div>
+                  </article>
+                ))}
               </div>
             </article>
           ))}
         </div>
       </section>
 
-      <section id="pricing" className="dnk-section">
-        <div className="section-heading">
-          <span className="section-heading__main">Доступ</span>
-          <span className="section-heading__divider">/</span>
-          <span className="section-heading__sub">Тарифы</span>
-        </div>
+      <section id="final-cta" className="dnk-section">
+        <article className="panel funnel-final-cta">
+          <span className="eyebrow">Финальный CTA</span>
+          <h2>Выберите программу или соберите обучение для команды.</h2>
+          <p className="panel-copy">
+            Короткий путь уже есть: программа, доступ, обучение, возврат в
+            кабинет.
+          </p>
 
-        <div className="pricing-grid">
-          <article className="tariff-card tariff-card--static">
-            <span className="tariff-card__pill">Статический блок DNK</span>
-            <h2>База</h2>
-            <div className="tariff-card__price">от 2 990 ₽</div>
-            <p className="muted-text">Самостоятельное изучение материалов и база знаний.</p>
-            <ul className="tariff-features">
-              <li>Доступ к базе знаний</li>
-              <li>Базовый AI-помощник</li>
-              <li>Шаблоны и инструкции</li>
-            </ul>
-            <Link href={user ? '/lk' : '/register'} className="secondary-button">
-              {user ? 'В кабинет' : 'Регистрация'}
-            </Link>
-          </article>
-
-          {tariffs.map((tariff) => (
-            <article key={tariff.id} className="tariff-card tariff-card--primary">
-              <span className="tariff-card__pill">Реальный backend-тариф</span>
-              <h2>{tariff.title}</h2>
-              <div className="tariff-card__price">{formatMoney(tariff.price)}</div>
-              <p className="muted-text">
-                {tariff.courseTitle}. {tariff.lessonsCount} уроков, доступ к защищённой странице
-                курса и сохранение прогресса.
-              </p>
-              <ul className="tariff-features">
-                <li>Авторизация и личный кабинет</li>
-                <li>Test checkout и переход прямо в курс</li>
-                <li>Прогресс уроков по пользователю</li>
-                <li>{formatInterval(tariff.interval)}</li>
-              </ul>
-
-              <div className="badge-row">
-                {tariff.isOwned ? (
-                  <span className="badge badge-paid">доступ уже открыт</span>
-                ) : null}
-                {tariff.pendingOrder ? (
-                  <span className="badge badge-pending">
-                    заказ #{tariff.pendingOrder.id} ожидает оплаты
-                  </span>
-                ) : null}
-              </div>
-
-              {tariff.isOwned ? (
-                <Link href={`/courses/${tariff.courseSlug}`} className="primary-button">
-                  Открыть курс
-                </Link>
-              ) : tariff.pendingOrder ? (
-                <Link href={tariff.pendingOrder.checkoutUrl} className="secondary-button">
-                  Продолжить оплату
-                </Link>
-              ) : user ? (
-                <button
-                  className="primary-button"
-                  disabled={buyingTariffId === tariff.id}
-                  onClick={() => handleCreateOrder(tariff.id)}
-                  type="button"
-                >
-                  {buyingTariffId === tariff.id ? 'Создаём заказ...' : 'Купить доступ'}
-                </button>
-              ) : (
-                <Link href="/register" className="primary-button">
-                  Зарегистрироваться
-                </Link>
-              )}
-            </article>
-          ))}
-
-          <article className="tariff-card tariff-card--static">
-            <span className="tariff-card__pill">Статический блок DNK</span>
-            <h2>Наставничество</h2>
-            <div className="tariff-card__price">по запросу</div>
-            <p className="muted-text">
-              Личный трекер, ручной аудит бизнеса и сопровождение внедрения.
-            </p>
-            <ul className="tariff-features">
-              <li>Разбор с экспертом</li>
-              <li>Помощь во внедрении</li>
-              <li>Поддержка 24/7</li>
-            </ul>
-            <Link href={user ? '/lk' : '/register'} className="secondary-button">
-              {user ? 'Открыть кабинет' : 'Подать заявку'}
-            </Link>
-          </article>
-        </div>
-      </section>
-
-      <section id="about" className="dnk-section">
-        <div className="section-heading">
-          <span className="section-heading__main">О нас</span>
-          <span className="section-heading__divider">/</span>
-          <span className="section-heading__sub">Команда</span>
-        </div>
-
-        <div className="team-grid">
-          <article className="panel panel--feature">
-            <span className="eyebrow">Философия</span>
-            <h2>Объединяем бизнес-экспертизу и цифровые технологии.</h2>
-            <p className="panel-copy">
-              Каждый участник команды — часть единой системы. Мы не просто показываем
-              материалы, а проводим пользователя через рабочий контур: от входа и покупки до
-              прохождения курса и закрепления результата.
-            </p>
-            <div className="stats-strip">
-              {dnkTeamStats.map((stat) => (
-                <span key={stat}>{stat}</span>
-              ))}
-            </div>
-          </article>
-
-          <div className="team-card-grid">
-            {dnkTeamMembers.map((member) => (
-              <article key={member.name} className="team-card">
-                <span className="eyebrow">{member.role}</span>
-                <h3>{member.name}</h3>
-                <p>{member.direction}</p>
-              </article>
-            ))}
+          <div className="row-actions">
+            {renderAccessAction('primary-button', {
+              create: 'Выбрать программу',
+              owned: 'Открыть курс',
+            })}
+            <a href="#scenarios" className="secondary-button">
+              Подобрать обучение для компании
+            </a>
           </div>
-        </div>
-      </section>
-
-      <section id="contacts" className="dnk-section">
-        <div className="section-heading">
-          <span className="section-heading__main">Опыт внедрения</span>
-          <span className="section-heading__divider">/</span>
-          <span className="section-heading__sub">Отзывы</span>
-        </div>
-
-        <div className="testimonial-grid">
-          {dnkTestimonials.map((item) => (
-            <article key={item.initials + item.name} className="testimonial-card">
-              <div className="testimonial-card__head">
-                <span className="testimonial-card__avatar">{item.initials}</span>
-                <div>
-                  <strong>{item.name}</strong>
-                  <p>{item.company}</p>
-                </div>
-              </div>
-              <p>{item.text}</p>
-            </article>
-          ))}
-        </div>
-
-        <footer className="site-footer">
-          <div>
-            <div className="brand">
-              <span className="brand-mark" />
-              <span>БИЗНЕС ШКОЛА ДНК</span>
-            </div>
-            <p className="site-footer__lead">
-              Платформа для систематизации и автоматизации бизнеса. Подключён рабочий MVP:
-              вход, регистрация, покупка тарифа, личный кабинет и закрытый курс.
-            </p>
-          </div>
-
-          <div className="site-footer__cols">
-            <div>
-              <strong>Адрес</strong>
-              <p>Красноярский край, г. Норильск</p>
-              <p>ул. Московская, 19, оф. 401</p>
-            </div>
-            <div>
-              <strong>Навигация</strong>
-              <p>
-                <a href="#education">Обучение</a>
-              </p>
-              <p>
-                <a href="#programs">Программы</a>
-              </p>
-              <p>
-                <a href="#pricing">Тарифы</a>
-              </p>
-            </div>
-            <div>
-              <strong>Личный кабинет</strong>
-              <p>
-                <Link href="/login">Войти</Link>
-              </p>
-              <p>
-                <Link href="/register">Регистрация</Link>
-              </p>
-              <p>
-                <Link href="/lk">Мои курсы</Link>
-              </p>
-            </div>
-          </div>
-        </footer>
-
-        <div className="footer-note">
-          <span>© 2026 Бизнес Школа ДНК. Все права защищены.</span>
-          <div className="footer-note__links">
-            <span>Договор оферты</span>
-            <span>Политика конфиденциальности</span>
-            <span>Реквизиты</span>
-          </div>
-        </div>
-      </section>
-
-      <section className="dnk-section dnk-section--compact">
-        <div className="feature-strip">
-          {dnkFeaturedPrograms.map((program) => (
-            <article key={program.title} className="program-highlight-card">
-              <span className="eyebrow">DNK программа</span>
-              <h3>{program.title}</h3>
-              <p>{formatMoney(program.price)}</p>
-            </article>
-          ))}
-        </div>
+        </article>
       </section>
     </main>
   );
