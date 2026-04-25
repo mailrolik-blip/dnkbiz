@@ -104,7 +104,7 @@ const catalogCourseDefinitions: CatalogCourseDefinition[] = [
     title: 'Microsoft Word (базовый курс)',
     description:
       'Базовая программа по подготовке документов, форматированию и аккуратной работе с деловыми текстами.',
-    price: 8000,
+    price: null,
     groupId: 'office-accounting',
     order: 50,
   },
