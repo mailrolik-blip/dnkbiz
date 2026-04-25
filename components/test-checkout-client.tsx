@@ -4,6 +4,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
+import {
+  formatCoursePrice,
+  formatLessonCount,
+  formatPreviewLessons,
+} from '@/lib/purchase-ux';
+
 type CheckoutOrder = {
   id: number;
   status: 'PENDING' | 'PAID' | 'CANCELED';
@@ -13,6 +19,9 @@ type CheckoutOrder = {
   tariffTitle: string;
   courseTitle: string;
   courseSlug: string;
+  courseDescription: string | null;
+  lessonsCount: number;
+  previewLessonsCount: number;
 };
 
 type TestCheckoutClientProps = {
@@ -20,13 +29,9 @@ type TestCheckoutClientProps = {
   testPaymentsEnabled: boolean;
 };
 
-function formatMoney(value: number) {
-  return `${value.toLocaleString('ru-RU')} ₽`;
-}
-
 function formatDateTime(value: string | null) {
   if (!value) {
-    return 'ещё не оплачено';
+    return 'еще не подтверждено';
   }
 
   return new Intl.DateTimeFormat('ru-RU', {
@@ -37,11 +42,11 @@ function formatDateTime(value: string | null) {
 
 function getStatusLabel(status: CheckoutOrder['status']) {
   if (status === 'PAID') {
-    return 'Оплачен';
+    return 'Доступ открыт';
   }
 
   if (status === 'CANCELED') {
-    return 'Отменён';
+    return 'Покупка отменена';
   }
 
   return 'Ожидает оплаты';
@@ -71,6 +76,7 @@ export default function TestCheckoutClient({
   } | null>(null);
 
   const canPay = testPaymentsEnabled && order.status === 'PENDING';
+  const isPaid = order.status === 'PAID';
 
   async function handleTestPay() {
     setPending(true);
@@ -89,7 +95,7 @@ export default function TestCheckoutClient({
         | null;
 
       if (!response.ok || !payload?.courseSlug) {
-        throw new Error(payload?.error || 'Не удалось выполнить тестовую оплату.');
+        throw new Error(payload?.error || 'Не удалось подтвердить оплату.');
       }
 
       router.push(`/courses/${payload.courseSlug}`);
@@ -100,7 +106,7 @@ export default function TestCheckoutClient({
         message:
           paymentError instanceof Error
             ? paymentError.message
-            : 'Не удалось выполнить тестовую оплату.',
+            : 'Не удалось подтвердить оплату.',
       });
       setPending(false);
       return;
@@ -114,7 +120,7 @@ export default function TestCheckoutClient({
       <div className="top-nav">
         <Link href="/" className="brand">
           <span className="brand-mark" />
-          <span>БИЗНЕС ШКОЛА ДНК</span>
+          <span>Бизнес школа ДНК</span>
         </Link>
         <div className="row-actions" style={{ marginTop: 0 }}>
           <Link href="/lk" className="ghost-button">
@@ -125,46 +131,93 @@ export default function TestCheckoutClient({
 
       <section className="stack-grid">
         <article className="panel">
-          <span className="eyebrow">Тестовая оплата</span>
-          <h1 style={{ marginTop: '0.9rem' }}>Проверьте заказ и сразу откройте курс.</h1>
+          <div className="badge-row" style={{ marginTop: 0 }}>
+            <span className="eyebrow">Покупка курса</span>
+            {testPaymentsEnabled ? (
+              <span className="badge badge-pending">dev/test flow</span>
+            ) : null}
+          </div>
+          <h1 style={{ marginTop: '0.9rem' }}>
+            {isPaid ? 'Доступ к курсу открыт' : 'Завершите покупку курса'}
+          </h1>
           <p className="panel-copy" style={{ marginTop: '0.75rem' }}>
-            Это MVP-страница для локального checkout-flow без реальной платежки. После
-            тестовой оплаты заказ перейдёт в статус PAID, доступ к курсу откроется автоматически.
+            {order.courseDescription ||
+              'После подтверждения оплаты курс откроется в личном кабинете и будет доступен для прохождения в полном объеме.'}
           </p>
         </article>
 
         <div className="grid-two">
           <section className="panel">
-            <span className="eyebrow">Заказ</span>
-            <h2 style={{ marginTop: '0.9rem' }}>Заказ #{order.id}</h2>
+            <span className="eyebrow">Доступ к курсу</span>
+            <h2 style={{ marginTop: '0.9rem' }}>{order.courseTitle}</h2>
+            <p className="muted-text" style={{ marginTop: '0.75rem' }}>
+              {order.tariffTitle}
+            </p>
 
             <div className="feature-metrics" style={{ marginTop: '1rem' }}>
               <div>
-                <dt>Тариф</dt>
-                <dd>{order.tariffTitle}</dd>
+                <dt>Цена</dt>
+                <dd>{formatCoursePrice(order.amount)}</dd>
               </div>
               <div>
-                <dt>Курс</dt>
-                <dd>{order.courseTitle}</dd>
+                <dt>Внутри курса</dt>
+                <dd>{formatLessonCount(order.lessonsCount)}</dd>
               </div>
               <div>
-                <dt>Сумма</dt>
-                <dd>{formatMoney(order.amount)}</dd>
+                <dt>До покупки</dt>
+                <dd>
+                  {order.previewLessonsCount > 0
+                    ? formatPreviewLessons(order.previewLessonsCount)
+                    : 'без первых уроков до покупки'}
+                </dd>
               </div>
               <div>
-                <dt>Создан</dt>
-                <dd>{formatDateTime(order.createdAt)}</dd>
+                <dt>Статус</dt>
+                <dd>{getStatusLabel(order.status)}</dd>
               </div>
             </div>
 
+            <div className="status-stack" style={{ marginTop: '1rem' }}>
+              <div className="status-card">
+                <strong>Что входит в доступ</strong>
+                <p>Все уроки курса, домашние задания, сохранение прогресса и возврат в кабинет с того места, где вы остановились.</p>
+              </div>
+              <div className="status-card">
+                <strong>До покупки</strong>
+                <p>
+                  {order.previewLessonsCount > 0
+                    ? `Вы можете открыть ${formatPreviewLessons(
+                        order.previewLessonsCount
+                      )} и познакомиться с курсом до оплаты.`
+                    : 'Курс открывается только после оплаты.'}
+                </p>
+              </div>
+              <div className="status-card">
+                <strong>После оплаты</strong>
+                <p>Курс сразу открывается в режиме FULL и становится доступен в личном кабинете без ручной выдачи доступа.</p>
+              </div>
+            </div>
+          </section>
+
+          <section className="panel">
+            <span className="eyebrow">Статус покупки</span>
+            <h2 style={{ marginTop: '0.9rem' }}>Заказ #{order.id}</h2>
+
             <div className="badge-row" style={{ marginTop: '1rem' }}>
               <span className={getStatusClass(order.status)}>{getStatusLabel(order.status)}</span>
-              {order.status === 'PAID' ? (
-                <span className="badge badge-complete">
-                  оплачено {formatDateTime(order.paidAt)}
-                </span>
+              <span className="badge badge-complete">Создан {formatDateTime(order.createdAt)}</span>
+              {isPaid ? (
+                <span className="badge badge-paid">Оплачен {formatDateTime(order.paidAt)}</span>
               ) : null}
             </div>
+
+            <p className="panel-copy" style={{ marginTop: '1rem' }}>
+              {isPaid
+                ? 'Покупка завершена. Можно сразу открыть курс и продолжить обучение.'
+                : order.status === 'CANCELED'
+                ? 'Этот заказ отменен и больше не может быть использован для открытия курса.'
+                : 'Оплата уже начата. Подтвердите покупку, чтобы открыть полный доступ ко всем урокам курса.'}
+            </p>
 
             {feedback ? (
               <p
@@ -177,7 +230,7 @@ export default function TestCheckoutClient({
             ) : null}
 
             <div className="row-actions" style={{ marginTop: '1rem' }}>
-              {order.status === 'PAID' ? (
+              {isPaid ? (
                 <Link href={`/courses/${order.courseSlug}`} className="primary-button">
                   Открыть курс
                 </Link>
@@ -188,7 +241,7 @@ export default function TestCheckoutClient({
                   onClick={handleTestPay}
                   type="button"
                 >
-                  {pending ? 'Проводим оплату...' : 'Оплатить тестово'}
+                  {pending ? 'Подтверждаем оплату...' : 'Оплатить курс'}
                 </button>
               ) : (
                 <button className="primary-button" disabled type="button">
@@ -196,47 +249,31 @@ export default function TestCheckoutClient({
                 </button>
               )}
 
-              <Link href="/lk" className="secondary-button">
-                Назад
+              <Link href={`/courses/${order.courseSlug}`} className="secondary-button">
+                Назад к курсу
               </Link>
             </div>
-          </section>
 
-          <section className="panel">
-            <span className="eyebrow">Что произойдёт дальше</span>
             <div className="status-stack" style={{ marginTop: '1rem' }}>
               <div className="status-card">
-                <strong>1. Смена статуса</strong>
-                <p>Тестовый endpoint переведёт ваш заказ из PENDING в PAID.</p>
+                <strong>Следующий шаг</strong>
+                <p>
+                  {isPaid
+                    ? 'Перейдите в курс и продолжайте обучение без ограничений.'
+                    : 'После подтверждения оплаты курс автоматически откроется в полном доступе.'}
+                </p>
               </div>
-              <div className="status-card">
-                <strong>2. Выдача доступа</strong>
-                <p>Для курса автоматически создастся Enrollment по текущей рабочей логике.</p>
-              </div>
-              <div className="status-card">
-                <strong>3. Редирект в обучение</strong>
-                <p>После успешной оплаты вы сразу попадёте на защищённую страницу курса.</p>
-              </div>
+              {testPaymentsEnabled ? (
+                <div className="status-card">
+                  <strong>Текущий режим оплаты</strong>
+                  <p>В локальной среде подтверждение платежа работает через dev/test flow, но сам пользовательский сценарий уже соответствует обычной покупке курса.</p>
+                </div>
+              ) : (
+                <div className="feedback feedback-error" style={{ marginTop: 0 }}>
+                  Для локальной покупки включите <span className="mono">ENABLE_TEST_PAYMENTS=true</span>.
+                </div>
+              )}
             </div>
-
-            {!testPaymentsEnabled ? (
-              <div className="feedback feedback-error" style={{ marginTop: '1rem' }}>
-                Тестовые оплаты отключены. Для локального MVP включите флаг
-                <span className="mono"> ENABLE_TEST_PAYMENTS=true</span>.
-              </div>
-            ) : null}
-
-            {order.status === 'CANCELED' ? (
-              <div className="feedback feedback-error" style={{ marginTop: '1rem' }}>
-                Этот заказ отменён и не может быть оплачен повторно.
-              </div>
-            ) : null}
-
-            {order.status === 'PAID' ? (
-              <div className="feedback feedback-success" style={{ marginTop: '1rem' }}>
-                Заказ уже оплачен. Доступ к курсу открыт.
-              </div>
-            ) : null}
           </section>
         </div>
       </section>

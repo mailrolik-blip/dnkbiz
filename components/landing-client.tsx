@@ -9,46 +9,19 @@ import {
   dnkFunnelProofPoints,
   dnkFunnelScenarios,
 } from '@/lib/dnk-content';
-import {
-  groupCatalogCourses,
-  type CatalogCourseCard,
-  type CatalogCourseStatus,
-} from '@/lib/lms-catalog';
+import { groupCatalogCourses, type CatalogCourseCard } from '@/lib/lms-catalog';
 import type { LandingPageData } from '@/lib/landing';
+import {
+  formatCoursePrice,
+  formatLessonCount,
+  formatPreviewLessons,
+  getCatalogCourseNextStep,
+  getCatalogCourseStatusClass,
+  getCatalogCourseStatusLabel,
+  isStartedPreviewCourse,
+} from '@/lib/purchase-ux';
 
 type LandingClientProps = LandingPageData;
-
-function formatMoney(value: number | null) {
-  if (value === null) {
-    return 'Бесплатно';
-  }
-
-  return `${value.toLocaleString('ru-RU')} ₽`;
-}
-
-function getStatusLabel(status: CatalogCourseStatus) {
-  if (status === 'free') {
-    return 'Бесплатный';
-  }
-
-  if (status === 'paid') {
-    return 'Платный';
-  }
-
-  return 'Скоро';
-}
-
-function getStatusClass(status: CatalogCourseStatus) {
-  if (status === 'free') {
-    return 'badge badge-complete';
-  }
-
-  if (status === 'paid') {
-    return 'badge badge-paid';
-  }
-
-  return 'badge badge-pending';
-}
 
 function CheckIcon() {
   return (
@@ -83,20 +56,20 @@ function CatalogCourseAction({
   buyingTariffId,
   onCreateOrder,
 }: CatalogActionProps) {
+  if (course.status === 'showcase') {
+    return <span className="ghost-button landing-card-disabled">Скоро</span>;
+  }
+
   if (course.status === 'free') {
     return (
       <Link href={userEmail ? `/courses/${course.slug}` : '/register'} className="primary-button">
         {userEmail
           ? course.isStarted
-            ? 'Продолжить бесплатно'
+            ? 'Открыть курс'
             : 'Начать бесплатно'
-          : 'Регистрация'}
+          : 'Зарегистрироваться'}
       </Link>
     );
-  }
-
-  if (course.status === 'showcase') {
-    return <span className="ghost-button landing-card-disabled">Скоро в платформе</span>;
   }
 
   if (course.isOwned) {
@@ -118,7 +91,7 @@ function CatalogCourseAction({
   if (!userEmail) {
     return (
       <Link href="/register" className="primary-button">
-        Регистрация и preview
+        Зарегистрироваться
       </Link>
     );
   }
@@ -130,7 +103,7 @@ function CatalogCourseAction({
       onClick={() => onCreateOrder(course)}
       type="button"
     >
-      {buyingTariffId === course.tariffId ? 'Создаем заказ...' : 'Купить курс'}
+      {buyingTariffId === course.tariffId ? 'Открываем оплату...' : 'Купить курс'}
     </button>
   );
 }
@@ -180,7 +153,6 @@ export default function LandingClient({
       const payload = (await response.json().catch(() => null)) as
         | {
             error?: string;
-            order?: { id: number };
             checkoutUrl?: string;
           }
         | null;
@@ -192,21 +164,15 @@ export default function LandingClient({
       }
 
       if (!response.ok) {
-        throw new Error(payload?.error || 'Не удалось создать заказ.');
+        throw new Error(payload?.error || 'Не удалось открыть оплату.');
       }
-
-      setFeedback({
-        tone: 'success',
-        message: `Заказ #${payload?.order?.id ?? ''} создан. Продолжите оплату в checkout.`,
-      });
-      router.refresh();
     } catch (orderError) {
       setFeedback({
         tone: 'error',
         message:
           orderError instanceof Error
             ? orderError.message
-            : 'Не удалось создать заказ.',
+            : 'Не удалось открыть оплату.',
       });
     } finally {
       setBuyingTariffId(null);
@@ -253,20 +219,21 @@ export default function LandingClient({
           className="primary-button"
           data-access-state="preview"
         >
-          Продолжить preview
+          Продолжить обучение
         </Link>
       );
     }
 
-    if (freeStarterCourse) {
+    if (featuredPaidCourse) {
       return (
-        <Link
-          href={`/courses/${freeStarterCourse.slug}`}
+        <button
           className="primary-button"
-          data-access-state="free-course"
+          disabled={buyingTariffId === featuredPaidCourse.tariffId}
+          onClick={() => handleCreateOrder(featuredPaidCourse)}
+          type="button"
         >
-          Начать бесплатно
-        </Link>
+          {buyingTariffId === featuredPaidCourse.tariffId ? 'Открываем оплату...' : 'Купить курс'}
+        </button>
       );
     }
 
@@ -282,6 +249,18 @@ export default function LandingClient({
       return (
         <Link href="/login" className="secondary-button" data-hero-secondary="login">
           Войти
+        </Link>
+      );
+    }
+
+    if (freeStarterCourse && !freeStarterCourse.isStarted) {
+      return (
+        <Link
+          href={`/courses/${freeStarterCourse.slug}`}
+          className="secondary-button"
+          data-hero-secondary="free-course"
+        >
+          Начать бесплатно
         </Link>
       );
     }
@@ -326,8 +305,9 @@ export default function LandingClient({
             Курсы для работы и обязательного обучения в одном кабинете
           </h1>
           <p className="funnel-hero__subtitle">
-            1С, Excel, Word, охрана труда, пожарная безопасность,
-            электробезопасность и другие программы с быстрым доступом после оплаты.
+            1С, Excel, Word, охрана труда, пожарная безопасность, электробезопасность и
+            другие программы с понятным доступом: регистрация, покупка, обучение и возврат к
+            прогрессу в одном LMS-маршруте.
           </p>
 
           <div className="row-actions">
@@ -358,18 +338,18 @@ export default function LandingClient({
         </article>
 
         <aside className="panel funnel-hero__aside">
-          <span className="eyebrow">Старт без тупика</span>
+          <span className="eyebrow">Как устроен вход</span>
           <div className="funnel-mini-stat">
             <span>Бесплатный курс</span>
             <strong>{freeStarterCourse?.title ?? 'Откроется после seed'}</strong>
           </div>
           <div className="funnel-mini-stat">
-            <span>Платный курс с preview</span>
-            <strong>{featuredPaidCourse?.previewLessonsCount ?? 0} урока до покупки</strong>
+            <span>Первые уроки до покупки</span>
+            <strong>{featuredPaidCourse?.previewLessonsCount ?? 0} урока</strong>
           </div>
           <div className="funnel-mini-stat">
             <span>После оплаты</span>
-            <strong>полный доступ в LMS</strong>
+            <strong>полный доступ к курсу</strong>
           </div>
           <div className="badge-row">
             <span className="badge badge-complete">free / paid / showcase</span>
@@ -382,7 +362,7 @@ export default function LandingClient({
         <div className="section-heading">
           <span className="section-heading__main">Сценарии</span>
           <span className="section-heading__divider">/</span>
-          <span className="section-heading__sub">Выберите ваш сценарий</span>
+          <span className="section-heading__sub">Выберите свой сценарий</span>
         </div>
 
         <div className="funnel-scenarios">
@@ -426,8 +406,8 @@ export default function LandingClient({
                 {featuredCourse?.title ?? 'Платформа ДНК: стартовый курс'}
               </h2>
               <p className="lms-desc">
-                Реальный LMS-поток уже собран: регистрация, preview, покупка, уроки,
-                домашка и возврат в кабинет без ручной выдачи доступа.
+                Реальный поток уже собран: регистрация, первые уроки до покупки, покупка курса,
+                уроки, домашка и возврат в кабинет без ручной выдачи доступа.
               </p>
 
               <div className="feature-metrics">
@@ -436,12 +416,12 @@ export default function LandingClient({
                   <dd>{featuredCourse?.lessonsCount ?? 0}</dd>
                 </div>
                 <div>
-                  <dt>Preview до оплаты</dt>
+                  <dt>До покупки</dt>
                   <dd>{featuredPaidCourse?.previewLessonsCount ?? 0} урока</dd>
                 </div>
                 <div>
                   <dt>Формат</dt>
-                  <dd>Живой LMS-курс</dd>
+                  <dd>живой LMS-курс</dd>
                 </div>
               </div>
 
@@ -470,10 +450,20 @@ export default function LandingClient({
                   </Link>
                 )}
                 <Link
-                  href={user ? '/lk' : '/register'}
+                  href={
+                    user && freeStarterCourse && !freeStarterCourse.isStarted
+                      ? `/courses/${freeStarterCourse.slug}`
+                      : user
+                      ? '/lk'
+                      : '/register'
+                  }
                   className="secondary-button"
                 >
-                  {user ? 'Перейти в кабинет' : 'Создать кабинет'}
+                  {user && freeStarterCourse && !freeStarterCourse.isStarted
+                    ? 'Начать бесплатно'
+                    : user
+                    ? 'Перейти в кабинет'
+                    : 'Создать кабинет'}
                 </Link>
               </div>
             </div>
@@ -504,10 +494,10 @@ export default function LandingClient({
                     </span>
                     <span className="lesson-btn__meta">
                       {index < (featuredPaidCourse?.previewLessonsCount ?? 0)
-                        ? 'Открывается как preview'
+                        ? 'Открыто до покупки'
                         : index === 0
                         ? 'Текущий модуль'
-                        : 'Полный доступ после покупки'}
+                        : 'Открывается после покупки'}
                     </span>
                   </div>
                   <span className="check-icon">
@@ -524,7 +514,7 @@ export default function LandingClient({
         <div className="section-heading">
           <span className="section-heading__main">Каталог</span>
           <span className="section-heading__divider">/</span>
-          <span className="section-heading__sub">Статусы курсов внутри LMS</span>
+          <span className="section-heading__sub">Курсы и следующий шаг по каждому из них</span>
         </div>
 
         {featuredPaidCourse ? (
@@ -537,17 +527,20 @@ export default function LandingClient({
               <div className="funnel-live-card__body">
                 <h2>{featuredPaidCourse.title}</h2>
                 <p className="panel-copy">
-                  Полный курс открывается после оплаты, а до покупки доступны preview-уроки
-                  внутри того же маршрута `/courses/slug`.
+                  {getCatalogCourseNextStep(featuredPaidCourse, Boolean(user?.email))}
                 </p>
               </div>
             </div>
             <div className="funnel-live-card__stats">
-              <span className="badge badge-paid">Платный курс</span>
-              <span className="badge badge-pending">
-                {featuredPaidCourse.previewLessonsCount} preview-урока
+              <span className={getCatalogCourseStatusClass(featuredPaidCourse)}>
+                {getCatalogCourseStatusLabel(featuredPaidCourse)}
               </span>
-              <span className="badge badge-complete">{formatMoney(featuredPaidCourse.price)}</span>
+              <span className="badge badge-pending">
+                {formatPreviewLessons(featuredPaidCourse.previewLessonsCount)}
+              </span>
+              <span className="badge badge-complete">
+                {formatCoursePrice(featuredPaidCourse.price)}
+              </span>
             </div>
             <div className="row-actions funnel-live-card__actions">
               <CatalogCourseAction
@@ -557,7 +550,9 @@ export default function LandingClient({
                 userEmail={user?.email ?? null}
               />
               <Link className="secondary-button" href={`/courses/${featuredPaidCourse.slug}`}>
-                Открыть preview
+                {isStartedPreviewCourse(featuredPaidCourse)
+                  ? 'Продолжить обучение'
+                  : 'Открыть первые уроки'}
               </Link>
             </div>
           </article>
@@ -582,8 +577,8 @@ export default function LandingClient({
                       <span className="showcase-course-card__category">
                         {course.category}
                       </span>
-                      <span className={getStatusClass(course.status)}>
-                        {getStatusLabel(course.status)}
+                      <span className={getCatalogCourseStatusClass(course)}>
+                        {getCatalogCourseStatusLabel(course)}
                       </span>
                     </div>
                     <div className="showcase-course-card__body">
@@ -591,17 +586,40 @@ export default function LandingClient({
                       <p className="showcase-course-card__description">
                         {course.description}
                       </p>
+                      <p className="muted-text" style={{ marginTop: '0.85rem' }}>
+                        {getCatalogCourseNextStep(course, Boolean(user?.email))}
+                      </p>
                     </div>
                     <div className="showcase-course-card__footer">
                       <div className="showcase-course-card__pricing">
                         <span className="showcase-course-card__label">
-                          {course.status === 'showcase' ? 'Статус' : 'Доступ'}
+                          {course.status === 'showcase'
+                            ? 'Статус'
+                            : course.isOwned
+                            ? 'Доступ'
+                            : 'Следующий шаг'}
                         </span>
                         <span className="showcase-course-card__price">
                           {course.status === 'showcase'
-                            ? 'Витрина / скоро'
-                            : formatMoney(course.price)}
+                            ? 'В каталоге'
+                            : course.status === 'free'
+                            ? 'Открывается сразу'
+                            : course.isOwned
+                            ? 'Курс уже доступен'
+                            : formatCoursePrice(course.price)}
                         </span>
+                      </div>
+                      <div className="badge-row">
+                        {course.lessonsCount ? (
+                          <span className="badge badge-pending">
+                            {formatLessonCount(course.lessonsCount)}
+                          </span>
+                        ) : null}
+                        {course.previewEnabled ? (
+                          <span className="badge badge-pending">
+                            {formatPreviewLessons(course.previewLessonsCount)}
+                          </span>
+                        ) : null}
                       </div>
                       <div className="showcase-course-card__actions">
                         <CatalogCourseAction
@@ -612,7 +630,7 @@ export default function LandingClient({
                         />
                         {course.status === 'paid' && course.previewLessonsCount > 0 ? (
                           <Link className="ghost-button" href={`/courses/${course.slug}`}>
-                            Preview
+                            {course.isStarted ? 'Продолжить обучение' : 'Открыть первые уроки'}
                           </Link>
                         ) : null}
                       </div>
@@ -630,8 +648,8 @@ export default function LandingClient({
           <span className="eyebrow">Финальный CTA</span>
           <h2>Зарегистрируйтесь бесплатно и соберите свой маршрут внутри LMS.</h2>
           <p className="panel-copy">
-            Бесплатный курс можно начать сразу, а платные программы открыть через preview и
-            checkout без менеджерского сценария.
+            Бесплатные курсы можно начать сразу, а платные программы покупать и проходить внутри
+            того же кабинета без менеджерского сценария.
           </p>
 
           <div className="row-actions">

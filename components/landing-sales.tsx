@@ -162,10 +162,10 @@ export default function LandingSales({
     tariff: LandingTariff | null = primaryTariff
   ) {
     const resolvedLabels: AccessActionLabels = {
-      create: 'Получить доступ',
-      guest: 'Начать обучение',
-      loading: 'Создаем заказ...',
-      owned: 'Открыть живой курс',
+      create: 'Купить курс',
+      guest: 'Зарегистрироваться',
+      loading: 'Открываем оплату...',
+      owned: 'Открыть курс',
       pending: 'Продолжить оплату',
       ...labels,
     };
@@ -393,8 +393,7 @@ export default function LandingSales({
             <h2>{featuredCourse?.title ?? 'Платформа ДНК: стартовый курс'}</h2>
             <p className="panel-copy">
               Стартовый practical-course остается живым доказательством всей
-              платформы:
-              выбор тарифа, checkout/test, доступ в курс и продолжение обучения
+              платформы: выбор тарифа, экран покупки, доступ в курс и продолжение обучения
               в личном кабинете уже работают end-to-end.
             </p>
           </div>
@@ -416,7 +415,7 @@ export default function LandingSales({
 
           <div className="row-actions" style={{ marginTop: '1rem' }}>
             {renderCourseAccessAction('primary-button', {
-              create: 'Получить доступ к курсу',
+              create: 'Купить курс',
               owned: 'Продолжить обучение',
             })}
           </div>
@@ -511,8 +510,8 @@ export default function LandingSales({
 
           <div className="row-actions">
             {renderCourseAccessAction('primary-button', {
-              create: 'Открыть доступ к LMS',
-              owned: 'Открыть живой курс',
+              create: 'Купить курс',
+              owned: 'Открыть курс',
             })}
             <Link
               href={user ? '/lk' : '/register'}

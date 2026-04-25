@@ -5,6 +5,15 @@ import { useRouter } from 'next/navigation';
 import { type ReactNode, useState } from 'react';
 
 import type { CatalogCourseCard } from '@/lib/lms-catalog';
+import {
+  formatCoursePrice,
+  formatLessonCount,
+  formatPreviewLessons,
+  getCatalogCourseNextStep,
+  getCatalogCourseStatusClass,
+  getCatalogCourseStatusLabel,
+  isStartedPreviewCourse,
+} from '@/lib/purchase-ux';
 
 type DashboardUser = {
   email: string;
@@ -20,45 +29,21 @@ type DashboardClientProps = {
   pendingCourses: CatalogCourseCard[];
 };
 
-function formatMoney(value: number | null) {
-  if (value === null) {
-    return 'Бесплатно';
-  }
-
-  return `${value.toLocaleString('ru-RU')} ₽`;
-}
-
-function isStartedPreview(course: CatalogCourseCard) {
-  return course.status === 'paid' && !course.isOwned;
-}
-
-function getStatusBadge(course: CatalogCourseCard) {
-  if (course.status === 'free') {
-    return <span className="badge badge-complete">Бесплатный курс</span>;
-  }
-
-  if (course.pendingOrder) {
-    return <span className="badge badge-pending">Ожидает оплаты</span>;
-  }
-
-  if (course.isOwned) {
-    return <span className="badge badge-paid">Курс куплен</span>;
-  }
-
-  return <span className="badge badge-paid">Платный курс</span>;
-}
-
 function CourseMeta({ course }: { course: CatalogCourseCard }) {
   return (
     <div className="badge-row">
       <span className="badge badge-complete">{course.category}</span>
-      {getStatusBadge(course)}
+      <span className={getCatalogCourseStatusClass(course)}>
+        {getCatalogCourseStatusLabel(course)}
+      </span>
       {course.lessonsCount ? (
-        <span className="badge badge-pending">{course.lessonsCount} уроков</span>
+        <span className="badge badge-pending">
+          {formatLessonCount(course.lessonsCount)}
+        </span>
       ) : null}
       {course.previewEnabled ? (
         <span className="badge badge-pending">
-          {course.previewLessonsCount} preview-урока
+          {formatPreviewLessons(course.previewLessonsCount)}
         </span>
       ) : null}
     </div>
@@ -152,7 +137,7 @@ export default function DashboardClient({
       }
 
       if (!response.ok) {
-        throw new Error(payload?.error || 'Не удалось создать заказ.');
+        throw new Error(payload?.error || 'Не удалось открыть оплату.');
       }
     } catch (orderError) {
       setFeedback({
@@ -160,7 +145,7 @@ export default function DashboardClient({
         message:
           orderError instanceof Error
             ? orderError.message
-            : 'Не удалось создать заказ.',
+            : 'Не удалось открыть оплату.',
       });
     } finally {
       setBuyingTariffId(null);
@@ -183,7 +168,7 @@ export default function DashboardClient({
         onClick={() => handleCreateOrder(course)}
         type="button"
       >
-        {buyingTariffId === course.tariffId ? 'Создаем заказ...' : 'Купить курс'}
+        {buyingTariffId === course.tariffId ? 'Открываем оплату...' : 'Купить курс'}
       </button>
     );
   }
@@ -214,12 +199,12 @@ export default function DashboardClient({
             <div>
               <h1>{user.name || user.email}</h1>
               <p className="panel-copy" style={{ marginTop: '0.75rem' }}>
-                Один кабинет для бесплатных курсов, preview платных программ и
-                полного доступа после оплаты.
+                Здесь собраны все ваши курсы: бесплатные программы, купленные курсы и покупки,
+                которые еще ждут завершения оплаты.
               </p>
             </div>
             <div className="badge-row" style={{ marginTop: 0 }}>
-              <span className="badge badge-paid">{myCourses.length} моих курсов</span>
+              <span className="badge badge-paid">{myCourses.length} в моих курсах</span>
               <span className="badge badge-complete">
                 {freeCourses.length + myCourses.filter((course) => course.status === 'free').length}{' '}
                 бесплатных
@@ -243,11 +228,10 @@ export default function DashboardClient({
 
         {pendingCourses.length > 0 ? (
           <section className="panel">
-            <span className="eyebrow">Продолжить оплату</span>
-            <h2 style={{ marginTop: '0.9rem' }}>Ожидающие заказы</h2>
+            <span className="eyebrow">Pending payment</span>
+            <h2 style={{ marginTop: '0.9rem' }}>Продолжить оплату</h2>
             <p className="panel-copy" style={{ marginTop: '0.75rem' }}>
-              Заказ уже создан. Откройте checkout и завершите оплату, чтобы получить
-              полный доступ ко всем урокам курса.
+              Покупка уже начата. Вернитесь на экран оплаты, чтобы открыть полный доступ к курсу.
             </p>
 
             <div className="course-grid" style={{ marginTop: '1rem' }}>
@@ -256,14 +240,12 @@ export default function DashboardClient({
                   <CourseMeta course={course} />
                   <h2 style={{ marginTop: '0.8rem' }}>{course.title}</h2>
                   <p className="muted-text" style={{ marginTop: '0.65rem' }}>
-                    {course.description}
+                    {getCatalogCourseNextStep(course, true)}
                   </p>
                   <div className="badge-row">
-                    <span className="badge badge-pending">{formatMoney(course.price)}</span>
+                    <span className="badge badge-paid">{formatCoursePrice(course.price)}</span>
                     {course.pendingOrder ? (
-                      <span className="badge badge-pending">
-                        Заказ #{course.pendingOrder.id}
-                      </span>
+                      <span className="badge badge-pending">Заказ #{course.pendingOrder.id}</span>
                     ) : null}
                   </div>
                   <div className="row-actions">
@@ -271,7 +253,7 @@ export default function DashboardClient({
                       Продолжить оплату
                     </Link>
                     <Link className="secondary-button" href={`/courses/${course.slug}`}>
-                      {course.isStarted ? 'Вернуться к preview' : 'Открыть preview'}
+                      {course.isStarted ? 'Вернуться к курсу' : 'Открыть курс'}
                     </Link>
                   </div>
                 </article>
@@ -282,17 +264,17 @@ export default function DashboardClient({
 
         <section className="panel">
           <span className="eyebrow">Мои курсы</span>
-          <h2 style={{ marginTop: '0.9rem' }}>То, что уже открыто</h2>
+          <h2 style={{ marginTop: '0.9rem' }}>Курсы с доступом и начатым обучением</h2>
           <p className="panel-copy" style={{ marginTop: '0.75rem' }}>
-            Здесь собраны купленные программы, начатые бесплатные курсы и платные
-            курсы, в которых вы уже начали preview.
+            Здесь находятся купленные курсы, бесплатные курсы, которые вы уже начали, и платные
+            курсы с уже открытыми первыми уроками.
           </p>
 
           <div className="course-grid" style={{ marginTop: '1rem' }}>
             {myCourses.length === 0 ? (
               <EmptyCard>
-                Пока здесь пусто. Начните с бесплатного курса ниже или откройте
-                preview платной программы.
+                Пока здесь пусто. Начните с бесплатного курса или откройте первые уроки любого
+                платного курса ниже.
               </EmptyCard>
             ) : (
               myCourses.map((course) => (
@@ -300,7 +282,7 @@ export default function DashboardClient({
                   <CourseMeta course={course} />
                   <h2 style={{ marginTop: '0.8rem' }}>{course.title}</h2>
                   <p className="muted-text" style={{ marginTop: '0.65rem' }}>
-                    {course.description}
+                    {getCatalogCourseNextStep(course, true)}
                   </p>
                   <div
                     className="progress-box"
@@ -320,21 +302,21 @@ export default function DashboardClient({
                   <p className="muted-text" style={{ marginTop: '0.9rem' }}>
                     {course.nextLessonTitle
                       ? `Следующий урок: ${course.nextLessonTitle}.`
-                      : 'Все доступные уроки пройдены, можно вернуться к материалам в любой момент.'}
+                      : 'Все доступные уроки уже завершены. Можно вернуться к материалам в любой момент.'}
                   </p>
                   <div className="badge-row">
                     <span className="badge badge-paid">
                       {course.completedLessonsCount}/{course.lessonsCount ?? 0} завершено
                     </span>
-                    {isStartedPreview(course) ? (
-                      <span className="badge badge-pending">Доступно как preview</span>
+                    {isStartedPreviewCourse(course) ? (
+                      <span className="badge badge-pending">Открыты первые уроки</span>
                     ) : null}
                   </div>
                   <div className="row-actions">
                     <Link className="primary-button" href={`/courses/${course.slug}`}>
-                      {isStartedPreview(course) ? 'Продолжить preview' : 'Продолжить обучение'}
+                      {course.isOwned ? 'Продолжить обучение' : 'Открыть курс'}
                     </Link>
-                    {isStartedPreview(course) ? renderBuyAction(course, 'secondary-button') : null}
+                    {isStartedPreviewCourse(course) ? renderBuyAction(course, 'secondary-button') : null}
                   </div>
                 </article>
               ))
@@ -347,13 +329,13 @@ export default function DashboardClient({
             <span className="eyebrow">Бесплатные курсы</span>
             <h2 style={{ marginTop: '0.9rem' }}>Можно начать сразу</h2>
             <p className="panel-copy" style={{ marginTop: '0.75rem' }}>
-              Доступ открывается сразу после регистрации. Без оплаты и ожидания.
+              Доступ открывается сразу после входа. Никакой оплаты и ожидания.
             </p>
 
             <div className="course-grid" style={{ marginTop: '1rem' }}>
               {freeCourses.length === 0 ? (
                 <EmptyCard>
-                  Все бесплатные курсы уже начаты. Возвращайтесь в блок «Мои курсы».
+                  Все бесплатные курсы уже начаты. Продолжить их можно в блоке «Мои курсы».
                 </EmptyCard>
               ) : (
                 freeCourses.map((course) => (
@@ -361,12 +343,14 @@ export default function DashboardClient({
                     <CourseMeta course={course} />
                     <h2 style={{ marginTop: '0.8rem' }}>{course.title}</h2>
                     <p className="muted-text" style={{ marginTop: '0.65rem' }}>
-                      {course.description}
+                      {getCatalogCourseNextStep(course, true)}
                     </p>
                     <div className="badge-row">
                       <span className="badge badge-complete">Бесплатно</span>
                       {course.lessonsCount ? (
-                        <span className="badge badge-pending">{course.lessonsCount} уроков</span>
+                        <span className="badge badge-pending">
+                          {formatLessonCount(course.lessonsCount)}
+                        </span>
                       ) : null}
                     </div>
                     <div className="row-actions">
@@ -382,16 +366,17 @@ export default function DashboardClient({
 
           <section className="panel">
             <span className="eyebrow">Платные курсы</span>
-            <h2 style={{ marginTop: '0.9rem' }}>Можно купить самостоятельно</h2>
+            <h2 style={{ marginTop: '0.9rem' }}>Можно начать с первых уроков</h2>
             <p className="panel-copy" style={{ marginTop: '0.75rem' }}>
-              Платный курс можно открыть через checkout. До покупки доступны preview-уроки.
+              У платных курсов можно открыть первые уроки, а затем оформить полный доступ через
+              экран покупки.
             </p>
 
             <div className="course-grid" style={{ marginTop: '1rem' }}>
               {paidCourses.length === 0 ? (
                 <EmptyCard>
-                  Все активные платные курсы уже куплены, начаты в preview или находятся
-                  в ожидающей оплате.
+                  Все активные платные курсы уже куплены, начаты с первых уроков или находятся в
+                  ожидании оплаты.
                 </EmptyCard>
               ) : (
                 paidCourses.map((course) => (
@@ -399,13 +384,13 @@ export default function DashboardClient({
                     <CourseMeta course={course} />
                     <h2 style={{ marginTop: '0.8rem' }}>{course.title}</h2>
                     <p className="muted-text" style={{ marginTop: '0.65rem' }}>
-                      {course.description}
+                      {getCatalogCourseNextStep(course, true)}
                     </p>
                     <div className="badge-row">
-                      <span className="badge badge-paid">{formatMoney(course.price)}</span>
+                      <span className="badge badge-paid">{formatCoursePrice(course.price)}</span>
                       {course.previewEnabled ? (
                         <span className="badge badge-pending">
-                          {course.previewLessonsCount} урока можно открыть до покупки
+                          {formatPreviewLessons(course.previewLessonsCount)}
                         </span>
                       ) : null}
                     </div>
@@ -413,7 +398,7 @@ export default function DashboardClient({
                       {renderBuyAction(course)}
                       {course.previewEnabled ? (
                         <Link className="secondary-button" href={`/courses/${course.slug}`}>
-                          Открыть preview
+                          Открыть первые уроки
                         </Link>
                       ) : null}
                     </div>

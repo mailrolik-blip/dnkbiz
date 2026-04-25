@@ -241,7 +241,7 @@ export default function LandingClassic({
         onClick={() => handleCreateOrder(primaryTariff.id)}
         type="button"
       >
-        {buyingTariffId === primaryTariff.id ? 'Создаём заказ...' : 'Купить доступ'}
+        {buyingTariffId === primaryTariff.id ? 'Открываем оплату...' : 'Купить курс'}
       </button>
     );
   }
@@ -436,8 +436,8 @@ export default function LandingClassic({
                 <p>Вход по email и паролю, сессия и защищённые маршруты.</p>
               </div>
               <div className="status-card">
-                <strong>Checkout flow</strong>
-                <p>После выбора тарифа пользователь сразу попадает в test checkout и оттуда в курс.</p>
+                <strong>Покупка курса</strong>
+                <p>После выбора тарифа пользователь переходит на экран покупки и затем сразу в курс.</p>
               </div>
               <div className="status-card">
                 <strong>Прогресс уроков</strong>
@@ -617,7 +617,7 @@ export default function LandingClassic({
               </div>
               <div>
                 <dt>Доступ</dt>
-                <dd>через test checkout</dd>
+                <dd>через экран покупки</dd>
               </div>
               <div>
                 <dt>Формат</dt>
@@ -744,7 +744,7 @@ export default function LandingClassic({
                   onClick={() => handleCreateOrder(tariff.id)}
                   type="button"
                 >
-                  {buyingTariffId === tariff.id ? 'Создаём заказ...' : 'Купить доступ'}
+                  {buyingTariffId === tariff.id ? 'Открываем оплату...' : 'Купить курс'}
                 </button>
               ) : (
                 <Link href="/register" className="primary-button">
@@ -767,7 +767,7 @@ export default function LandingClassic({
               <li>Поддержка 24/7</li>
             </ul>
             <Link href={user ? '/lk' : '/register'} className="secondary-button">
-              {user ? 'Открыть кабинет' : 'Подать заявку'}
+              {user ? 'Открыть кабинет' : 'Перейти в каталог'}
             </Link>
           </article>
         </div>

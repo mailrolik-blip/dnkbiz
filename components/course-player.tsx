@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import type { CourseViewerData, CourseViewerLesson } from '@/lib/course-access';
 import { dnkFeaturedPrograms } from '@/lib/dnk-content';
+import { formatPreviewLessons } from '@/lib/purchase-ux';
 
 type CoursePlayerProps = {
   course: CourseViewerData;
@@ -555,9 +556,9 @@ function PaywallBlock({
         <span className="eyebrow">Полный доступ после оплаты</span>
         <h3>{lesson.title}</h3>
         <p>
-          Этот урок закрыт. До покупки доступны {course.access.previewLessonsCount}{' '}
-          preview-урока, а после оплаты откроется весь курс, домашка и полный маршрут
-          обучения в LMS.
+          Этот урок закрыт. До покупки доступны{' '}
+          {formatPreviewLessons(course.access.previewLessonsCount)}, а после оплаты откроется весь
+          курс, домашка и полный маршрут обучения в LMS.
         </p>
       </div>
       <div className="badge-row course-paywall__badges">
@@ -567,7 +568,7 @@ function PaywallBlock({
           </span>
         ) : null}
         <span className="badge badge-pending">
-          {course.access.previewLessonsCount} preview-урока
+          {formatPreviewLessons(course.access.previewLessonsCount)}
         </span>
       </div>
       <div className="row-actions">
@@ -582,11 +583,11 @@ function PaywallBlock({
             onClick={onCreateOrder}
             type="button"
           >
-            {purchasePending ? 'Создаем заказ...' : 'Купить курс'}
+            {purchasePending ? 'Открываем оплату...' : 'Купить курс'}
           </button>
         )}
         <Link href="/lk" className="secondary-button">
-          Вернуться в кабинет
+          В кабинет
         </Link>
       </div>
     </div>
@@ -993,7 +994,7 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
             </span>
             {courseState.access.accessMode === 'PREVIEW' ? (
               <span className="badge badge-pending">
-                {courseState.access.previewLessonsCount} preview-урока
+                {formatPreviewLessons(courseState.access.previewLessonsCount)}
               </span>
             ) : null}
             <span className="badge badge-complete">{progressPercent}% прогресса</span>
@@ -1223,12 +1224,31 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
             {courseState.access.accessMode === 'PREVIEW' ? (
               <div className="course-preview-summary">
                 <span className="badge badge-pending">
-                  {previewCompletedCount}/{courseState.access.previewLessonsCount} preview завершено
+                  {previewCompletedCount}/{courseState.access.previewLessonsCount} урока открыто
                 </span>
                 <p className="muted-text">
-                  Без покупки доступны только preview-уроки. Закрытые модули откроются
+                  Без покупки доступны только первые уроки. Закрытые модули откроются
                   после оплаты.
                 </p>
+                <div className="row-actions" style={{ marginTop: '0.9rem' }}>
+                  {courseState.access.pendingOrder ? (
+                    <Link
+                      href={courseState.access.pendingOrder.checkoutUrl}
+                      className="primary-button"
+                    >
+                      Продолжить оплату
+                    </Link>
+                  ) : (
+                    <button
+                      className="primary-button"
+                      disabled={purchasePending}
+                      onClick={handleCreateOrder}
+                      type="button"
+                    >
+                      {purchasePending ? 'Открываем оплату...' : 'Купить курс'}
+                    </button>
+                  )}
+                </div>
               </div>
             ) : null}
 
@@ -1252,7 +1272,7 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
                       {lesson.isLocked
                         ? 'Откроется после оплаты'
                         : lesson.isPreview && courseState.access.accessMode === 'PREVIEW'
-                        ? 'Доступно как preview'
+                        ? 'Открыто до покупки'
                         : lesson.description ||
                           'Откройте урок, чтобы посмотреть содержание и практику.'}
                     </span>

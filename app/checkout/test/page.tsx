@@ -49,6 +49,16 @@ export default async function TestCheckoutPage({
             select: {
               title: true,
               slug: true,
+              description: true,
+              lessons: {
+                where: {
+                  isPublished: true,
+                },
+                select: {
+                  id: true,
+                  isPreview: true,
+                },
+              },
             },
           },
         },
@@ -59,6 +69,11 @@ export default async function TestCheckoutPage({
   if (!order) {
     redirect('/lk');
   }
+
+  const lessonsCount = order.tariff.course.lessons.length;
+  const previewLessonsCount = order.tariff.course.lessons.filter(
+    (lesson) => lesson.isPreview
+  ).length;
 
   return (
     <TestCheckoutClient
@@ -71,6 +86,9 @@ export default async function TestCheckoutPage({
         tariffTitle: order.tariff.title,
         courseTitle: order.tariff.course.title,
         courseSlug: order.tariff.course.slug,
+        courseDescription: order.tariff.course.description,
+        lessonsCount,
+        previewLessonsCount,
       }}
       testPaymentsEnabled={isTestPaymentsEnabled()}
     />
