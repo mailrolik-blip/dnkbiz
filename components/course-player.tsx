@@ -558,8 +558,8 @@ function PaywallBlock({
         <h3>{lesson.title}</h3>
         <p>
           Этот урок закрыт. До покупки доступны{' '}
-          {formatPreviewLessons(course.access.previewLessonsCount)}, а после оплаты откроется весь
-          курс, домашка и полный маршрут обучения в LMS.
+          {formatPreviewLessons(course.access.previewLessonsCount)}, а после оплаты откроются
+          остальные модули, домашние задания и полный маршрут курса внутри LMS.
         </p>
       </div>
       <div className="badge-row course-paywall__badges">
@@ -1056,7 +1056,7 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
 
                   <div className="badge-row">
                     {currentLesson.isPreview ? (
-                      <span className="badge badge-pending">Preview-урок</span>
+                      <span className="badge badge-pending">Ознакомительный урок</span>
                     ) : null}
                     {currentLessonLocked ? (
                       <span className="badge badge-paid">Закрыт до оплаты</span>
@@ -1224,13 +1224,22 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
 
             {courseState.access.accessMode === 'PREVIEW' ? (
               <div className="course-preview-summary">
+                <span className="eyebrow">Ознакомительный доступ</span>
                 <span className="badge badge-pending">
                   {previewCompletedCount}/{courseState.access.previewLessonsCount} урока открыто
                 </span>
                 <p className="muted-text">
-                  Без покупки доступны только первые уроки. Закрытые модули откроются
-                  после оплаты.
+                  Сначала можно пройти первые уроки и оценить формат курса. После покупки
+                  откроются остальные модули, практика и полный доступ в кабинете.
                 </p>
+                {courseState.access.tariff ? (
+                  <div className="badge-row">
+                    <span className="badge badge-paid">
+                      {formatMoney(courseState.access.tariff.price)}
+                    </span>
+                    <span className="badge badge-pending">Полный доступ после оплаты</span>
+                  </div>
+                ) : null}
                 <div className="row-actions" style={{ marginTop: '0.9rem' }}>
                   {courseState.access.pendingOrder ? (
                     <Link
@@ -1291,6 +1300,42 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
             </button>
           </aside>
         </div>
+
+        {courseState.access.accessMode === 'PREVIEW' ? (
+          <div className="course-mobile-bar">
+            <div className="course-mobile-bar__copy">
+              <span>
+                {courseState.access.pendingOrder
+                  ? 'Покупка уже начата'
+                  : 'Открыт ознакомительный доступ'}
+              </span>
+              <strong>
+                {courseState.access.pendingOrder
+                  ? getActiveOrderActionLabel(courseState.access.pendingOrder.status)
+                  : courseState.access.tariff
+                  ? formatMoney(courseState.access.tariff.price)
+                  : 'Полный доступ'}
+              </strong>
+            </div>
+            {courseState.access.pendingOrder ? (
+              <Link
+                href={courseState.access.pendingOrder.checkoutUrl}
+                className="primary-button"
+              >
+                {getActiveOrderActionLabel(courseState.access.pendingOrder.status)}
+              </Link>
+            ) : (
+              <button
+                className="primary-button"
+                disabled={purchasePending}
+                onClick={handleCreateOrder}
+                type="button"
+              >
+                {purchasePending ? 'Открываем оплату...' : 'Купить курс'}
+              </button>
+            )}
+          </div>
+        ) : null}
 
         <div className="gallery-wrapper">
           <div className="gallery-track">

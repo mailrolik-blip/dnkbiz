@@ -53,7 +53,7 @@ export function getActiveOrderActionLabel(status: OrderStatus) {
 
 export function getPaymentMethodLabel(method: PaymentMethod) {
   if (method === 'TEST') {
-    return 'Dev/Test fallback';
+    return 'Локальная проверка';
   }
 
   return 'Онлайн-оплата';

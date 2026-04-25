@@ -43,6 +43,30 @@ export function isStartedPreviewCourse(course: CatalogCourseCard) {
   return course.status === 'paid' && course.isStarted && !course.isOwned;
 }
 
+export function getCatalogCourseToneClass(course: CatalogCourseCard) {
+  if (course.status === 'showcase') {
+    return 'catalog-card--showcase';
+  }
+
+  if (course.pendingOrder) {
+    return 'catalog-card--pending';
+  }
+
+  if (course.isOwned) {
+    return 'catalog-card--owned';
+  }
+
+  if (course.status === 'free') {
+    return 'catalog-card--free';
+  }
+
+  if (isStartedPreviewCourse(course)) {
+    return 'catalog-card--preview';
+  }
+
+  return 'catalog-card--paid';
+}
+
 export function getCatalogCourseStatusClass(course: CatalogCourseCard) {
   if (course.status === 'showcase') {
     return 'badge badge-pending';
@@ -79,7 +103,7 @@ export function getCatalogCourseStatusLabel(course: CatalogCourseCard) {
   }
 
   if (course.isOwned) {
-    return 'Доступ к курсу';
+    return 'Доступ открыт';
   }
 
   if (course.status === 'free') {
@@ -93,18 +117,58 @@ export function getCatalogCourseStatusLabel(course: CatalogCourseCard) {
   return 'Можно купить';
 }
 
-export function getCatalogCourseNextStep(course: CatalogCourseCard, hasUser: boolean) {
+export function getCatalogCourseActionHint(course: CatalogCourseCard, hasUser: boolean) {
   if (course.status === 'showcase') {
-    return 'Курс остается в каталоге как витрина и пока недоступен для покупки внутри LMS.';
+    return 'В каталоге, без покупки';
+  }
+
+  if (course.pendingOrder) {
+    return course.pendingOrder.status === 'PROCESSING'
+      ? 'Платеж в обработке'
+      : 'Вернуться к оплате';
+  }
+
+  if (course.isOwned) {
+    return 'Курс уже доступен';
   }
 
   if (course.status === 'free') {
     if (!hasUser) {
-      return 'После регистрации курс откроется сразу, без оплаты и без дополнительных шагов.';
+      return 'Регистрация откроет курс сразу';
+    }
+
+    return course.isStarted ? 'Продолжить с сохраненного места' : 'Начать бесплатно';
+  }
+
+  if (isStartedPreviewCourse(course)) {
+    return `Открыто: ${formatPreviewLessons(course.previewLessonsCount)}`;
+  }
+
+  if (!hasUser) {
+    return course.previewEnabled && course.previewLessonsCount > 0
+      ? 'Регистрация откроет первые уроки'
+      : 'Регистрация откроет покупку';
+  }
+
+  if (course.previewEnabled && course.previewLessonsCount > 0) {
+    return `${formatPreviewLessons(course.previewLessonsCount)} до покупки`;
+  }
+
+  return 'Оформить доступ';
+}
+
+export function getCatalogCourseNextStep(course: CatalogCourseCard, hasUser: boolean) {
+  if (course.status === 'showcase') {
+    return 'Курс остается в каталоге как витрина. Он еще не открыт для самостоятельной покупки внутри LMS.';
+  }
+
+  if (course.status === 'free') {
+    if (!hasUser) {
+      return 'После бесплатной регистрации курс откроется сразу, без оплаты и без дополнительных шагов.';
     }
 
     return course.isStarted
-      ? 'Курс уже доступен в кабинете. Можно открыть его и продолжить обучение.'
+      ? 'Курс уже есть в кабинете. Можно вернуться к урокам и продолжить обучение с сохраненного места.'
       : 'Курс доступен сразу после входа. Его можно начать без оплаты.';
   }
 
@@ -136,5 +200,5 @@ export function getCatalogCourseNextStep(course: CatalogCourseCard, hasUser: boo
     )}. Полный доступ откроется сразу после оплаты.`;
   }
 
-  return 'Курс можно купить и открыть в кабинете после оплаты.';
+  return 'Курс можно купить и открыть в кабинете сразу после оплаты.';
 }

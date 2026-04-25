@@ -271,7 +271,7 @@ export const dnkFunnelScenarios = [
       'Управление и развитие',
     ],
     ctaLabel: 'Подобрать направление',
-    href: '#final-cta',
+    href: '#catalog',
   },
 ] as const;
 
@@ -302,7 +302,7 @@ export const dnkFunnelCatalogShelves = [
 ] as const;
 
 export const dnkFunnelProofPoints = [
-  'Рабочий checkout/test и выдача доступа',
+  'Покупка курса и выдача доступа в одном потоке',
   'Живой курс с уроками и домашкой',
   'Возврат в кабинет и продолжение обучения',
 ] as const;

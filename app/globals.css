@@ -1766,17 +1766,7 @@ main {
 }
 
 .ai-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.6rem;
-  width: 100%;
-  min-height: 3rem;
-  border: none;
-  border-radius: 1rem;
-  background: linear-gradient(135deg, rgba(1, 247, 246, 0.95), #1fc7ff);
-  color: #031112;
-  font-weight: 700;
+  display: none;
 }
 
 .ai-btn svg,
@@ -1787,21 +1777,7 @@ main {
 }
 
 .gallery-wrapper {
-  overflow: hidden;
-  -webkit-mask-image: linear-gradient(
-    to right,
-    transparent,
-    black 4%,
-    black 96%,
-    transparent
-  );
-  mask-image: linear-gradient(
-    to right,
-    transparent,
-    black 4%,
-    black 96%,
-    transparent
-  );
+  display: none;
 }
 
 .gallery-track {
@@ -2725,6 +2701,12 @@ a.bento-card:hover {
   }
 }
 
+@media (max-width: 479px) {
+  .dashboard-hero__stats {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* compact sales funnel */
 
 .funnel-hero,
@@ -3096,6 +3078,243 @@ a.bento-card:hover {
   pointer-events: none;
 }
 
+.catalog-card--free {
+  border-color: rgba(0, 255, 136, 0.18);
+}
+
+.catalog-card--paid {
+  border-color: rgba(1, 247, 246, 0.2);
+}
+
+.catalog-card--preview,
+.catalog-card--pending {
+  border-color: rgba(255, 201, 79, 0.2);
+}
+
+.catalog-card--owned {
+  border-color: rgba(0, 255, 136, 0.24);
+  background:
+    linear-gradient(180deg, rgba(0, 255, 136, 0.08), rgba(255, 255, 255, 0)),
+    rgba(10, 18, 28, 0.88);
+}
+
+.catalog-card--showcase {
+  opacity: 0.96;
+}
+
+.funnel-live-card__hint,
+.showcase-course-card__next {
+  margin: 0;
+  color: var(--muted-strong);
+  line-height: 1.55;
+}
+
+.funnel-live-card__hint {
+  font-size: 0.94rem;
+}
+
+.showcase-course-card__next {
+  font-size: 0.9rem;
+}
+
+.dashboard-hero,
+.dashboard-section {
+  display: grid;
+  gap: 1rem;
+}
+
+.dashboard-hero {
+  background:
+    radial-gradient(circle at top right, rgba(1, 247, 246, 0.16), transparent 28rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0)),
+    var(--surface-strong);
+}
+
+.dashboard-hero__copy {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.dashboard-hero__copy .panel-copy {
+  max-width: 44rem;
+  margin: 0;
+}
+
+.dashboard-hero__stats {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.dashboard-stat {
+  display: grid;
+  gap: 0.18rem;
+  padding: 1rem 1.05rem;
+  border-radius: 1.1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.dashboard-stat span {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.dashboard-stat strong {
+  color: var(--foreground);
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  line-height: 1;
+  letter-spacing: -0.05em;
+}
+
+.dashboard-section__head {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.dashboard-section__head h2,
+.dashboard-card h3 {
+  margin: 0;
+}
+
+.dashboard-section__head .panel-copy {
+  margin: 0;
+  max-width: 54rem;
+}
+
+.dashboard-grid,
+.dashboard-split {
+  align-items: stretch;
+}
+
+.dashboard-card {
+  display: grid;
+  gap: 0.95rem;
+  min-height: 100%;
+}
+
+.dashboard-card__head,
+.dashboard-card__body,
+.dashboard-card__footer {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.dashboard-card__hint {
+  color: var(--muted-strong);
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.dashboard-card__description,
+.dashboard-card__next {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.dashboard-card__progress {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-radius: 1.1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.dashboard-card__status {
+  margin-top: -0.1rem;
+}
+
+.dashboard-card__footer {
+  margin-top: auto;
+  padding-top: 0.95rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.dashboard-card__actions {
+  gap: 0.65rem;
+}
+
+.dashboard-empty-card {
+  display: grid;
+  place-items: center;
+  min-height: 100%;
+}
+
+.dashboard-empty-card .muted-text {
+  margin: 0;
+}
+
+.payment-method-card {
+  display: grid;
+  gap: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease,
+    background 180ms ease;
+}
+
+.payment-method-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(1, 247, 246, 0.18);
+}
+
+.payment-method-card--selected {
+  border-color: rgba(255, 201, 79, 0.34);
+  box-shadow: 0 0 0 1px rgba(255, 201, 79, 0.32);
+  background:
+    linear-gradient(180deg, rgba(255, 201, 79, 0.08), rgba(255, 255, 255, 0)),
+    var(--surface);
+}
+
+.payment-method-card:disabled {
+  cursor: default;
+}
+
+.checkout-mobile-bar,
+.course-mobile-bar {
+  display: none;
+}
+
+.course-mobile-bar {
+  gap: 0.85rem;
+  padding: 1rem 1.1rem calc(1rem + env(safe-area-inset-bottom));
+  border-radius: 1.25rem 1.25rem 0 0;
+  border: 1px solid rgba(255, 201, 79, 0.18);
+  border-bottom: none;
+  background:
+    radial-gradient(circle at top right, rgba(255, 201, 79, 0.12), transparent 18rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0)),
+    rgba(11, 18, 28, 0.96);
+  box-shadow: 0 -18px 40px -30px rgba(0, 0, 0, 0.85);
+}
+
+.course-mobile-bar__copy {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.course-mobile-bar__copy span {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.course-mobile-bar__copy strong {
+  color: var(--foreground);
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
 .course-preview-summary,
 .course-paywall {
   display: grid;
@@ -3162,6 +3381,10 @@ a.bento-card:hover {
 }
 
 @media (min-width: 860px) {
+  .dashboard-hero__stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
   .funnel-hero {
     grid-template-columns: minmax(0, 1.35fr) minmax(18rem, 0.78fr);
   }
@@ -3191,6 +3414,49 @@ a.bento-card:hover {
 }
 
 @media (max-width: 959px) {
+  .page-shell {
+    padding-bottom: calc(8.5rem + env(safe-area-inset-bottom));
+  }
+
+  .dashboard-hero__stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-card__actions .primary-button,
+  .dashboard-card__actions .secondary-button {
+    width: 100%;
+  }
+
+  .checkout-actions {
+    display: none;
+  }
+
+  .checkout-mobile-bar,
+  .course-mobile-bar {
+    position: fixed;
+    left: 1rem;
+    right: 1rem;
+    bottom: 0;
+    z-index: 12;
+    display: grid;
+  }
+
+  .checkout-mobile-bar {
+    gap: 0.7rem;
+    margin-top: 1rem;
+    padding: 1rem 1.05rem calc(1rem + env(safe-area-inset-bottom));
+    border-radius: 1.25rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(10, 18, 28, 0.96);
+    box-shadow: 0 -18px 40px -30px rgba(0, 0, 0, 0.85);
+  }
+
+  .checkout-mobile-bar .primary-button,
+  .checkout-mobile-bar .secondary-button,
+  .course-mobile-bar .primary-button {
+    width: 100%;
+  }
+
   .funnel-hero__main,
   .funnel-live-card,
   .funnel-final-cta {
@@ -3228,10 +3494,16 @@ a.bento-card:hover {
     justify-items: stretch;
   }
 
+  .funnel-live-card__hint,
+  .showcase-course-card__next {
+    font-size: 0.88rem;
+  }
+
   .funnel-shelf .showcase-course-card__footer .secondary-button,
   .funnel-shelf .showcase-course-card__footer .ghost-button,
   .funnel-shelf .landing-card-disabled,
-  .funnel-live-card__actions .primary-button {
+  .funnel-live-card__actions .primary-button,
+  .funnel-live-card__actions .secondary-button {
     width: 100%;
   }
 }

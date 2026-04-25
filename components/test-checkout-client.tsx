@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import {
+  getPaymentMethodLabel,
   getOrderStatusBadgeClass,
   getOrderStatusLabel,
   isRetryableOrderStatus,
@@ -120,17 +121,17 @@ function getPaymentMethodOptions(
       value: 'MANUAL',
       label: 'Онлайн-оплата',
       description:
-        'Основной provider-ready вариант. Заказ перейдет в обработку и будет готов к подтверждению через webhook провайдера.',
-      badge: 'provider-ready',
+        'Основной пользовательский сценарий покупки. Заказ перейдет в обработку и будет готов к подтверждению после подключения платежного провайдера.',
+      badge: 'основной',
     },
   ];
 
   if (testPaymentsEnabled) {
     options.push({
       value: 'TEST',
-      label: 'Dev/Test fallback',
+      label: 'Локальная проверка',
       description:
-        'Локальный способ для проверки purchase flow и автоматического открытия курса без реальной платежки.',
+        'Резервный dev-режим для локальной проверки покупки и автоматического открытия курса без боевой платежки.',
       badge: 'dev',
     });
   }
@@ -420,9 +421,7 @@ export default function TestCheckoutClient({
               </div>
               <div>
                 <dt>Способ оплаты</dt>
-                <dd>
-                  {selectedMethod === 'TEST' ? 'Dev/Test fallback' : 'Онлайн-оплата'}
-                </dd>
+                <dd>{getPaymentMethodLabel(selectedMethod)}</dd>
               </div>
             </div>
 
@@ -500,7 +499,7 @@ export default function TestCheckoutClient({
                 </p>
               </div>
 
-              <div className="course-grid" style={{ marginTop: 0 }}>
+              <div className="course-grid checkout-methods" style={{ marginTop: 0 }}>
                 {methodOptions.map((method) => {
                   const isSelected = selectedMethod === method.value;
 
@@ -508,17 +507,11 @@ export default function TestCheckoutClient({
                     <button
                       key={method.value}
                       type="button"
-                      className="course-card"
+                      className={`course-card payment-method-card ${
+                        isSelected ? 'payment-method-card--selected' : ''
+                      }`}
                       disabled={!canSwitchMethod}
                       onClick={() => setSelectedMethod(method.value)}
-                      style={{
-                        textAlign: 'left',
-                        borderColor: isSelected ? 'var(--brand)' : undefined,
-                        boxShadow: isSelected
-                          ? '0 0 0 1px rgba(245, 165, 36, 0.4)'
-                          : undefined,
-                        cursor: canSwitchMethod ? 'pointer' : 'default',
-                      }}
                     >
                       <div className="badge-row">
                         <span className={isSelected ? 'badge badge-paid' : 'badge badge-pending'}>
@@ -537,7 +530,14 @@ export default function TestCheckoutClient({
               </div>
             </div>
 
-            <div className="row-actions" style={{ marginTop: '1rem' }}>
+            <div className="row-actions checkout-actions" style={{ marginTop: '1rem' }}>
+              {renderPrimaryAction()}
+              <Link href={`/courses/${order.courseSlug}`} className="secondary-button">
+                Назад к курсу
+              </Link>
+            </div>
+
+            <div className="checkout-mobile-bar">
               {renderPrimaryAction()}
               <Link href={`/courses/${order.courseSlug}`} className="secondary-button">
                 Назад к курсу
@@ -555,8 +555,8 @@ export default function TestCheckoutClient({
                     : canRetry
                     ? 'Создайте новый заказ и повторите оплату через нужный способ.'
                     : selectedMethod === 'MANUAL'
-                    ? 'После запуска оплаты заказ перейдет в обработку и будет ждать подтверждения провайдера.'
-                    : 'Подтвердите покупку через dev/test fallback и откройте курс.'}
+                    ? 'После запуска оплаты заказ перейдет в обработку и будет ждать подтверждения платежного провайдера.'
+                    : 'Подтвердите покупку через локальную проверку и сразу откройте курс.'}
                 </p>
               </div>
               {order.paymentFailureText ? (
@@ -567,17 +567,17 @@ export default function TestCheckoutClient({
               ) : null}
               {order.paymentReference ? (
                 <div className="status-card">
-                  <strong>Payment reference</strong>
+                  <strong>Идентификатор платежа</strong>
                   <p>{order.paymentReference}</p>
                 </div>
               ) : null}
               {testPaymentsEnabled ? (
                 <div className="status-card">
-                  <strong>Dev/Test fallback</strong>
+                  <strong>Локальная проверка</strong>
                   <p>
-                    Локально доступен резервный способ подтверждения оплаты. Он не
-                    меняет основной purchase UX, а только заменяет реального провайдера
-                    на этапе разработки.
+                    Локально доступен резервный способ подтверждения оплаты. Он не меняет
+                    основной пользовательский сценарий покупки и нужен только для разработки и
+                    smoke-проверок.
                   </p>
                 </div>
               ) : null}

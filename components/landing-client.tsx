@@ -13,12 +13,14 @@ import { groupCatalogCourses, type CatalogCourseCard } from '@/lib/lms-catalog';
 import type { LandingPageData } from '@/lib/landing';
 import { getActiveOrderActionLabel } from '@/lib/payments/constants';
 import {
+  getCatalogCourseActionHint,
   formatCoursePrice,
   formatLessonCount,
   formatPreviewLessons,
   getCatalogCourseNextStep,
   getCatalogCourseStatusClass,
   getCatalogCourseStatusLabel,
+  getCatalogCourseToneClass,
   isStartedPreviewCourse,
 } from '@/lib/purchase-ux';
 
@@ -121,6 +123,7 @@ export default function LandingClient({
     tone: 'error' | 'success';
     message: string;
   } | null>(null);
+  const hasUser = Boolean(user?.email);
 
   const featuredPaidCourse =
     catalogCourses.find((course) => course.slug === 'practical-course') ??
@@ -528,7 +531,10 @@ export default function LandingClient({
               <div className="funnel-live-card__body">
                 <h2>{featuredPaidCourse.title}</h2>
                 <p className="panel-copy">
-                  {getCatalogCourseNextStep(featuredPaidCourse, Boolean(user?.email))}
+                  {getCatalogCourseNextStep(featuredPaidCourse, hasUser)}
+                </p>
+                <p className="funnel-live-card__hint">
+                  Следующий шаг: {getCatalogCourseActionHint(featuredPaidCourse, hasUser)}
                 </p>
               </div>
             </div>
@@ -572,7 +578,9 @@ export default function LandingClient({
                 {shelf.courses.map((course) => (
                   <article
                     key={course.slug}
-                    className={`program-highlight-card showcase-course-card showcase-course-card--${course.status}`}
+                    className={`program-highlight-card showcase-course-card showcase-course-card--${course.status} ${getCatalogCourseToneClass(
+                      course
+                    )}`}
                   >
                     <div className="showcase-course-card__meta">
                       <span className="showcase-course-card__category">
@@ -587,8 +595,8 @@ export default function LandingClient({
                       <p className="showcase-course-card__description">
                         {course.description}
                       </p>
-                      <p className="muted-text" style={{ marginTop: '0.85rem' }}>
-                        {getCatalogCourseNextStep(course, Boolean(user?.email))}
+                      <p className="showcase-course-card__next">
+                        Следующий шаг: {getCatalogCourseActionHint(course, hasUser)}
                       </p>
                     </div>
                     <div className="showcase-course-card__footer">
@@ -646,11 +654,11 @@ export default function LandingClient({
 
       <section id="final-cta" className="dnk-section">
         <article className="panel funnel-final-cta">
-          <span className="eyebrow">Финальный CTA</span>
+          <span className="eyebrow">Старт в LMS</span>
           <h2>Зарегистрируйтесь бесплатно и соберите свой маршрут внутри LMS.</h2>
           <p className="panel-copy">
-            Бесплатные курсы можно начать сразу, а платные программы покупать и проходить внутри
-            того же кабинета без менеджерского сценария.
+            Бесплатные курсы можно начать сразу, а платные программы покупать и проходить в том
+            же кабинете без заявок, менеджерского шага и ручной выдачи доступа.
           </p>
 
           <div className="row-actions">

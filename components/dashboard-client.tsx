@@ -10,9 +10,11 @@ import {
   formatCoursePrice,
   formatLessonCount,
   formatPreviewLessons,
+  getCatalogCourseActionHint,
   getCatalogCourseNextStep,
   getCatalogCourseStatusClass,
   getCatalogCourseStatusLabel,
+  getCatalogCourseToneClass,
   isStartedPreviewCourse,
 } from '@/lib/purchase-ux';
 
@@ -30,6 +32,24 @@ type DashboardClientProps = {
   pendingCourses: CatalogCourseCard[];
 };
 
+type DashboardCardMode = 'my' | 'free' | 'paid' | 'pending';
+
+type SectionIntroProps = {
+  eyebrow: string;
+  title: string;
+  description: string;
+};
+
+type EmptyCardProps = {
+  children: ReactNode;
+};
+
+type DashboardCourseCardProps = {
+  course: CatalogCourseCard;
+  mode: DashboardCardMode;
+  renderBuyAction: (course: CatalogCourseCard, className?: string) => ReactNode;
+};
+
 function CourseMeta({ course }: { course: CatalogCourseCard }) {
   return (
     <div className="badge-row">
@@ -38,9 +58,7 @@ function CourseMeta({ course }: { course: CatalogCourseCard }) {
         {getCatalogCourseStatusLabel(course)}
       </span>
       {course.lessonsCount ? (
-        <span className="badge badge-pending">
-          {formatLessonCount(course.lessonsCount)}
-        </span>
+        <span className="badge badge-pending">{formatLessonCount(course.lessonsCount)}</span>
       ) : null}
       {course.previewEnabled ? (
         <span className="badge badge-pending">
@@ -51,11 +69,147 @@ function CourseMeta({ course }: { course: CatalogCourseCard }) {
   );
 }
 
-function EmptyCard({ children }: { children: ReactNode }) {
+function SectionIntro({ eyebrow, title, description }: SectionIntroProps) {
   return (
-    <div className="empty-card">
+    <div className="dashboard-section__head">
+      <div>
+        <span className="eyebrow">{eyebrow}</span>
+        <h2>{title}</h2>
+      </div>
+      <p className="panel-copy">{description}</p>
+    </div>
+  );
+}
+
+function EmptyCard({ children }: EmptyCardProps) {
+  return (
+    <div className="empty-card dashboard-empty-card">
       <p className="muted-text">{children}</p>
     </div>
+  );
+}
+
+function DashboardCourseCard({
+  course,
+  mode,
+  renderBuyAction,
+}: DashboardCourseCardProps) {
+  const actionHint = getCatalogCourseActionHint(course, true);
+  const nextStepCopy =
+    mode === 'my' && course.nextLessonTitle
+      ? `Следующий урок: ${course.nextLessonTitle}.`
+      : getCatalogCourseNextStep(course, true);
+
+  function renderPrimaryAction() {
+    if (mode === 'free') {
+      return (
+        <Link className="primary-button" href={`/courses/${course.slug}`}>
+          {course.isStarted ? 'Открыть курс' : 'Начать бесплатно'}
+        </Link>
+      );
+    }
+
+    if (mode === 'pending') {
+      return (
+        <Link className="primary-button" href={course.pendingOrder!.checkoutUrl}>
+          {getActiveOrderActionLabel(course.pendingOrder!.status)}
+        </Link>
+      );
+    }
+
+    if (mode === 'paid') {
+      return renderBuyAction(course);
+    }
+
+    return (
+      <Link className="primary-button" href={`/courses/${course.slug}`}>
+        {course.isOwned ? 'Продолжить обучение' : 'Открыть курс'}
+      </Link>
+    );
+  }
+
+  function renderSecondaryAction() {
+    if (mode === 'my' && isStartedPreviewCourse(course)) {
+      return renderBuyAction(course, 'secondary-button');
+    }
+
+    if (mode === 'paid' && course.previewEnabled) {
+      return (
+        <Link className="secondary-button" href={`/courses/${course.slug}`}>
+          {course.isStarted ? 'Продолжить preview' : 'Открыть первые уроки'}
+        </Link>
+      );
+    }
+
+    if (mode === 'pending') {
+      return (
+        <Link className="secondary-button" href={`/courses/${course.slug}`}>
+          {course.isStarted ? 'Вернуться к курсу' : 'Открыть курс'}
+        </Link>
+      );
+    }
+
+    return null;
+  }
+
+  return (
+    <article className={`course-card dashboard-card ${getCatalogCourseToneClass(course)}`}>
+      <div className="dashboard-card__head">
+        <CourseMeta course={course} />
+        <span className="dashboard-card__hint">{actionHint}</span>
+      </div>
+
+      <div className="dashboard-card__body">
+        <h3>{course.title}</h3>
+        <p className="dashboard-card__description">{course.description}</p>
+      </div>
+
+      {mode === 'my' ? (
+        <div className="dashboard-card__progress">
+          <div className="progress-info">
+            <span>Прогресс по курсу</span>
+            <span>{course.progressPercent}%</span>
+          </div>
+          <div className="progress-line">
+            <div className="progress-fill" style={{ width: `${course.progressPercent}%` }} />
+          </div>
+          <div className="badge-row">
+            <span className="badge badge-paid">
+              {course.completedLessonsCount}/{course.lessonsCount ?? 0} завершено
+            </span>
+            {isStartedPreviewCourse(course) ? (
+              <span className="badge badge-pending">Открыты первые уроки</span>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      {mode === 'pending' && course.pendingOrder ? (
+        <div className="status-card dashboard-card__status">
+          <strong>Заказ #{course.pendingOrder.id}</strong>
+          <p>
+            {course.pendingOrder.status === 'PROCESSING'
+              ? 'Платеж уже запущен и сейчас находится в обработке.'
+              : 'Оплата еще не завершена. Можно вернуться на экран покупки и продолжить ее.'}
+          </p>
+        </div>
+      ) : null}
+
+      <p className="dashboard-card__next">{nextStepCopy}</p>
+
+      <div className="dashboard-card__footer">
+        <div className="badge-row">
+          {course.price !== null ? (
+            <span className="badge badge-paid">{formatCoursePrice(course.price)}</span>
+          ) : null}
+          {mode === 'free' ? <span className="badge badge-complete">Без оплаты</span> : null}
+        </div>
+        <div className="row-actions dashboard-card__actions">
+          {renderPrimaryAction()}
+          {renderSecondaryAction()}
+        </div>
+      </div>
+    </article>
   );
 }
 
@@ -73,6 +227,16 @@ export default function DashboardClient({
     tone: 'error' | 'success';
     message: string;
   } | null>(null);
+
+  const stats = {
+    my: myCourses.length,
+    free: freeCourses.length + myCourses.filter((course) => course.status === 'free').length,
+    paid:
+      paidCourses.length +
+      pendingCourses.length +
+      myCourses.filter((course) => course.status === 'paid').length,
+    pending: pendingCourses.length,
+  };
 
   async function handleLogout() {
     setFeedback(null);
@@ -194,25 +358,32 @@ export default function DashboardClient({
       </div>
 
       <section className="stack-grid">
-        <article className="panel">
-          <span className="eyebrow">Личный кабинет</span>
-          <div className="panel-head" style={{ marginTop: '0.9rem' }}>
-            <div>
-              <h1>{user.name || user.email}</h1>
-              <p className="panel-copy" style={{ marginTop: '0.75rem' }}>
-                Здесь собраны все ваши курсы: бесплатные программы, купленные курсы и покупки,
-                которые еще ждут завершения оплаты.
-              </p>
+        <article className="panel dashboard-hero">
+          <div className="dashboard-hero__copy">
+            <span className="eyebrow">Личный кабинет</span>
+            <h1>{user.name || user.email}</h1>
+            <p className="panel-copy">
+              Здесь собраны ваши доступные курсы, бесплатные старты, покупки в процессе и
+              следующий шаг по каждому маршруту внутри LMS.
+            </p>
+          </div>
+
+          <div className="dashboard-hero__stats">
+            <div className="dashboard-stat">
+              <span>Мои курсы</span>
+              <strong>{stats.my}</strong>
             </div>
-            <div className="badge-row" style={{ marginTop: 0 }}>
-              <span className="badge badge-paid">{myCourses.length} в моих курсах</span>
-              <span className="badge badge-complete">
-                {freeCourses.length + myCourses.filter((course) => course.status === 'free').length}{' '}
-                бесплатных
-              </span>
-              <span className="badge badge-pending">
-                {paidCourses.length + pendingCourses.length} платных
-              </span>
+            <div className="dashboard-stat">
+              <span>Бесплатные</span>
+              <strong>{stats.free}</strong>
+            </div>
+            <div className="dashboard-stat">
+              <span>Платные</span>
+              <strong>{stats.paid}</strong>
+            </div>
+            <div className="dashboard-stat">
+              <span>Оплата</span>
+              <strong>{stats.pending}</strong>
             </div>
           </div>
 
@@ -228,53 +399,34 @@ export default function DashboardClient({
         </article>
 
         {pendingCourses.length > 0 ? (
-          <section className="panel">
-            <span className="eyebrow">Pending payment</span>
-            <h2 style={{ marginTop: '0.9rem' }}>Оплата и обработка</h2>
-            <p className="panel-copy" style={{ marginTop: '0.75rem' }}>
-              Покупка уже начата. Вернитесь на экран оплаты, чтобы завершить оплату или
-              проверить текущий статус заказа.
-            </p>
+          <section className="panel dashboard-section">
+            <SectionIntro
+              eyebrow="Продолжить оплату"
+              title="Покупки, которые ждут завершения"
+              description="Если оплата уже начата, вернитесь на экран покупки, чтобы завершить ее или проверить текущий статус заказа."
+            />
 
-            <div className="course-grid" style={{ marginTop: '1rem' }}>
+            <div className="course-grid dashboard-grid">
               {pendingCourses.map((course) => (
-                <article key={course.slug} className="course-card">
-                  <CourseMeta course={course} />
-                  <h2 style={{ marginTop: '0.8rem' }}>{course.title}</h2>
-                  <p className="muted-text" style={{ marginTop: '0.65rem' }}>
-                    {getCatalogCourseNextStep(course, true)}
-                  </p>
-                  <div className="badge-row">
-                    <span className="badge badge-paid">{formatCoursePrice(course.price)}</span>
-                    {course.pendingOrder ? (
-                      <span className="badge badge-pending">
-                        Заказ #{course.pendingOrder.id}: {course.pendingOrder.status === 'PROCESSING' ? 'обработка' : 'ожидание'}
-                      </span>
-                    ) : null}
-                  </div>
-                  <div className="row-actions">
-                    <Link className="primary-button" href={course.pendingOrder!.checkoutUrl}>
-                      {getActiveOrderActionLabel(course.pendingOrder!.status)}
-                    </Link>
-                    <Link className="secondary-button" href={`/courses/${course.slug}`}>
-                      {course.isStarted ? 'Вернуться к курсу' : 'Открыть курс'}
-                    </Link>
-                  </div>
-                </article>
+                <DashboardCourseCard
+                  key={course.slug}
+                  course={course}
+                  mode="pending"
+                  renderBuyAction={renderBuyAction}
+                />
               ))}
             </div>
           </section>
         ) : null}
 
-        <section className="panel">
-          <span className="eyebrow">Мои курсы</span>
-          <h2 style={{ marginTop: '0.9rem' }}>Курсы с доступом и начатым обучением</h2>
-          <p className="panel-copy" style={{ marginTop: '0.75rem' }}>
-            Здесь находятся купленные курсы, бесплатные курсы, которые вы уже начали, и платные
-            курсы с уже открытыми первыми уроками.
-          </p>
+        <section className="panel dashboard-section">
+          <SectionIntro
+            eyebrow="Мои курсы"
+            title="Все, что уже начато или доступно полностью"
+            description="Здесь лежат купленные курсы, бесплатные курсы с сохраненным прогрессом и платные программы, в которых уже открыты первые уроки."
+          />
 
-          <div className="course-grid" style={{ marginTop: '1rem' }}>
+          <div className="course-grid dashboard-grid">
             {myCourses.length === 0 ? (
               <EmptyCard>
                 Пока здесь пусто. Начните с бесплатного курса или откройте первые уроки любого
@@ -282,131 +434,64 @@ export default function DashboardClient({
               </EmptyCard>
             ) : (
               myCourses.map((course) => (
-                <article key={course.slug} className="course-card">
-                  <CourseMeta course={course} />
-                  <h2 style={{ marginTop: '0.8rem' }}>{course.title}</h2>
-                  <p className="muted-text" style={{ marginTop: '0.65rem' }}>
-                    {getCatalogCourseNextStep(course, true)}
-                  </p>
-                  <div
-                    className="progress-box"
-                    style={{ marginTop: '1rem', paddingBottom: 0, borderBottom: 'none' }}
-                  >
-                    <div className="progress-info" style={{ marginBottom: '0.55rem' }}>
-                      <span>Прогресс по курсу</span>
-                      <span>{course.progressPercent}%</span>
-                    </div>
-                    <div className="progress-line">
-                      <div
-                        className="progress-fill"
-                        style={{ width: `${course.progressPercent}%` }}
-                      />
-                    </div>
-                  </div>
-                  <p className="muted-text" style={{ marginTop: '0.9rem' }}>
-                    {course.nextLessonTitle
-                      ? `Следующий урок: ${course.nextLessonTitle}.`
-                      : 'Все доступные уроки уже завершены. Можно вернуться к материалам в любой момент.'}
-                  </p>
-                  <div className="badge-row">
-                    <span className="badge badge-paid">
-                      {course.completedLessonsCount}/{course.lessonsCount ?? 0} завершено
-                    </span>
-                    {isStartedPreviewCourse(course) ? (
-                      <span className="badge badge-pending">Открыты первые уроки</span>
-                    ) : null}
-                  </div>
-                  <div className="row-actions">
-                    <Link className="primary-button" href={`/courses/${course.slug}`}>
-                      {course.isOwned ? 'Продолжить обучение' : 'Открыть курс'}
-                    </Link>
-                    {isStartedPreviewCourse(course) ? renderBuyAction(course, 'secondary-button') : null}
-                  </div>
-                </article>
+                <DashboardCourseCard
+                  key={course.slug}
+                  course={course}
+                  mode="my"
+                  renderBuyAction={renderBuyAction}
+                />
               ))
             )}
           </div>
         </section>
 
-        <div className="grid-two">
-          <section className="panel">
-            <span className="eyebrow">Бесплатные курсы</span>
-            <h2 style={{ marginTop: '0.9rem' }}>Можно начать сразу</h2>
-            <p className="panel-copy" style={{ marginTop: '0.75rem' }}>
-              Доступ открывается сразу после входа. Никакой оплаты и ожидания.
-            </p>
+        <div className="grid-two dashboard-split">
+          <section className="panel dashboard-section">
+            <SectionIntro
+              eyebrow="Бесплатные курсы"
+              title="Можно начать сразу"
+              description="Доступ к этим курсам открывается после входа без оплаты и без ожидания подтверждения."
+            />
 
-            <div className="course-grid" style={{ marginTop: '1rem' }}>
+            <div className="course-grid dashboard-grid">
               {freeCourses.length === 0 ? (
                 <EmptyCard>
                   Все бесплатные курсы уже начаты. Продолжить их можно в блоке «Мои курсы».
                 </EmptyCard>
               ) : (
                 freeCourses.map((course) => (
-                  <article key={course.slug} className="course-card">
-                    <CourseMeta course={course} />
-                    <h2 style={{ marginTop: '0.8rem' }}>{course.title}</h2>
-                    <p className="muted-text" style={{ marginTop: '0.65rem' }}>
-                      {getCatalogCourseNextStep(course, true)}
-                    </p>
-                    <div className="badge-row">
-                      <span className="badge badge-complete">Бесплатно</span>
-                      {course.lessonsCount ? (
-                        <span className="badge badge-pending">
-                          {formatLessonCount(course.lessonsCount)}
-                        </span>
-                      ) : null}
-                    </div>
-                    <div className="row-actions">
-                      <Link className="primary-button" href={`/courses/${course.slug}`}>
-                        Начать бесплатно
-                      </Link>
-                    </div>
-                  </article>
+                  <DashboardCourseCard
+                    key={course.slug}
+                    course={course}
+                    mode="free"
+                    renderBuyAction={renderBuyAction}
+                  />
                 ))
               )}
             </div>
           </section>
 
-          <section className="panel">
-            <span className="eyebrow">Платные курсы</span>
-            <h2 style={{ marginTop: '0.9rem' }}>Можно начать с первых уроков</h2>
-            <p className="panel-copy" style={{ marginTop: '0.75rem' }}>
-              У платных курсов можно открыть первые уроки, а затем оформить полный доступ через
-              экран покупки.
-            </p>
+          <section className="panel dashboard-section">
+            <SectionIntro
+              eyebrow="Платные курсы"
+              title="Можно начать с первых уроков"
+              description="У платных курсов доступны ознакомительные уроки. Полный доступ открывается после покупки и сразу появляется в кабинете."
+            />
 
-            <div className="course-grid" style={{ marginTop: '1rem' }}>
+            <div className="course-grid dashboard-grid">
               {paidCourses.length === 0 ? (
                 <EmptyCard>
-                  Все активные платные курсы уже куплены, начаты с первых уроков или находятся в
-                  ожидании оплаты.
+                  Все активные платные курсы уже куплены, начаты с preview или ждут завершения
+                  оплаты.
                 </EmptyCard>
               ) : (
                 paidCourses.map((course) => (
-                  <article key={course.slug} className="course-card">
-                    <CourseMeta course={course} />
-                    <h2 style={{ marginTop: '0.8rem' }}>{course.title}</h2>
-                    <p className="muted-text" style={{ marginTop: '0.65rem' }}>
-                      {getCatalogCourseNextStep(course, true)}
-                    </p>
-                    <div className="badge-row">
-                      <span className="badge badge-paid">{formatCoursePrice(course.price)}</span>
-                      {course.previewEnabled ? (
-                        <span className="badge badge-pending">
-                          {formatPreviewLessons(course.previewLessonsCount)}
-                        </span>
-                      ) : null}
-                    </div>
-                    <div className="row-actions">
-                      {renderBuyAction(course)}
-                      {course.previewEnabled ? (
-                        <Link className="secondary-button" href={`/courses/${course.slug}`}>
-                          Открыть первые уроки
-                        </Link>
-                      ) : null}
-                    </div>
-                  </article>
+                  <DashboardCourseCard
+                    key={course.slug}
+                    course={course}
+                    mode="paid"
+                    renderBuyAction={renderBuyAction}
+                  />
                 ))
               )}
             </div>
