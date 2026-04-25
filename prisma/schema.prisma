@@ -32,6 +32,22 @@ model User {
   orders         Order[]
 }
 
+model ProgramRequest {
+  id               Int      @id @default(autoincrement())
+  programSlug      String
+  programTitle     String
+  name             String
+  email            String?
+  phone            String?
+  companyName      String?
+  comment          String?
+  isCompanyRequest Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([programSlug, createdAt])
+}
+
 model Course {
   id          Int      @id @default(autoincrement())
   title       String
@@ -60,6 +76,7 @@ model Lesson {
   homeworkType String?
   homeworkOptions Json?
   position    Int
+  isPreview   Boolean  @default(false)
   isPublished Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

@@ -1,18 +1,11 @@
+import { showcasePrograms } from './programs';
+import type { ShowcaseCourse } from './programs';
+
 export type ProgramItem = {
   title: string;
   price: number;
 };
-
-export type ShowcaseCourseStatus = 'ACTIVE' | 'SHOWCASE' | 'SOON';
-
-export type ShowcaseCourse = {
-  title: string;
-  slug: string;
-  description: string;
-  price: number;
-  category: string;
-  status: ShowcaseCourseStatus;
-};
+export type { ShowcaseCourse, ShowcaseCourseStatus } from './programs';
 
 export const dnkSectionLinks = [
   { id: 'education', label: 'Обучение' },
@@ -69,80 +62,14 @@ export const dnkFeaturedPrograms: ProgramItem[] = [
   { title: 'Охрана труда', price: 5000 },
 ];
 
-export const dnkShowcaseCourses: ShowcaseCourse[] = [
-  {
-    title: '1С: Бухгалтерия 8.3',
-    slug: '1c-accounting-83',
-    description:
-      'Практический курс по учёту, проводкам, операциям и базовой работе в 1С для специалистов и руководителей небольших команд.',
-    price: 12000,
-    category: '1С и бухгалтерия',
-    status: 'SHOWCASE',
-  },
-  {
-    title: '1С: Зарплата и кадры',
-    slug: '1c-payroll-and-hr',
-    description:
-      'Программа по кадровым документам, начислениям, отпускным и типовым сценариям расчёта зарплаты в 1С.',
-    price: 12000,
-    category: '1С и бухгалтерия',
-    status: 'SHOWCASE',
-  },
-  {
-    title: 'Microsoft Excel. Основы работы с программой. Базовый уровень',
-    slug: 'microsoft-excel-basic',
-    description:
-      'Стартовый курс по таблицам, формулам, структуре данных и ежедневной работе в Excel без перегруза сложными сценариями.',
-    price: 9000,
-    category: 'Офисные программы',
-    status: 'SHOWCASE',
-  },
-  {
-    title: 'Microsoft Word (базовый курс)',
-    slug: 'microsoft-word-basic',
-    description:
-      'Базовая программа по подготовке документов, форматированию, шаблонам и аккуратной работе с деловыми текстами.',
-    price: 8000,
-    category: 'Офисные программы',
-    status: 'SOON',
-  },
-  {
-    title: 'IT менеджмент',
-    slug: 'it-management',
-    description:
-      'Курс о роли IT-менеджера: процессы, команда, приоритеты, взаимодействие с бизнесом и управление внедрением цифровых изменений.',
-    price: 25000,
-    category: 'Управление',
-    status: 'SHOWCASE',
-  },
-  {
-    title: 'Охрана труда',
-    slug: 'occupational-safety',
-    description:
-      'Прикладная программа по обязательным требованиям, внутренним регламентам и снижению операционных рисков на рабочих местах.',
-    price: 5000,
-    category: 'Безопасность',
-    status: 'SHOWCASE',
-  },
-  {
-    title: 'Пожарная безопасность',
-    slug: 'fire-safety',
-    description:
-      'Курс по требованиям пожарной безопасности, инструктажам, документации и устойчивой подготовке сотрудников к проверкам.',
-    price: 14000,
-    category: 'Безопасность',
-    status: 'SOON',
-  },
-  {
-    title: 'Электробезопасность',
-    slug: 'electrical-safety',
-    description:
-      'Короткая прикладная программа по допускам, правилам эксплуатации и базовым процедурам безопасной работы с электроустановками.',
-    price: 3000,
-    category: 'Безопасность',
-    status: 'SOON',
-  },
-] as const;
+export const dnkShowcaseCourses: ShowcaseCourse[] = showcasePrograms.map((program) => ({
+  title: program.title,
+  slug: program.slug,
+  description: program.description,
+  price: program.price,
+  category: program.category,
+  status: program.status,
+}));
 
 export const dnkSalesSectionLinks = [
   { id: 'audience', label: 'Кому подходит' },

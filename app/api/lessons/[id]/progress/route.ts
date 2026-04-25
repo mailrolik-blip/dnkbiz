@@ -1,4 +1,5 @@
 import { getOptionalCurrentUser } from '@/lib/auth';
+import { getLessonAccessForUser } from '@/lib/course-access';
 import prisma from '@/lib/prisma';
 
 type RouteParams = {
@@ -16,7 +17,10 @@ export async function POST(request: Request, { params }: RouteParams) {
   const lessonId = Number(id);
 
   if (!Number.isInteger(lessonId) || lessonId <= 0) {
-    return Response.json({ error: 'Некорректный идентификатор урока.' }, { status: 400 });
+    return Response.json(
+      { error: 'Некорректный идентификатор урока.' },
+      { status: 400 }
+    );
   }
 
   const body = (await request.json().catch(() => null)) as
@@ -32,25 +36,9 @@ export async function POST(request: Request, { params }: RouteParams) {
         : null
       : undefined;
 
-  const lesson = await prisma.lesson.findFirst({
-    where: {
-      id: lessonId,
-      isPublished: true,
-      course: {
-        isPublished: true,
-        enrollments: {
-          some: {
-            userId: user.id,
-          },
-        },
-      },
-    },
-    select: {
-      id: true,
-    },
-  });
+  const access = await getLessonAccessForUser(lessonId, user.id);
 
-  if (!lesson) {
+  if (!access?.canAccess) {
     return Response.json(
       { error: 'Доступ к этому уроку не открыт.' },
       { status: 403 }
@@ -61,7 +49,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     where: {
       userId_lessonId: {
         userId: user.id,
-        lessonId: lesson.id,
+        lessonId,
       },
     },
     update: {
@@ -71,7 +59,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     },
     create: {
       userId: user.id,
-      lessonId: lesson.id,
+      lessonId,
       completed: completed ?? false,
       answer: answer ?? null,
       lastViewedAt: new Date(),

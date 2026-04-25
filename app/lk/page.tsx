@@ -2,8 +2,7 @@ import { redirect } from 'next/navigation';
 
 import DashboardClient from '@/components/dashboard-client';
 import { getOptionalCurrentUser } from '@/lib/auth';
-import { getOrderCheckoutUrl } from '@/lib/orders';
-import prisma from '@/lib/prisma';
+import { getCatalogCoursesForViewer } from '@/lib/course-access';
 
 export default async function DashboardPage() {
   const user = await getOptionalCurrentUser();
@@ -12,172 +11,31 @@ export default async function DashboardPage() {
     redirect('/login');
   }
 
-  const [courses, tariffs, orders] = await Promise.all([
-    prisma.enrollment.findMany({
-      where: {
-        userId: user.id,
-        course: {
-          isPublished: true,
-        },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-      select: {
-        createdAt: true,
-        course: {
-          select: {
-            id: true,
-          title: true,
-          slug: true,
-          description: true,
-          lessons: {
-            where: {
-              isPublished: true,
-            },
-            orderBy: {
-              position: 'asc',
-            },
-            select: {
-              id: true,
-              slug: true,
-              title: true,
-              progress: {
-                where: {
-                  userId: user.id,
-                },
-                select: {
-                  completed: true,
-                },
-                take: 1,
-              },
-            },
-          },
-        },
-      },
-      },
-    }),
-    prisma.tariff.findMany({
-      where: {
-        isActive: true,
-        course: {
-          isPublished: true,
-        },
-      },
-      orderBy: [
-        {
-          course: {
-            title: 'asc',
-          },
-        },
-        {
-          price: 'asc',
-        },
-      ],
-      select: {
-        id: true,
-        title: true,
-        price: true,
-        interval: true,
-        course: {
-          select: {
-            id: true,
-            title: true,
-            slug: true,
-            description: true,
-          },
-        },
-      },
-    }),
-    prisma.order.findMany({
-      where: {
-        userId: user.id,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-      select: {
-        id: true,
-        tariffId: true,
-        status: true,
-        amount: true,
-        createdAt: true,
-        paidAt: true,
-        tariff: {
-          select: {
-            title: true,
-            course: {
-              select: {
-                title: true,
-              },
-            },
-          },
-        },
-      },
-    }),
-  ]);
+  const catalogCourses = await getCatalogCoursesForViewer(user.id);
 
-  const ownedCourseIds = new Set(courses.map((item) => item.course.id));
-  const pendingOrdersByTariffId = new Map(
-    orders
-      .filter((order) => order.status === 'PENDING')
-      .map((order) => [
-        order.tariffId,
-        {
-          id: order.id,
-          checkoutUrl: getOrderCheckoutUrl(order.id),
-        },
-      ])
+  const myCourses = catalogCourses.filter(
+    (course) => (course.isOwned || course.isStarted) && !course.pendingOrder
+  );
+  const freeCourses = catalogCourses.filter(
+    (course) => course.status === 'free' && !course.isStarted
+  );
+  const pendingCourses = catalogCourses.filter(
+    (course) => course.status === 'paid' && Boolean(course.pendingOrder) && !course.isOwned
+  );
+  const paidCourses = catalogCourses.filter(
+    (course) =>
+      course.status === 'paid' &&
+      !course.isOwned &&
+      !course.pendingOrder &&
+      !course.isStarted
   );
 
   return (
     <DashboardClient
-      courses={courses.map((item) => ({
-        id: item.course.id,
-        title: item.course.title,
-        slug: item.course.slug,
-        description: item.course.description,
-        lessonsCount: item.course.lessons.length,
-        completedLessonsCount: item.course.lessons.filter(
-          (lesson) => lesson.progress[0]?.completed
-        ).length,
-        progressPercent:
-          item.course.lessons.length > 0
-            ? Math.round(
-                (item.course.lessons.filter((lesson) => lesson.progress[0]?.completed)
-                  .length /
-                  item.course.lessons.length) *
-                  100
-              )
-            : 0,
-        nextLessonTitle:
-          item.course.lessons.find((lesson) => !lesson.progress[0]?.completed)?.title ??
-          item.course.lessons[0]?.title ??
-          null,
-        enrolledAt: item.createdAt.toISOString(),
-      }))}
-      orders={orders.map((order) => ({
-        id: order.id,
-        status: order.status,
-        amount: order.amount,
-        createdAt: order.createdAt.toISOString(),
-        paidAt: order.paidAt?.toISOString() ?? null,
-        checkoutUrl:
-          order.status === 'PENDING' ? getOrderCheckoutUrl(order.id) : null,
-        tariffTitle: order.tariff.title,
-        courseTitle: order.tariff.course.title,
-      }))}
-      tariffs={tariffs.map((tariff) => ({
-        id: tariff.id,
-        title: tariff.title,
-        price: tariff.price,
-        interval: tariff.interval,
-        courseTitle: tariff.course.title,
-        courseSlug: tariff.course.slug,
-        courseDescription: tariff.course.description,
-        isOwned: ownedCourseIds.has(tariff.course.id),
-        pendingOrder: pendingOrdersByTariffId.get(tariff.id) ?? null,
-      }))}
+      freeCourses={freeCourses}
+      myCourses={myCourses}
+      paidCourses={paidCourses}
+      pendingCourses={pendingCourses}
       user={{
         email: user.email,
         name: user.name,

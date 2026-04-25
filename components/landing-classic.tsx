@@ -667,9 +667,12 @@ export default function LandingClassic({
               <p>{course.description}</p>
               <div className="showcase-course-card__footer">
                 <span className="showcase-course-card__price">{formatMoney(course.price)}</span>
-                <button className="ghost-button" disabled type="button">
-                  {course.status === 'SOON' ? 'Скоро' : 'В разработке'}
-                </button>
+                <Link
+                  className="secondary-button"
+                  href="/#catalog"
+                >
+                  В каталог LMS
+                </Link>
               </div>
             </article>
           ))}

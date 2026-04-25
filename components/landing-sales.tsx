@@ -459,15 +459,12 @@ export default function LandingSales({
                       <span className="showcase-course-card__price">
                         {formatMoney(course.price)}
                       </span>
-                      {course.status === 'SOON' ? (
-                        <button className="ghost-button" disabled type="button">
-                          Скоро
-                        </button>
-                      ) : (
-                        <a href="#final-cta" className="secondary-button">
-                          Подробнее
-                        </a>
-                      )}
+                      <Link
+                        className="secondary-button"
+                        href="/#catalog"
+                      >
+                        В каталог LMS
+                      </Link>
                     </div>
                   </article>
                 ))}

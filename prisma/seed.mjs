@@ -360,6 +360,110 @@ function buildLessons() {
   ].map((lesson, index) => ({
     ...lesson,
     position: index + 1,
+    isPreview: index < 2,
+  }));
+}
+
+function buildFreeExcelLessons() {
+  return [
+    {
+      title: 'Старт в Excel: интерфейс, ячейки и логика таблицы',
+      slug: 'excel-start-and-layout',
+      description:
+        'Быстрый вводный урок по структуре книги, листам, типам данных и рабочей логике таблицы.',
+      content: `## Что важно понять на старте
+Excel полезен как рабочий инструмент, а не как бесконечное полотно из ячеек. Если с первого урока задать правильную структуру таблицы, дальше легче строить отчеты и не тратить время на ручные правки.
+
+## Базовые правила
+- Один тип данных в одном столбце.
+- Заголовки в первой строке.
+- Даты, суммы и текст должны храниться в корректном формате.
+
+## Что будет на выходе
+После урока у вас будет простая, но аккуратная таблица, в которой можно уверенно сортировать, фильтровать и считать данные без ручной чистки.`,
+      videoUrl: 'https://www.youtube.com/watch?v=ysz5S6PUM-U',
+      videoProvider: 'youtube',
+      homeworkTitle: 'Соберите рабочий шаблон таблицы',
+      homeworkPrompt:
+        'Создайте короткую таблицу на 5–7 строк с заголовками, датой, суммой и статусом. Проверьте, что каждый столбец хранит один тип данных.',
+      homeworkType: 'CHECKLIST',
+      homeworkOptions: [
+        'Есть строка заголовков',
+        'Числа и даты записаны как данные, а не как текст',
+        'Таблица готова к сортировке и фильтру',
+      ],
+    },
+    {
+      title: 'Формулы без страха: сумма, среднее, ссылки на ячейки',
+      slug: 'excel-basic-formulas',
+      description:
+        'Учимся считать в таблице без ручного калькулятора: базовые формулы и относительные ссылки.',
+      content: `## С чего начать
+Большинству рабочих задач хватает простых формул: сумма, среднее, минимум, максимум. Главное — понять принцип ссылки на ячейку и не бояться редактировать формулу вручную.
+
+## На что смотреть
+- Формула всегда начинается со знака равно.
+- Ссылка на ячейку показывает, откуда берется значение.
+- Если протянуть формулу вниз, ссылки сместятся автоматически.
+
+## Практика
+Соберите мини-таблицу расходов или продаж и посчитайте итог по строкам и по столбцу.`,
+      homeworkTitle: 'Посчитайте итог в своей таблице',
+      homeworkPrompt:
+        'Добавьте в таблицу минимум две формулы: сумму и среднее значение. Коротко напишите, где это пригодится в вашей работе.',
+      homeworkType: 'TEXT',
+      homeworkOptions: null,
+    },
+    {
+      title: 'Сортировка, фильтры и быстрый поиск по данным',
+      slug: 'excel-filters-and-search',
+      description:
+        'Показываем, как из простой таблицы сделать рабочий инструмент для ежедневного поиска и отбора данных.',
+      content: `## Почему это важно
+Если таблица не умеет быстро отвечать на вопрос «покажи только нужное», она перестает быть инструментом и становится архивом.
+
+## Минимум, который нужен
+- Включить фильтр на строке заголовков.
+- Отсортировать данные по дате, сумме или статусу.
+- Быстро находить нужные строки по одному признаку.
+
+## Что дает этот урок
+После него вы сможете без ручной прокрутки находить нужные записи и строить простые рабочие выборки.`,
+      homeworkTitle: 'Настройте фильтр по одному признаку',
+      homeworkPrompt:
+        'Отфильтруйте таблицу по статусу, типу операции или периоду. Зафиксируйте, какой вопрос эта фильтрация помогает решать быстрее.',
+      homeworkType: 'ACTION_PLAN',
+      homeworkOptions: [
+        'Выбран рабочий признак фильтрации',
+        'Таблица проверена на корректную сортировку',
+        'Сформулирован реальный сценарий использования',
+      ],
+    },
+    {
+      title: 'Мини-отчет для работы: как оформить таблицу так, чтобы ей пользовались',
+      slug: 'excel-mini-report',
+      description:
+        'Финальный урок бесплатного курса: приводим таблицу в аккуратный вид и собираем первый рабочий отчет.',
+      content: `## Что делает таблицу рабочей
+Пользователь должен с первого взгляда понимать, где исходные данные, где итог и на что смотреть. Для этого не нужен сложный дизайн, достаточно базовой структуры и аккуратного форматирования.
+
+## Что включить в мини-отчет
+1. Заголовок и период.
+2. Понятные названия столбцов.
+3. Итоговую строку или отдельный блок с ключевой цифрой.
+
+## Следующий шаг
+Когда таблица собрана аккуратно, ее легче передать коллеге, использовать в отчете и расширять без полного пересбора с нуля.`,
+      homeworkTitle: 'Соберите первый мини-отчет',
+      homeworkPrompt:
+        'Оформите текущую таблицу как мини-отчет: добавьте название, период и итог. Напишите, кому вы могли бы показать эту таблицу уже сейчас.',
+      homeworkType: 'TEXT',
+      homeworkOptions: null,
+    },
+  ].map((lesson, index) => ({
+    ...lesson,
+    position: index + 1,
+    isPreview: false,
   }));
 }
 
@@ -416,49 +520,12 @@ function buildShowcaseCourses() {
   ];
 }
 
-async function main() {
-  assertDevSeedAllowed();
-
-  const admin = await upsertUser({
-    email: 'admin@example.com',
-    password: 'Admin123!',
-    name: 'Администратор DNK',
-    role: 'ADMIN',
-  });
-
-  const user = await upsertUser({
-    email: 'user@example.com',
-    password: 'User12345!',
-    name: 'Тестовый ученик',
-    role: 'USER',
-  });
-
-  const course = await prisma.course.upsert({
-    where: {
-      slug: 'practical-course',
-    },
-    update: {
-      title: 'Платформа ДНК: стартовый курс',
-      description:
-        'Практическая программа о том, как превратить курс и кабинет в рабочий продукт: с уроками, видео, домашними заданиями и управляемым пользовательским путём.',
-      isPublished: true,
-    },
-    create: {
-      title: 'Платформа ДНК: стартовый курс',
-      slug: 'practical-course',
-      description:
-        'Практическая программа о том, как превратить курс и кабинет в рабочий продукт: с уроками, видео, домашними заданиями и управляемым пользовательским путём.',
-      isPublished: true,
-    },
-  });
-
-  const lessons = buildLessons();
-  const showcaseCourses = buildShowcaseCourses();
+async function syncCourseLessons(courseId, lessons) {
   const lessonSlugs = lessons.map((lesson) => lesson.slug);
 
   const obsoleteLessons = await prisma.lesson.findMany({
     where: {
-      courseId: course.id,
+      courseId,
       slug: {
         notIn: lessonSlugs,
       },
@@ -492,7 +559,7 @@ async function main() {
     await prisma.lesson.upsert({
       where: {
         courseId_slug: {
-          courseId: course.id,
+          courseId,
           slug: lesson.slug,
         },
       },
@@ -507,10 +574,11 @@ async function main() {
         homeworkType: lesson.homeworkType,
         homeworkOptions: lesson.homeworkOptions,
         position: lesson.position,
+        isPreview: lesson.isPreview ?? false,
         isPublished: true,
       },
       create: {
-        courseId: course.id,
+        courseId,
         title: lesson.title,
         slug: lesson.slug,
         description: lesson.description,
@@ -522,10 +590,76 @@ async function main() {
         homeworkType: lesson.homeworkType,
         homeworkOptions: lesson.homeworkOptions,
         position: lesson.position,
+        isPreview: lesson.isPreview ?? false,
         isPublished: true,
       },
     });
   }
+}
+
+async function main() {
+  assertDevSeedAllowed();
+
+  const admin = await upsertUser({
+    email: 'admin@example.com',
+    password: 'Admin123!',
+    name: 'Администратор DNK',
+    role: 'ADMIN',
+  });
+
+  const user = await upsertUser({
+    email: 'user@example.com',
+    password: 'User12345!',
+    name: 'Тестовый ученик',
+    role: 'USER',
+  });
+
+  const practicalCourse = await prisma.course.upsert({
+    where: {
+      slug: 'practical-course',
+    },
+    update: {
+      title: 'Платформа ДНК: стартовый курс',
+      description:
+        'Практическая программа о том, как превратить курс и кабинет в рабочий продукт: с уроками, видео, домашними заданиями и управляемым пользовательским путём.',
+      isPublished: true,
+    },
+    create: {
+      title: 'Платформа ДНК: стартовый курс',
+      slug: 'practical-course',
+      description:
+        'Практическая программа о том, как превратить курс и кабинет в рабочий продукт: с уроками, видео, домашними заданиями и управляемым пользовательским путём.',
+      isPublished: true,
+    },
+  });
+
+  const freeCourse = await prisma.course.upsert({
+    where: {
+      slug: 'microsoft-excel-basic',
+    },
+    update: {
+      title: 'Microsoft Excel. Основы работы с программой. Базовый уровень',
+      description:
+        'Бесплатный стартовый курс по Excel: базовая логика таблиц, формулы, фильтры и первый рабочий мини-отчет.',
+      isPublished: true,
+    },
+    create: {
+      title: 'Microsoft Excel. Основы работы с программой. Базовый уровень',
+      slug: 'microsoft-excel-basic',
+      description:
+        'Бесплатный стартовый курс по Excel: базовая логика таблиц, формулы, фильтры и первый рабочий мини-отчет.',
+      isPublished: true,
+    },
+  });
+
+  const lessons = buildLessons();
+  const freeLessons = buildFreeExcelLessons();
+  const showcaseCourses = buildShowcaseCourses().filter(
+    (showcaseCourse) => showcaseCourse.slug !== 'microsoft-excel-basic'
+  );
+
+  await syncCourseLessons(practicalCourse.id, lessons);
+  await syncCourseLessons(freeCourse.id, freeLessons);
 
   for (const showcaseCourse of showcaseCourses) {
     await prisma.course.upsert({
@@ -555,7 +689,7 @@ async function main() {
       price: 14900,
       interval: 'one-time',
       isActive: true,
-      courseId: course.id,
+      courseId: practicalCourse.id,
     },
     create: {
       title: 'Доступ к стартовому курсу',
@@ -563,7 +697,7 @@ async function main() {
       price: 14900,
       interval: 'one-time',
       isActive: true,
-      courseId: course.id,
+      courseId: practicalCourse.id,
     },
   });
 
@@ -571,8 +705,10 @@ async function main() {
   console.log('SEED_SUMMARY');
   console.log(`Админ: ${admin.email} / Admin123! / id=${admin.id}`);
   console.log(`Пользователь: ${user.email} / User12345! / id=${user.id}`);
-  console.log(`Курс: ${course.title} / slug=${course.slug}`);
-  console.log(`Уроков: ${lessons.length}`);
+  console.log(`Платный курс: ${practicalCourse.title} / slug=${practicalCourse.slug}`);
+  console.log(`Preview-уроков: ${lessons.filter((lesson) => lesson.isPreview).length}`);
+  console.log(`Бесплатный курс: ${freeCourse.title} / slug=${freeCourse.slug}`);
+  console.log(`Бесплатных уроков: ${freeLessons.length}`);
   console.log(`Витринных курсов: ${showcaseCourses.length}`);
   console.log(`Тариф: ${tariff.title} / ${tariff.price} RUB / id=${tariff.id}`);
   console.log('');

@@ -1,6 +1,8 @@
 import 'server-only';
 
 import { getOptionalCurrentUser } from '@/lib/auth';
+import { getCatalogCoursesForViewer } from '@/lib/course-access';
+import type { CatalogCourseCard } from '@/lib/lms-catalog';
 import { getOrderCheckoutUrl } from '@/lib/orders';
 import prisma from '@/lib/prisma';
 
@@ -41,18 +43,18 @@ export type LandingPageData = {
   user: LandingUser;
   featuredCourse: FeaturedCourse;
   tariffs: LandingTariff[];
+  catalogCourses: CatalogCourseCard[];
 };
 
 export async function getLandingPageData(): Promise<LandingPageData> {
   const user = await getOptionalCurrentUser();
 
-  const [featuredCourse, tariffs, enrollments, pendingOrders] = await Promise.all([
+  const [featuredCourse, tariffs, enrollments, pendingOrders, catalogCourses] =
+    await Promise.all([
     prisma.course.findFirst({
       where: {
+        slug: 'practical-course',
         isPublished: true,
-      },
-      orderBy: {
-        createdAt: 'asc',
       },
       select: {
         title: true,
@@ -128,6 +130,7 @@ export async function getLandingPageData(): Promise<LandingPageData> {
           },
         })
       : Promise.resolve([]),
+    getCatalogCoursesForViewer(user?.id ?? null),
   ]);
 
   const ownedCourseIds = new Set(enrollments.map((item) => item.courseId));
@@ -163,6 +166,7 @@ export async function getLandingPageData(): Promise<LandingPageData> {
       isOwned: ownedCourseIds.has(tariff.course.id),
       pendingOrder: pendingOrdersByTariffId.get(tariff.id) ?? null,
     })),
+    catalogCourses,
     user: user
       ? {
           email: user.email,

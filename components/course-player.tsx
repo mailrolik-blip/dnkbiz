@@ -1,42 +1,14 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
+import type { CourseViewerData, CourseViewerLesson } from '@/lib/course-access';
 import { dnkFeaturedPrograms } from '@/lib/dnk-content';
 
-type LessonProgress = {
-  completed: boolean;
-  answer: string | null;
-  lastViewedAt: string | null;
-  updatedAt: string;
-} | null;
-
-type LessonItem = {
-  id: number;
-  title: string;
-  slug: string;
-  description: string | null;
-  content: string | null;
-  videoUrl: string | null;
-  videoProvider: string | null;
-  homeworkTitle: string | null;
-  homeworkPrompt: string | null;
-  homeworkType: string | null;
-  homeworkOptions: string[] | null;
-  position: number;
-  progress: LessonProgress;
-};
-
-type CourseData = {
-  title: string;
-  slug: string;
-  description: string | null;
-  lessons: LessonItem[];
-};
-
 type CoursePlayerProps = {
-  course: CourseData;
+  course: CourseViewerData;
 };
 
 type ChatMessage = {
@@ -78,7 +50,7 @@ type VideoPresentation =
 
 function formatDateTime(value: string | null) {
   if (!value) {
-    return 'ещё не сохраняли';
+    return 'еще не сохраняли';
   }
 
   return new Intl.DateTimeFormat('ru-RU', {
@@ -91,16 +63,22 @@ function formatMoney(value: number) {
   return `${value.toLocaleString('ru-RU')} ₽`;
 }
 
-function isCourseCompleted(lessons: LessonItem[]) {
+function isCourseCompleted(lessons: CourseViewerLesson[]) {
   return lessons.length > 0 && lessons.every((lesson) => lesson.progress?.completed);
 }
 
-function getNextLessonId(lessons: LessonItem[], currentLessonId?: number) {
+function getNextLessonId(lessons: CourseViewerLesson[], currentLessonId?: number) {
   if (currentLessonId && lessons.some((lesson) => lesson.id === currentLessonId)) {
     return currentLessonId;
   }
 
-  return lessons.find((lesson) => !lesson.progress?.completed)?.id ?? lessons[0]?.id ?? 0;
+  return (
+    lessons.find((lesson) => !lesson.isLocked && !lesson.progress?.completed)?.id ??
+    lessons.find((lesson) => lesson.isLocked)?.id ??
+    lessons.find((lesson) => !lesson.isLocked)?.id ??
+    lessons[0]?.id ??
+    0
+  );
 }
 
 function normalizeHomeworkType(value: string | null | undefined): HomeworkType {
@@ -145,7 +123,7 @@ function getHomeworkPlaceholder(type: HomeworkType) {
   return 'Ответ, заметки или план действий по уроку...';
 }
 
-function parseHomeworkAnswer(lesson: LessonItem): HomeworkDraft {
+function parseHomeworkAnswer(lesson: CourseViewerLesson): HomeworkDraft {
   const type = normalizeHomeworkType(lesson.homeworkType);
   const rawAnswer = lesson.progress?.answer;
 
@@ -182,7 +160,7 @@ function parseHomeworkAnswer(lesson: LessonItem): HomeworkDraft {
   }
 }
 
-function serializeHomeworkAnswer(lesson: LessonItem, draft: HomeworkDraft) {
+function serializeHomeworkAnswer(lesson: CourseViewerLesson, draft: HomeworkDraft) {
   const type = normalizeHomeworkType(lesson.homeworkType);
 
   if (type === 'CHECKLIST') {
@@ -301,7 +279,7 @@ function extractVimeoId(url: string) {
   return match?.[1] ?? null;
 }
 
-function getVideoPresentation(lesson: LessonItem): VideoPresentation | null {
+function getVideoPresentation(lesson: CourseViewerLesson): VideoPresentation | null {
   if (!lesson.videoUrl) {
     return null;
   }
@@ -417,6 +395,15 @@ function ArrowUpIcon() {
   );
 }
 
+function LockIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="5" y="11" width="14" height="9" rx="2" />
+      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+    </svg>
+  );
+}
+
 function LessonContent({ content }: { content: string }) {
   const blocks = parseContentBlocks(content);
 
@@ -469,7 +456,7 @@ function LessonContent({ content }: { content: string }) {
   );
 }
 
-function VideoBlock({ lesson }: { lesson: LessonItem }) {
+function VideoBlock({ lesson }: { lesson: CourseViewerLesson }) {
   const presentation = getVideoPresentation(lesson);
 
   if (!presentation) {
@@ -481,8 +468,8 @@ function VideoBlock({ lesson }: { lesson: LessonItem }) {
         <div className="lesson-video__meta">
           <strong>Видео к уроку пока не добавлено</strong>
           <p>
-            Этот урок можно пройти в текстовом формате: изучите материал, выполните практику и
-            сохраните прогресс в блоке домашнего задания.
+            Этот урок можно пройти в текстовом формате: изучите материал, выполните
+            практику и сохраните прогресс в блоке домашнего задания.
           </p>
         </div>
       </div>
@@ -548,12 +535,74 @@ function VideoBlock({ lesson }: { lesson: LessonItem }) {
   );
 }
 
+function PaywallBlock({
+  course,
+  lesson,
+  purchasePending,
+  onCreateOrder,
+}: {
+  course: CourseViewerData;
+  lesson: CourseViewerLesson;
+  purchasePending: boolean;
+  onCreateOrder: () => void;
+}) {
+  return (
+    <div className="course-paywall">
+      <div className="course-paywall__icon">
+        <LockIcon />
+      </div>
+      <div className="course-paywall__copy">
+        <span className="eyebrow">Полный доступ после оплаты</span>
+        <h3>{lesson.title}</h3>
+        <p>
+          Этот урок закрыт. До покупки доступны {course.access.previewLessonsCount}{' '}
+          preview-урока, а после оплаты откроется весь курс, домашка и полный маршрут
+          обучения в LMS.
+        </p>
+      </div>
+      <div className="badge-row course-paywall__badges">
+        {course.access.tariff ? (
+          <span className="badge badge-paid">
+            {formatMoney(course.access.tariff.price)}
+          </span>
+        ) : null}
+        <span className="badge badge-pending">
+          {course.access.previewLessonsCount} preview-урока
+        </span>
+      </div>
+      <div className="row-actions">
+        {course.access.pendingOrder ? (
+          <Link href={course.access.pendingOrder.checkoutUrl} className="primary-button">
+            Продолжить оплату
+          </Link>
+        ) : (
+          <button
+            className="primary-button"
+            disabled={purchasePending}
+            onClick={onCreateOrder}
+            type="button"
+          >
+            {purchasePending ? 'Создаем заказ...' : 'Купить курс'}
+          </button>
+        )}
+        <Link href="/lk" className="secondary-button">
+          Вернуться в кабинет
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 export default function CoursePlayer({ course }: CoursePlayerProps) {
+  const router = useRouter();
   const initialCourseComplete = isCourseCompleted(course.lessons);
   const [courseState, setCourseState] = useState(course);
   const [lessons, setLessons] = useState(course.lessons);
-  const [currentLessonId, setCurrentLessonId] = useState(() => getNextLessonId(course.lessons));
+  const [currentLessonId, setCurrentLessonId] = useState(() =>
+    getNextLessonId(course.lessons)
+  );
   const [pendingLessonId, setPendingLessonId] = useState<number | null>(null);
+  const [purchasePending, setPurchasePending] = useState(false);
   const [message, setMessage] = useState<{
     tone: 'error' | 'success';
     text: string;
@@ -566,7 +615,7 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
     {
       id: 1,
       role: 'ai',
-      text: 'Привет! Я AI-ассистент курса. Сейчас это demo-блок без реального backend-ответчика, но я показываю, как будет выглядеть диалог внутри платформы.',
+      text: 'Привет! Я AI-ассистент курса. Сейчас это demo-блок без реальной AI-интеграции, но он показывает, как будет выглядеть помощник внутри платформы.',
     },
   ]);
   const chatBodyRef = useRef<HTMLDivElement | null>(null);
@@ -592,7 +641,7 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
         });
 
         const payload = (await response.json().catch(() => null)) as
-          | { error?: string; course?: CourseData }
+          | { error?: string; course?: CourseViewerData }
           | null;
 
         if (!response.ok || !payload?.course || cancelled) {
@@ -604,7 +653,9 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
 
         setCourseState(payload.course);
         setLessons(payload.course.lessons);
-        setCurrentLessonId((current) => getNextLessonId(payload.course?.lessons ?? [], current));
+        setCurrentLessonId((current) =>
+          getNextLessonId(payload.course?.lessons ?? [], current)
+        );
         setSyncError(null);
       } catch {
         if (!cancelled) {
@@ -667,22 +718,35 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
     };
   }, []);
 
-  const currentLesson = lessons.find((lesson) => lesson.id === currentLessonId) ?? lessons[0] ?? null;
+  const currentLesson =
+    lessons.find((lesson) => lesson.id === currentLessonId) ?? lessons[0] ?? null;
   const completedCount = lessons.filter((lesson) => lesson.progress?.completed).length;
-  const progressPercent = lessons.length > 0 ? Math.round((completedCount / lessons.length) * 100) : 0;
+  const progressPercent =
+    lessons.length > 0 ? Math.round((completedCount / lessons.length) * 100) : 0;
+  const previewCompletedCount = lessons.filter(
+    (lesson) => lesson.isPreview && lesson.progress?.completed
+  ).length;
   const courseFinished = isCourseCompleted(lessons);
-  const currentHomeworkDraft = currentLesson ? parseHomeworkAnswer(currentLesson) : { text: '', selectedOptions: [] };
-  const currentHomeworkType = currentLesson ? normalizeHomeworkType(currentLesson.homeworkType) : 'TEXT';
+  const currentHomeworkDraft = currentLesson
+    ? parseHomeworkAnswer(currentLesson)
+    : { text: '', selectedOptions: [] };
+  const currentHomeworkType = currentLesson
+    ? normalizeHomeworkType(currentLesson.homeworkType)
+    : 'TEXT';
   const currentHomeworkOptions = currentLesson?.homeworkOptions ?? [];
+  const currentLessonLocked = currentLesson?.isLocked ?? false;
 
-  function updateLesson(lessonId: number, updater: (lesson: LessonItem) => LessonItem) {
+  function updateLesson(
+    lessonId: number,
+    updater: (lesson: CourseViewerLesson) => CourseViewerLesson
+  ) {
     setLessons((current) =>
       current.map((lesson) => (lesson.id === lessonId ? updater(lesson) : lesson))
     );
   }
 
   function patchCurrentLessonAnswer(nextAnswer: string | null) {
-    if (!currentLesson) {
+    if (!currentLesson || currentLessonLocked) {
       return;
     }
 
@@ -706,7 +770,7 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
   }
 
   function handleHomeworkTextChange(text: string) {
-    if (!currentLesson) {
+    if (!currentLesson || currentLessonLocked) {
       return;
     }
 
@@ -719,7 +783,7 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
   }
 
   function handleHomeworkOptionToggle(option: string) {
-    if (!currentLesson) {
+    if (!currentLesson || currentLessonLocked) {
       return;
     }
 
@@ -736,7 +800,7 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
   }
 
   function handleCompletedToggle(completed: boolean) {
-    if (!currentLesson) {
+    if (!currentLesson || currentLessonLocked) {
       return;
     }
 
@@ -752,7 +816,7 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
   }
 
   async function persistProgress() {
-    if (!currentLesson) {
+    if (!currentLesson || currentLessonLocked) {
       return;
     }
 
@@ -794,7 +858,7 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
 
       setMessage({
         tone: 'success',
-        text: `Прогресс по уроку «${currentLesson.title}» сохранён.`,
+        text: `Прогресс по уроку «${currentLesson.title}» сохранен.`,
       });
       setSyncError(null);
     } catch (progressError) {
@@ -807,6 +871,51 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
       });
     } finally {
       setPendingLessonId(null);
+    }
+  }
+
+  async function handleCreateOrder() {
+    if (!courseState.access.tariff) {
+      return;
+    }
+
+    setMessage(null);
+    setPurchasePending(true);
+
+    try {
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tariffId: courseState.access.tariff.id,
+        }),
+      });
+
+      const payload = (await response.json().catch(() => null)) as
+        | { error?: string; checkoutUrl?: string }
+        | null;
+
+      if (payload?.checkoutUrl) {
+        router.push(payload.checkoutUrl);
+        router.refresh();
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Не удалось создать заказ.');
+      }
+    } catch (orderError) {
+      setMessage({
+        tone: 'error',
+        text:
+          orderError instanceof Error
+            ? orderError.message
+            : 'Не удалось создать заказ.',
+      });
+    } finally {
+      setPurchasePending(false);
     }
   }
 
@@ -835,7 +944,7 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
         {
           id: messageId + 1,
           role: 'ai',
-          text: 'Это demo-ответ AI. В текущем MVP чат оставлен как визуальный блок из 03-block без реальной интеграции модели.',
+          text: 'Это demo-ответ AI. В текущем MVP чат остается визуальным блоком из 03-block без реальной интеграции модели.',
         },
       ]);
     }, 550);
@@ -846,7 +955,7 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
       <div className="top-nav">
         <Link href="/" className="brand">
           <span className="brand-mark" />
-          <span>БИЗНЕС ШКОЛА ДНК</span>
+          <span>Бизнес школа ДНК</span>
         </Link>
         <div className="row-actions" style={{ marginTop: 0 }}>
           <Link className="secondary-button" href="/lk">
@@ -867,13 +976,26 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
             <p className="course-stage__eyebrow">{courseState.title}</p>
             <p className="course-stage__copy">
               {courseState.description ||
-                'Закрытый курс с живыми уроками, встроенными видео, домашними заданиями и сохранением прогресса по пользователю.'}
+                'Онлайн-курс с уроками, домашкой и сохранением прогресса внутри личного кабинета.'}
             </p>
           </div>
           <div className="badge-row" style={{ marginTop: 0 }}>
-            <span className="badge badge-paid">
-              {completedCount}/{lessons.length} пройдено
+            <span
+              className={
+                courseState.access.productType === 'FREE'
+                  ? 'badge badge-complete'
+                  : 'badge badge-paid'
+              }
+            >
+              {courseState.access.productType === 'FREE'
+                ? 'Бесплатный курс'
+                : 'Платный курс'}
             </span>
+            {courseState.access.accessMode === 'PREVIEW' ? (
+              <span className="badge badge-pending">
+                {courseState.access.previewLessonsCount} preview-урока
+              </span>
+            ) : null}
             <span className="badge badge-complete">{progressPercent}% прогресса</span>
           </div>
         </div>
@@ -898,8 +1020,8 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
                 </div>
                 <div className="success-title">Курс пройден</div>
                 <p className="lms-desc">
-                  Все уроки отмечены завершёнными. Можно вернуться в личный кабинет или
-                  остаться в курсе и пересмотреть материалы.
+                  Все уроки отмечены завершенными. Можно вернуться в кабинет или остаться
+                  внутри курса и пересмотреть материалы.
                 </p>
                 <div className="row-actions" style={{ justifyContent: 'center' }}>
                   <Link href="/lk" className="success-btn">
@@ -916,125 +1038,164 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
               </div>
             ) : null}
 
-            <div className="lms-scroll-area" style={{ display: successOpen ? 'none' : undefined }}>
+            <div
+              className="lms-scroll-area"
+              style={{ display: successOpen ? 'none' : undefined }}
+            >
               {currentLesson ? (
                 <>
                   <div className="lms-tag">
                     Урок <span>{currentLesson.position}</span>
                   </div>
                   <h2 className="lms-title">{currentLesson.title}</h2>
-                  {currentLesson.description ? <p className="lms-desc">{currentLesson.description}</p> : null}
+                  {currentLesson.description ? (
+                    <p className="lms-desc">{currentLesson.description}</p>
+                  ) : null}
 
-                  <VideoBlock lesson={currentLesson} />
-
-                  {currentLesson.content ? <LessonContent content={currentLesson.content} /> : null}
-
-                  <div className="homework-box">
-                    <div className="hw-header">
-                      <div className="hw-header__copy">
-                        <span className="hw-label">Домашняя практика</span>
-                        <h3 className="hw-title">
-                          {currentLesson.homeworkTitle || 'Закрепление материала'}
-                        </h3>
-                      </div>
-                      <span className="muted-text">
-                        Последнее сохранение:{' '}
-                        {formatDateTime(
-                          currentLesson.progress?.updatedAt ?? currentLesson.progress?.lastViewedAt ?? null
-                        )}
-                      </span>
-                    </div>
-
-                    <div className="badge-row">
-                      <span className="badge badge-complete">
-                        {getHomeworkTypeLabel(currentHomeworkType)}
-                      </span>
-                      {currentHomeworkOptions.length > 0 ? (
-                        <span className="badge badge-pending">
-                          {currentHomeworkOptions.length} пунктов практики
-                        </span>
-                      ) : null}
-                    </div>
-
-                    <div className="hw-task">
-                      {currentLesson.homeworkPrompt ||
-                        'Зафиксируйте ключевую мысль урока, сформулируйте рабочее решение и сохраните результат в прогресс.'}
-                    </div>
-
-                    {currentHomeworkOptions.length > 0 ? (
-                      <div className="hw-options-grid hw-options-grid--checklist">
-                        {currentHomeworkOptions.map((option) => {
-                          const checked = currentHomeworkDraft.selectedOptions.includes(option);
-
-                          return (
-                            <label
-                              key={option}
-                              className={`hw-checkbox ${checked ? 'hw-checkbox--checked' : ''}`}
-                            >
-                              <input
-                                checked={checked}
-                                onChange={() => handleHomeworkOptionToggle(option)}
-                                type="checkbox"
-                              />
-                              <span className="checkmark">
-                                <CheckIcon />
-                              </span>
-                              <span className="hw-checkbox__copy">{option}</span>
-                            </label>
-                          );
-                        })}
-                      </div>
+                  <div className="badge-row">
+                    {currentLesson.isPreview ? (
+                      <span className="badge badge-pending">Preview-урок</span>
                     ) : null}
-
-                    <label className="field" style={{ gap: '0.55rem' }}>
-                      <span className="hw-textarea-label">Ответ по уроку</span>
-                      <textarea
-                        className="hw-input"
-                        onChange={(event) => handleHomeworkTextChange(event.target.value)}
-                        placeholder={getHomeworkPlaceholder(currentHomeworkType)}
-                        rows={6}
-                        value={currentHomeworkDraft.text}
-                      />
-                    </label>
-
-                    <div className="hw-options-grid hw-options-grid--single">
-                      <label className="hw-checkbox">
-                        <input
-                          checked={currentLesson.progress?.completed ?? false}
-                          disabled={pendingLessonId === currentLesson.id}
-                          onChange={(event) => handleCompletedToggle(event.target.checked)}
-                          type="checkbox"
-                        />
-                        <span className="checkmark">
-                          <CheckIcon />
-                        </span>
-                        <span>Отметить урок завершённым</span>
-                      </label>
-                    </div>
-
-                    <div className="row-actions" style={{ marginTop: '1rem' }}>
-                      <button
-                        className="primary-button"
-                        disabled={pendingLessonId === currentLesson.id}
-                        onClick={persistProgress}
-                        type="button"
-                      >
-                        {pendingLessonId === currentLesson.id ? 'Сохраняем...' : 'Сохранить прогресс'}
-                      </button>
-                    </div>
-
-                    {message ? (
-                      <p
-                        className={`feedback ${
-                          message.tone === 'success' ? 'feedback-success' : 'feedback-error'
-                        }`}
-                      >
-                        {message.text}
-                      </p>
+                    {currentLessonLocked ? (
+                      <span className="badge badge-paid">Закрыт до оплаты</span>
                     ) : null}
-
-                    {syncError ? <p className="feedback feedback-error">{syncError}</p> : null}
                   </div>
+
+                  {currentLessonLocked ? (
+                    <PaywallBlock
+                      course={courseState}
+                      lesson={currentLesson}
+                      onCreateOrder={handleCreateOrder}
+                      purchasePending={purchasePending}
+                    />
+                  ) : (
+                    <>
+                      <VideoBlock lesson={currentLesson} />
+                      {currentLesson.content ? (
+                        <LessonContent content={currentLesson.content} />
+                      ) : null}
+
+                      <div className="homework-box">
+                        <div className="hw-header">
+                          <div className="hw-header__copy">
+                            <span className="hw-label">Домашняя практика</span>
+                            <h3 className="hw-title">
+                              {currentLesson.homeworkTitle || 'Закрепление материала'}
+                            </h3>
+                          </div>
+                          <span className="muted-text">
+                            Последнее сохранение:{' '}
+                            {formatDateTime(
+                              currentLesson.progress?.updatedAt ??
+                                currentLesson.progress?.lastViewedAt ??
+                                null
+                            )}
+                          </span>
+                        </div>
+
+                        <div className="badge-row">
+                          <span className="badge badge-complete">
+                            {getHomeworkTypeLabel(currentHomeworkType)}
+                          </span>
+                          {currentHomeworkOptions.length > 0 ? (
+                            <span className="badge badge-pending">
+                              {currentHomeworkOptions.length} пунктов практики
+                            </span>
+                          ) : null}
+                        </div>
+
+                        <div className="hw-task">
+                          {currentLesson.homeworkPrompt ||
+                            'Зафиксируйте ключевую мысль урока и сохраните рабочий вывод в прогрессе.'}
+                        </div>
+
+                        {currentHomeworkOptions.length > 0 ? (
+                          <div className="hw-options-grid hw-options-grid--checklist">
+                            {currentHomeworkOptions.map((option) => {
+                              const checked =
+                                currentHomeworkDraft.selectedOptions.includes(option);
+
+                              return (
+                                <label
+                                  key={option}
+                                  className={`hw-checkbox ${
+                                    checked ? 'hw-checkbox--checked' : ''
+                                  }`}
+                                >
+                                  <input
+                                    checked={checked}
+                                    onChange={() => handleHomeworkOptionToggle(option)}
+                                    type="checkbox"
+                                  />
+                                  <span className="checkmark">
+                                    <CheckIcon />
+                                  </span>
+                                  <span className="hw-checkbox__copy">{option}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        ) : null}
+
+                        <label className="field" style={{ gap: '0.55rem' }}>
+                          <span className="hw-textarea-label">Ответ по уроку</span>
+                          <textarea
+                            className="hw-input"
+                            onChange={(event) =>
+                              handleHomeworkTextChange(event.target.value)
+                            }
+                            placeholder={getHomeworkPlaceholder(currentHomeworkType)}
+                            rows={6}
+                            value={currentHomeworkDraft.text}
+                          />
+                        </label>
+
+                        <div className="hw-options-grid hw-options-grid--single">
+                          <label className="hw-checkbox">
+                            <input
+                              checked={currentLesson.progress?.completed ?? false}
+                              disabled={pendingLessonId === currentLesson.id}
+                              onChange={(event) =>
+                                handleCompletedToggle(event.target.checked)
+                              }
+                              type="checkbox"
+                            />
+                            <span className="checkmark">
+                              <CheckIcon />
+                            </span>
+                            <span>Отметить урок завершенным</span>
+                          </label>
+                        </div>
+
+                        <div className="row-actions" style={{ marginTop: '1rem' }}>
+                          <button
+                            className="primary-button"
+                            disabled={pendingLessonId === currentLesson.id}
+                            onClick={persistProgress}
+                            type="button"
+                          >
+                            {pendingLessonId === currentLesson.id
+                              ? 'Сохраняем...'
+                              : 'Сохранить прогресс'}
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {message ? (
+                    <p
+                      className={`feedback ${
+                        message.tone === 'success'
+                          ? 'feedback-success'
+                          : 'feedback-error'
+                      }`}
+                    >
+                      {message.text}
+                    </p>
+                  ) : null}
+
+                  {syncError ? <p className="feedback feedback-error">{syncError}</p> : null}
                 </>
               ) : (
                 <div className="course-player__empty">
@@ -1059,13 +1220,27 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
               </div>
             </div>
 
+            {courseState.access.accessMode === 'PREVIEW' ? (
+              <div className="course-preview-summary">
+                <span className="badge badge-pending">
+                  {previewCompletedCount}/{courseState.access.previewLessonsCount} preview завершено
+                </span>
+                <p className="muted-text">
+                  Без покупки доступны только preview-уроки. Закрытые модули откроются
+                  после оплаты.
+                </p>
+              </div>
+            ) : null}
+
             <div className="lessons-list">
               {lessons.map((lesson) => (
                 <button
                   key={lesson.id}
                   className={`lesson-btn ${
                     lesson.id === currentLessonId ? 'active' : ''
-                  } ${lesson.progress?.completed ? 'completed' : ''}`}
+                  } ${lesson.progress?.completed ? 'completed' : ''} ${
+                    lesson.isLocked ? 'lesson-btn--locked' : ''
+                  }`}
                   onClick={() => openLesson(lesson.id)}
                   type="button"
                 >
@@ -1074,11 +1249,16 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
                       {lesson.position}. {lesson.title}
                     </span>
                     <span className="lesson-btn__meta">
-                      {lesson.description || 'Откройте урок, чтобы посмотреть содержание и практику.'}
+                      {lesson.isLocked
+                        ? 'Откроется после оплаты'
+                        : lesson.isPreview && courseState.access.accessMode === 'PREVIEW'
+                        ? 'Доступно как preview'
+                        : lesson.description ||
+                          'Откройте урок, чтобы посмотреть содержание и практику.'}
                     </span>
                   </span>
                   <span className="check-icon">
-                    <CheckIcon />
+                    {lesson.isLocked ? <LockIcon /> : <CheckIcon />}
                   </span>
                 </button>
               ))}
@@ -1102,7 +1282,7 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
                 <div className="gallery-course-title">{program.title}</div>
                 <div className="gallery-course-footer">
                   <span className="gallery-course-price">{formatMoney(program.price)}</span>
-                  <Link href="/#programs" className="gallery-course-btn">
+                  <Link href="/#catalog" className="gallery-course-btn">
                     Смотреть
                   </Link>
                 </div>
@@ -1133,7 +1313,9 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
               {chatMessages.map((chatMessage) => (
                 <div
                   key={chatMessage.id}
-                  className={`chat-msg ${chatMessage.role === 'ai' ? 'msg-ai' : 'msg-user'}`}
+                  className={`chat-msg ${
+                    chatMessage.role === 'ai' ? 'msg-ai' : 'msg-user'
+                  }`}
                 >
                   {chatMessage.text}
                 </div>

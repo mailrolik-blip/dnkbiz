@@ -5,10 +5,12 @@
   "scripts": {
     "dev": "next dev",
     "dev:3002": "next dev --port 3002",
+    "dev:local": "next dev -H 127.0.0.1 -p 3100",
     "build": "next build",
     "start": "next start",
     "start:3002": "next start --port 3002",
-    "lint": "eslint",
+    "start:local": "next start -H 127.0.0.1 -p 3100",
+    "lint": "eslint .",
     "db:generate": "prisma generate",
     "db:seed": "node --env-file=.env prisma/seed.mjs"
   },
