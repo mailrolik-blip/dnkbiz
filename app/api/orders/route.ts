@@ -1,6 +1,9 @@
 import { getOptionalCurrentUser } from '@/lib/auth';
-import { getOrderCheckoutUrl } from '@/lib/orders';
-import prisma from '@/lib/prisma';
+import {
+  createOrderForTariff,
+  getOrderCheckoutUrl,
+  normalizePaymentMethod,
+} from '@/lib/payments/service';
 
 function toPositiveInt(value: unknown) {
   const parsed = Number(value);
@@ -15,9 +18,10 @@ export async function POST(request: Request) {
   }
 
   const body = (await request.json().catch(() => null)) as
-    | { tariffId?: unknown }
+    | { tariffId?: unknown; paymentMethod?: unknown }
     | null;
   const tariffId = toPositiveInt(body?.tariffId);
+  const paymentMethod = normalizePaymentMethod(body?.paymentMethod);
 
   if (!tariffId) {
     return Response.json(
@@ -26,94 +30,50 @@ export async function POST(request: Request) {
     );
   }
 
-  const tariff = await prisma.tariff.findFirst({
-    where: {
-      id: tariffId,
-      isActive: true,
-      course: {
-        isPublished: true,
-      },
-    },
-    select: {
-      id: true,
-      price: true,
-      title: true,
-      courseId: true,
-      course: {
-        select: {
-          title: true,
-          slug: true,
-        },
-      },
-    },
+  const result = await createOrderForTariff({
+    userId: user.id,
+    tariffId,
+    paymentMethod,
   });
 
-  if (!tariff) {
+  if (result.kind === 'missing_tariff') {
     return Response.json({ error: 'Тариф не найден.' }, { status: 404 });
   }
 
-  const [existingEnrollment, existingPendingOrder] = await Promise.all([
-    prisma.enrollment.findUnique({
-      where: {
-        userId_courseId: {
-          userId: user.id,
-          courseId: tariff.courseId,
-        },
-      },
-    }),
-    prisma.order.findFirst({
-      where: {
-        userId: user.id,
-        tariffId: tariff.id,
-        status: 'PENDING',
-      },
-      select: {
-        id: true,
-      },
-    }),
-  ]);
-
-  if (existingEnrollment) {
+  if (result.kind === 'already_owned') {
     return Response.json(
       { error: 'Курс уже открыт для этого пользователя.' },
       { status: 409 }
     );
   }
 
-  if (existingPendingOrder) {
+  if (result.kind === 'existing_active_order') {
     return Response.json(
       {
-        error: `Заказ #${existingPendingOrder.id} уже создан и ожидает оплаты.`,
-        orderId: existingPendingOrder.id,
-        checkoutUrl: getOrderCheckoutUrl(existingPendingOrder.id),
+        error: `Заказ #${result.order.id} уже создан и ожидает завершения оплаты.`,
+        orderId: result.order.id,
+        orderStatus: result.order.status,
+        checkoutUrl: getOrderCheckoutUrl(result.order.id),
       },
       { status: 409 }
     );
   }
 
-  const order = await prisma.order.create({
-    data: {
-      userId: user.id,
-      tariffId: tariff.id,
-      amount: tariff.price,
-      status: 'PENDING',
-    },
-    select: {
-      id: true,
-      status: true,
-      amount: true,
-      createdAt: true,
-    },
-  });
-
   return Response.json(
     {
-      order,
-      checkoutUrl: getOrderCheckoutUrl(order.id),
+      order: {
+        id: result.order.id,
+        status: result.order.status,
+        paymentMethod: result.order.paymentMethod,
+        amount: result.order.amount,
+        createdAt: result.order.createdAt,
+        expiresAt: result.order.expiresAt,
+      },
+      checkoutUrl: getOrderCheckoutUrl(result.order.id),
       tariff: {
-        title: tariff.title,
-        courseTitle: tariff.course.title,
-        courseSlug: tariff.course.slug,
+        title: result.tariff.title,
+        courseTitle: result.tariff.course.title,
+        courseSlug: result.tariff.course.slug,
       },
     },
     { status: 201 }

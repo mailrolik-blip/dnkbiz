@@ -1,6 +1,5 @@
 import { getOptionalCurrentUser } from '@/lib/auth';
-import { isTestPaymentsEnabled, updateOrderStatus } from '@/lib/orders';
-import prisma from '@/lib/prisma';
+import { confirmTestPayment, isTestPaymentsEnabled } from '@/lib/payments/service';
 
 type RouteParams = {
   params: Promise<{ id: string }>;
@@ -8,7 +7,10 @@ type RouteParams = {
 
 export async function POST(_request: Request, { params }: RouteParams) {
   if (!isTestPaymentsEnabled()) {
-    return Response.json({ error: 'Тестовая оплата недоступна.' }, { status: 404 });
+    return Response.json(
+      { error: 'Dev/test подтверждение оплаты недоступно.' },
+      { status: 404 }
+    );
   }
 
   const user = await getOptionalCurrentUser();
@@ -27,36 +29,36 @@ export async function POST(_request: Request, { params }: RouteParams) {
     );
   }
 
-  const order = await prisma.order.findFirst({
-    where: {
-      id: orderId,
+  try {
+    const updatedOrder = await confirmTestPayment({
+      orderId,
       userId: user.id,
-    },
-    select: {
-      id: true,
-      status: true,
-    },
-  });
+    });
 
-  if (!order) {
-    return Response.json({ error: 'Заказ не найден.' }, { status: 404 });
-  }
+    if (!updatedOrder) {
+      return Response.json({ error: 'Заказ не найден.' }, { status: 404 });
+    }
 
-  if (order.status !== 'PENDING') {
+    if (updatedOrder.status !== 'PAID') {
+      return Response.json(
+        { error: 'Dev/test подтверждение доступно только для активного заказа.' },
+        { status: 409 }
+      );
+    }
+
+    return Response.json({
+      order: updatedOrder,
+      courseSlug: updatedOrder.tariff.course.slug,
+    });
+  } catch (error) {
     return Response.json(
-      { error: 'Тестово можно оплатить только заказ со статусом PENDING.' },
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Не удалось подтвердить оплату.',
+      },
       { status: 409 }
     );
   }
-
-  const updatedOrder = await updateOrderStatus(order.id, 'PAID');
-
-  if (!updatedOrder) {
-    return Response.json({ error: 'Заказ не найден.' }, { status: 404 });
-  }
-
-  return Response.json({
-    order: updatedOrder,
-    courseSlug: updatedOrder.tariff.course.slug,
-  });
 }

@@ -3,6 +3,8 @@ import 'server-only';
 import { getOptionalCurrentUser } from '@/lib/auth';
 import { getCatalogCoursesForViewer } from '@/lib/course-access';
 import type { CatalogCourseCard } from '@/lib/lms-catalog';
+import { activeOrderStatuses } from '@/lib/payments/constants';
+import { expireStaleOrdersForUser } from '@/lib/payments/service';
 import { getOrderCheckoutUrl } from '@/lib/orders';
 import prisma from '@/lib/prisma';
 
@@ -36,6 +38,7 @@ export type LandingTariff = {
   pendingOrder: {
     id: number;
     checkoutUrl: string;
+    status: 'PENDING' | 'PROCESSING';
   } | null;
 };
 
@@ -46,8 +49,16 @@ export type LandingPageData = {
   catalogCourses: CatalogCourseCard[];
 };
 
+function toActiveOrderStatus(value: string): 'PENDING' | 'PROCESSING' {
+  return value === 'PROCESSING' ? 'PROCESSING' : 'PENDING';
+}
+
 export async function getLandingPageData(): Promise<LandingPageData> {
   const user = await getOptionalCurrentUser();
+
+  if (user) {
+    await expireStaleOrdersForUser(user.id);
+  }
 
   const [featuredCourse, tariffs, enrollments, pendingOrders, catalogCourses] =
     await Promise.all([
@@ -120,15 +131,18 @@ export async function getLandingPageData(): Promise<LandingPageData> {
       : Promise.resolve([]),
     user
       ? prisma.order.findMany({
-          where: {
-            userId: user.id,
-            status: 'PENDING',
+        where: {
+          userId: user.id,
+          status: {
+            in: activeOrderStatuses,
           },
-          select: {
-            id: true,
-            tariffId: true,
-          },
-        })
+        },
+        select: {
+          id: true,
+          tariffId: true,
+          status: true,
+        },
+      })
       : Promise.resolve([]),
     getCatalogCoursesForViewer(user?.id ?? null),
   ]);
@@ -140,6 +154,7 @@ export async function getLandingPageData(): Promise<LandingPageData> {
       {
         id: item.id,
         checkoutUrl: getOrderCheckoutUrl(item.id),
+        status: toActiveOrderStatus(item.status),
       },
     ])
   );

@@ -1,6 +1,8 @@
 import 'server-only';
 
 import { getOrderCheckoutUrl } from './orders';
+import { activeOrderStatuses } from './payments/constants';
+import { expireStaleOrdersForUser } from './payments/service';
 import prisma from './prisma';
 import {
   getCatalogGroupById,
@@ -47,6 +49,7 @@ export type CourseViewerData = {
     pendingOrder: {
       id: number;
       checkoutUrl: string;
+      status: 'PENDING' | 'PROCESSING';
     } | null;
     tariff: {
       id: number;
@@ -74,6 +77,10 @@ function toIsoString(value: Date | null | undefined) {
   return value ? value.toISOString() : null;
 }
 
+function toActiveOrderStatus(value: string): 'PENDING' | 'PROCESSING' {
+  return value === 'PROCESSING' ? 'PROCESSING' : 'PENDING';
+}
+
 function buildProgress(progress: {
   completed: boolean;
   answer: string | null;
@@ -95,6 +102,10 @@ function buildProgress(progress: {
 export async function getCatalogCoursesForViewer(
   userId: number | null
 ): Promise<CatalogCourseCard[]> {
+  if (userId) {
+    await expireStaleOrdersForUser(userId);
+  }
+
   const viewerId = userId ?? -1;
   const profileSlugs = getCatalogProfileSlugs();
 
@@ -157,7 +168,9 @@ export async function getCatalogCoursesForViewer(
           orders: {
             where: {
               userId: viewerId,
-              status: 'PENDING',
+              status: {
+                in: activeOrderStatuses,
+              },
             },
             orderBy: {
               createdAt: 'desc',
@@ -165,6 +178,7 @@ export async function getCatalogCoursesForViewer(
             take: 1,
             select: {
               id: true,
+              status: true,
             },
           },
         },
@@ -186,10 +200,11 @@ export async function getCatalogCoursesForViewer(
       course.lessons[0]?.title ??
       null;
     const pendingOrder = activeTariff?.orders[0]
-      ? {
-          id: activeTariff.orders[0].id,
-          checkoutUrl: getOrderCheckoutUrl(activeTariff.orders[0].id),
-        }
+        ? {
+            id: activeTariff.orders[0].id,
+            checkoutUrl: getOrderCheckoutUrl(activeTariff.orders[0].id),
+            status: toActiveOrderStatus(activeTariff.orders[0].status),
+          }
       : null;
 
     return {
@@ -238,6 +253,8 @@ export async function getCourseForViewer(
   slug: string,
   userId: number
 ): Promise<CourseViewerData | null> {
+  await expireStaleOrdersForUser(userId);
+
   const course = await prisma.course.findFirst({
     where: {
       slug,
@@ -272,7 +289,9 @@ export async function getCourseForViewer(
           orders: {
             where: {
               userId,
-              status: 'PENDING',
+              status: {
+                in: activeOrderStatuses,
+              },
             },
             orderBy: {
               createdAt: 'desc',
@@ -280,6 +299,7 @@ export async function getCourseForViewer(
             take: 1,
             select: {
               id: true,
+              status: true,
             },
           },
         },
@@ -342,6 +362,7 @@ export async function getCourseForViewer(
     ? {
         id: tariff.orders[0].id,
         checkoutUrl: getOrderCheckoutUrl(tariff.orders[0].id),
+        status: toActiveOrderStatus(tariff.orders[0].status),
       }
     : null;
 

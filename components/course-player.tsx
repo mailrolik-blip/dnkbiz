@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import type { CourseViewerData, CourseViewerLesson } from '@/lib/course-access';
 import { dnkFeaturedPrograms } from '@/lib/dnk-content';
+import { getActiveOrderActionLabel } from '@/lib/payments/constants';
 import { formatPreviewLessons } from '@/lib/purchase-ux';
 
 type CoursePlayerProps = {
@@ -574,7 +575,7 @@ function PaywallBlock({
       <div className="row-actions">
         {course.access.pendingOrder ? (
           <Link href={course.access.pendingOrder.checkoutUrl} className="primary-button">
-            Продолжить оплату
+            {getActiveOrderActionLabel(course.access.pendingOrder.status)}
           </Link>
         ) : (
           <button
@@ -1236,7 +1237,7 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
                       href={courseState.access.pendingOrder.checkoutUrl}
                       className="primary-button"
                     >
-                      Продолжить оплату
+                      {getActiveOrderActionLabel(courseState.access.pendingOrder.status)}
                     </Link>
                   ) : (
                     <button

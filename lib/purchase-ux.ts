@@ -1,4 +1,5 @@
 import type { CatalogCourseCard } from './lms-catalog';
+import { getActiveOrderActionLabel } from './payments/constants';
 
 export function formatCoursePrice(value: number | null) {
   if (value === null) {
@@ -72,7 +73,9 @@ export function getCatalogCourseStatusLabel(course: CatalogCourseCard) {
   }
 
   if (course.pendingOrder) {
-    return 'Ожидает оплаты';
+    return course.pendingOrder.status === 'PROCESSING'
+      ? 'Оплата в обработке'
+      : 'Ожидает оплаты';
   }
 
   if (course.isOwned) {
@@ -110,7 +113,11 @@ export function getCatalogCourseNextStep(course: CatalogCourseCard, hasUser: boo
   }
 
   if (course.pendingOrder) {
-    return 'Покупка уже начата. Продолжите оплату, чтобы открыть полный доступ ко всем урокам курса.';
+    return course.pendingOrder.status === 'PROCESSING'
+      ? 'Платеж уже запущен и сейчас находится в обработке. Вернитесь на экран оплаты, чтобы проверить текущий статус заказа.'
+      : `Покупка уже начата. ${getActiveOrderActionLabel(
+          course.pendingOrder.status
+        )}, чтобы открыть полный доступ ко всем урокам курса.`;
   }
 
   if (isStartedPreviewCourse(course)) {

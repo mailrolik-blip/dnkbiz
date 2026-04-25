@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 
 import TestCheckoutClient from '@/components/test-checkout-client';
 import { getOptionalCurrentUser } from '@/lib/auth';
-import { isTestPaymentsEnabled } from '@/lib/orders';
+import { expireOrderIfNeeded, isTestPaymentsEnabled } from '@/lib/payments/service';
 import prisma from '@/lib/prisma';
 
 type CheckoutPageProps = {
@@ -31,6 +31,8 @@ export default async function TestCheckoutPage({
     redirect('/lk');
   }
 
+  await expireOrderIfNeeded(orderId);
+
   const order = await prisma.order.findFirst({
     where: {
       id: orderId,
@@ -39,11 +41,18 @@ export default async function TestCheckoutPage({
     select: {
       id: true,
       status: true,
+      paymentMethod: true,
       amount: true,
+      statusText: true,
+      paymentFailureCode: true,
+      paymentFailureText: true,
+      paymentReference: true,
       createdAt: true,
+      expiresAt: true,
       paidAt: true,
       tariff: {
         select: {
+          id: true,
           title: true,
           course: {
             select: {
@@ -79,9 +88,16 @@ export default async function TestCheckoutPage({
     <TestCheckoutClient
       order={{
         id: order.id,
+        tariffId: order.tariff.id,
         status: order.status,
+        paymentMethod: order.paymentMethod,
         amount: order.amount,
+        statusText: order.statusText,
+        paymentFailureCode: order.paymentFailureCode,
+        paymentFailureText: order.paymentFailureText,
+        paymentReference: order.paymentReference,
         createdAt: order.createdAt.toISOString(),
+        expiresAt: order.expiresAt?.toISOString() ?? null,
         paidAt: order.paidAt?.toISOString() ?? null,
         tariffTitle: order.tariff.title,
         courseTitle: order.tariff.course.title,

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { type ReactNode, useState } from 'react';
 
 import type { CatalogCourseCard } from '@/lib/lms-catalog';
+import { getActiveOrderActionLabel } from '@/lib/payments/constants';
 import {
   formatCoursePrice,
   formatLessonCount,
@@ -156,7 +157,7 @@ export default function DashboardClient({
     if (course.pendingOrder) {
       return (
         <Link className={className} href={course.pendingOrder.checkoutUrl}>
-          Продолжить оплату
+          {getActiveOrderActionLabel(course.pendingOrder.status)}
         </Link>
       );
     }
@@ -229,9 +230,10 @@ export default function DashboardClient({
         {pendingCourses.length > 0 ? (
           <section className="panel">
             <span className="eyebrow">Pending payment</span>
-            <h2 style={{ marginTop: '0.9rem' }}>Продолжить оплату</h2>
+            <h2 style={{ marginTop: '0.9rem' }}>Оплата и обработка</h2>
             <p className="panel-copy" style={{ marginTop: '0.75rem' }}>
-              Покупка уже начата. Вернитесь на экран оплаты, чтобы открыть полный доступ к курсу.
+              Покупка уже начата. Вернитесь на экран оплаты, чтобы завершить оплату или
+              проверить текущий статус заказа.
             </p>
 
             <div className="course-grid" style={{ marginTop: '1rem' }}>
@@ -245,12 +247,14 @@ export default function DashboardClient({
                   <div className="badge-row">
                     <span className="badge badge-paid">{formatCoursePrice(course.price)}</span>
                     {course.pendingOrder ? (
-                      <span className="badge badge-pending">Заказ #{course.pendingOrder.id}</span>
+                      <span className="badge badge-pending">
+                        Заказ #{course.pendingOrder.id}: {course.pendingOrder.status === 'PROCESSING' ? 'обработка' : 'ожидание'}
+                      </span>
                     ) : null}
                   </div>
                   <div className="row-actions">
                     <Link className="primary-button" href={course.pendingOrder!.checkoutUrl}>
-                      Продолжить оплату
+                      {getActiveOrderActionLabel(course.pendingOrder!.status)}
                     </Link>
                     <Link className="secondary-button" href={`/courses/${course.slug}`}>
                       {course.isStarted ? 'Вернуться к курсу' : 'Открыть курс'}

@@ -34,6 +34,7 @@ export type CatalogCourseCard = {
   pendingOrder: {
     id: number;
     checkoutUrl: string;
+    status: 'PENDING' | 'PROCESSING';
   } | null;
 };
 

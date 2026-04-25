@@ -13,6 +13,7 @@ import {
   dnkTeamStats,
   dnkTestimonials,
 } from '@/lib/dnk-content';
+import { getActiveOrderActionLabel } from '@/lib/payments/constants';
 
 type LandingUser = {
   email: string;
@@ -44,6 +45,7 @@ type LandingTariff = {
   pendingOrder: {
     id: number;
     checkoutUrl: string;
+    status: 'PENDING' | 'PROCESSING';
   } | null;
 };
 
@@ -229,7 +231,7 @@ export default function LandingClassic({
     if (primaryTariff.pendingOrder) {
       return (
         <Link href={primaryTariff.pendingOrder.checkoutUrl} className="primary-button">
-          Продолжить оплату
+          {getActiveOrderActionLabel(primaryTariff.pendingOrder.status)}
         </Link>
       );
     }
@@ -735,7 +737,7 @@ export default function LandingClassic({
                 </Link>
               ) : tariff.pendingOrder ? (
                 <Link href={tariff.pendingOrder.checkoutUrl} className="secondary-button">
-                  Продолжить оплату
+                  {getActiveOrderActionLabel(tariff.pendingOrder.status)}
                 </Link>
               ) : user ? (
                 <button

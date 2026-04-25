@@ -16,6 +16,7 @@ import {
 } from '@/lib/dnk-content';
 import type { ShowcaseCourse, ShowcaseCourseStatus } from '@/lib/dnk-content';
 import type { LandingPageData, LandingTariff } from '@/lib/landing';
+import { getActiveOrderActionLabel } from '@/lib/payments/constants';
 
 type LandingClientProps = LandingPageData;
 
@@ -197,7 +198,7 @@ export default function LandingSales({
     if (tariff.pendingOrder) {
       return (
         <Link href={tariff.pendingOrder.checkoutUrl} className={className}>
-          {resolvedLabels.pending}
+          {getActiveOrderActionLabel(tariff.pendingOrder.status)}
         </Link>
       );
     }

@@ -11,6 +11,7 @@ import {
 } from '@/lib/dnk-content';
 import { groupCatalogCourses, type CatalogCourseCard } from '@/lib/lms-catalog';
 import type { LandingPageData } from '@/lib/landing';
+import { getActiveOrderActionLabel } from '@/lib/payments/constants';
 import {
   formatCoursePrice,
   formatLessonCount,
@@ -83,7 +84,7 @@ function CatalogCourseAction({
   if (course.pendingOrder) {
     return (
       <Link href={course.pendingOrder.checkoutUrl} className="primary-button">
-        Продолжить оплату
+        {getActiveOrderActionLabel(course.pendingOrder.status)}
       </Link>
     );
   }
@@ -195,7 +196,7 @@ export default function LandingClient({
           className="primary-button"
           data-access-state="pending"
         >
-          Продолжить оплату
+          {getActiveOrderActionLabel(featuredPaidCourse.pendingOrder.status)}
         </Link>
       );
     }
