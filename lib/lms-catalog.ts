@@ -12,6 +12,19 @@ type CatalogCourseDefinition = {
   price: number | null;
   groupId: CatalogGroupId;
   order: number;
+  audience: string[];
+  includes: string[];
+};
+
+export type CatalogCourseMeta = {
+  slug: string;
+  title: string;
+  description: string;
+  category: string;
+  groupId: CatalogGroupId;
+  price: number | null;
+  audience: string[];
+  includes: string[];
 };
 
 export type CatalogCourseCard = {
@@ -53,7 +66,7 @@ export const lmsCatalogGroups: Array<{
     id: 'safety',
     title: 'Безопасность',
     description:
-      'Обязательное обучение по охране труда, пожарной безопасности и электробезопасности.',
+      'Обязательное обучение по охране труда, пожарной и электрической безопасности.',
   },
   {
     id: 'management-growth',
@@ -68,10 +81,20 @@ const catalogCourseDefinitions: CatalogCourseDefinition[] = [
     slug: 'practical-course',
     title: 'Платформа ДНК: стартовый курс',
     description:
-      'Практический курс о том, как превратить курс и кабинет в рабочий продукт с уроками, видео и управляемым пользовательским маршрутом.',
+      'Практический курс о том, как собрать рабочий self-serve продукт: каталог, preview, покупка, курс, домашка и прогресс внутри LMS.',
     price: 14900,
     groupId: 'management-growth',
     order: 10,
+    audience: [
+      'Руководителям, которые собирают обучение как продукт внутри компании',
+      'Командам, которым нужен единый маршрут: каталог, покупка и прохождение',
+      'Тем, кто хочет увидеть рабочую LMS-модель на реальном курсе',
+    ],
+    includes: [
+      'Полный маршрут пользователя от каталога до прохождения курса',
+      'Разбор preview-механики, paywall и выдачи доступа после оплаты',
+      'Практику по сборке понятного self-serve сценария без ручного сопровождения',
+    ],
   },
   {
     slug: 'microsoft-excel-basic',
@@ -81,6 +104,16 @@ const catalogCourseDefinitions: CatalogCourseDefinition[] = [
     price: null,
     groupId: 'office-accounting',
     order: 20,
+    audience: [
+      'Тем, кто работает с таблицами каждый день, но хочет меньше ручной рутины',
+      'Офисным сотрудникам, начинающим специалистам и администраторам',
+      'Тем, кому нужен быстрый базовый вход в Excel без лишней теории',
+    ],
+    includes: [
+      'Структуру таблиц, базовые формулы и сортировку данных',
+      'Работу с фильтрами, форматированием и простыми отчетами',
+      'Мини-практику, которую можно сразу применить в рабочих задачах',
+    ],
   },
   {
     slug: '1c-accounting-83',
@@ -90,6 +123,16 @@ const catalogCourseDefinitions: CatalogCourseDefinition[] = [
     price: 12000,
     groupId: 'office-accounting',
     order: 30,
+    audience: [
+      'Бухгалтерам и помощникам бухгалтера',
+      'Офисным специалистам, которым нужно уверенно работать в 1С',
+      'Тем, кто хочет быстрее освоить типовые операции и документы',
+    ],
+    includes: [
+      'Типовые документы и ежедневные сценарии работы в 1С',
+      'Понимание проводок, отчетности и логики учета в системе',
+      'Практические задания по основным операциям без отрыва от реальной работы',
+    ],
   },
   {
     slug: '1c-payroll-and-hr',
@@ -99,6 +142,16 @@ const catalogCourseDefinitions: CatalogCourseDefinition[] = [
     price: 12000,
     groupId: 'office-accounting',
     order: 40,
+    audience: [
+      'Кадровым специалистам и бухгалтерам по зарплате',
+      'Тем, кому нужно выстроить кадровый контур в 1С',
+      'Командам, которые готовят курс к запуску в LMS',
+    ],
+    includes: [
+      'Кадровые документы, начисления и базовые расчеты',
+      'Сценарии работы с сотрудниками, графиками и выплатами',
+      'Подготовку к полноценному запуску курса внутри LMS',
+    ],
   },
   {
     slug: 'microsoft-word-basic',
@@ -108,6 +161,16 @@ const catalogCourseDefinitions: CatalogCourseDefinition[] = [
     price: null,
     groupId: 'office-accounting',
     order: 50,
+    audience: [
+      'Офисным сотрудникам и администраторам',
+      'Тем, кто регулярно готовит документы, инструкции и шаблоны',
+      'Тем, кому нужен быстрый базовый вход в Word для работы',
+    ],
+    includes: [
+      'Создание и оформление документов без хаоса в форматировании',
+      'Работу со стилями, списками, таблицами и шаблонами',
+      'Базовые рабочие приемы для деловых текстов и внутренних документов',
+    ],
   },
   {
     slug: 'occupational-safety',
@@ -117,6 +180,16 @@ const catalogCourseDefinitions: CatalogCourseDefinition[] = [
     price: 5000,
     groupId: 'safety',
     order: 60,
+    audience: [
+      'Руководителям и ответственным за обучение сотрудников',
+      'Специалистам по охране труда и внутренним инструктажам',
+      'Компаниям, которым нужен понятный self-serve маршрут обязательного обучения',
+    ],
+    includes: [
+      'Ключевые требования по охране труда и роли ответственных лиц',
+      'Рабочие сценарии по документам, инструктажам и проверкам',
+      'Пошаговую структуру обучения, которую можно пройти внутри LMS',
+    ],
   },
   {
     slug: 'fire-safety',
@@ -126,6 +199,16 @@ const catalogCourseDefinitions: CatalogCourseDefinition[] = [
     price: 14000,
     groupId: 'safety',
     order: 70,
+    audience: [
+      'Компаниям, которым важно собрать обязательное обучение в одном кабинете',
+      'Ответственным за пожарную безопасность и внутренние проверки',
+      'Тем, кто готовит направление к запуску в LMS',
+    ],
+    includes: [
+      'Сценарии инструктажа и подготовки сотрудников',
+      'Работу с документами и обязательными требованиями',
+      'Витрину направления до запуска полного курса',
+    ],
   },
   {
     slug: 'electrical-safety',
@@ -135,6 +218,16 @@ const catalogCourseDefinitions: CatalogCourseDefinition[] = [
     price: 3000,
     groupId: 'safety',
     order: 80,
+    audience: [
+      'Сотрудникам, которым нужен понятный базовый вход в требования по электробезопасности',
+      'Компаниям, которые готовят обязательное обучение в LMS',
+      'Тем, кто хочет видеть курс как продукт, а не разрозненный набор файлов',
+    ],
+    includes: [
+      'Основы допуска, эксплуатации и безопасного поведения',
+      'Контур будущего курса внутри LMS-каталога',
+      'Краткое направление, готовое к следующему этапу запуска',
+    ],
   },
   {
     slug: 'it-management',
@@ -144,6 +237,16 @@ const catalogCourseDefinitions: CatalogCourseDefinition[] = [
     price: 25000,
     groupId: 'management-growth',
     order: 90,
+    audience: [
+      'Руководителям и тимлидам, которые растут в управленческую роль',
+      'Тем, кто отвечает за процессы и взаимодействие IT с бизнесом',
+      'Командам, которым нужен продуктовый подход к управленческому обучению',
+    ],
+    includes: [
+      'Работу с приоритетами, процессами и зоной ответственности руководителя',
+      'Основы системной коммуникации между IT и бизнесом',
+      'Витринное направление для следующего живого курса платформы',
+    ],
   },
 ];
 
@@ -151,8 +254,33 @@ const catalogDefinitionMap = new Map(
   catalogCourseDefinitions.map((definition) => [definition.slug, definition])
 );
 
+export function getCourseCatalogHref(slug: string) {
+  return `/catalog/${slug}`;
+}
+
 export function getCatalogProfile(slug: string) {
   return catalogDefinitionMap.get(slug) ?? null;
+}
+
+export function getCatalogCourseMeta(slug: string): CatalogCourseMeta | null {
+  const definition = getCatalogProfile(slug);
+
+  if (!definition) {
+    return null;
+  }
+
+  const group = getCatalogGroupById(definition.groupId);
+
+  return {
+    slug: definition.slug,
+    title: definition.title,
+    description: definition.description,
+    category: group.title,
+    groupId: definition.groupId,
+    price: definition.price,
+    audience: definition.audience,
+    includes: definition.includes,
+  };
 }
 
 export function getCatalogProfileSlugs() {
@@ -182,9 +310,7 @@ export function sortCatalogCourses<T extends { slug: string }>(courses: T[]) {
 export function groupCatalogCourses(courses: CatalogCourseCard[]) {
   return lmsCatalogGroups.map((group) => ({
     ...group,
-    courses: sortCatalogCourses(
-      courses.filter((course) => course.groupId === group.id)
-    ),
+    courses: sortCatalogCourses(courses.filter((course) => course.groupId === group.id)),
   }));
 }
 

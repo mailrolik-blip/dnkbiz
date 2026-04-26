@@ -4,7 +4,10 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { type ReactNode, useState } from 'react';
 
-import type { CatalogCourseCard } from '@/lib/lms-catalog';
+import {
+  getCourseCatalogHref,
+  type CatalogCourseCard,
+} from '@/lib/lms-catalog';
 import { getActiveOrderActionLabel } from '@/lib/payments/constants';
 import {
   formatCoursePrice,
@@ -160,7 +163,9 @@ function DashboardCourseCard({
       </div>
 
       <div className="dashboard-card__body">
-        <h3>{course.title}</h3>
+        <h3>
+          <Link href={getCourseCatalogHref(course.slug)}>{course.title}</Link>
+        </h3>
         <p className="dashboard-card__description">{course.description}</p>
       </div>
 

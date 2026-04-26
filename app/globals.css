@@ -3618,6 +3618,10 @@ a.bento-card:hover {
   min-height: 100%;
 }
 
+.catalog-product__actions {
+  align-items: center;
+}
+
 .program-lead-card {
   padding: 1.45rem;
   background:
@@ -3693,6 +3697,13 @@ a.bento-card:hover {
   .program-lead-card,
   .program-lead-success {
     padding: 1.2rem;
+  }
+
+  .catalog-product__actions .primary-button,
+  .catalog-product__actions .secondary-button,
+  .catalog-product__actions .ghost-button,
+  .catalog-product__actions .landing-card-disabled {
+    width: 100%;
   }
 
   .program-lead-form__footer .primary-button {

@@ -9,7 +9,11 @@ import {
   dnkFunnelProofPoints,
   dnkFunnelScenarios,
 } from '@/lib/dnk-content';
-import { groupCatalogCourses, type CatalogCourseCard } from '@/lib/lms-catalog';
+import {
+  getCourseCatalogHref,
+  groupCatalogCourses,
+  type CatalogCourseCard,
+} from '@/lib/lms-catalog';
 import type { LandingPageData } from '@/lib/landing';
 import { getActiveOrderActionLabel } from '@/lib/payments/constants';
 import {
@@ -529,7 +533,11 @@ export default function LandingClient({
                 <span className="funnel-card-pill">Preview + покупка + LMS</span>
               </div>
               <div className="funnel-live-card__body">
-                <h2>{featuredPaidCourse.title}</h2>
+                <h2>
+                  <Link href={getCourseCatalogHref(featuredPaidCourse.slug)}>
+                    {featuredPaidCourse.title}
+                  </Link>
+                </h2>
                 <p className="panel-copy">
                   {getCatalogCourseNextStep(featuredPaidCourse, hasUser)}
                 </p>
@@ -556,7 +564,10 @@ export default function LandingClient({
                 onCreateOrder={handleCreateOrder}
                 userEmail={user?.email ?? null}
               />
-              <Link className="secondary-button" href={`/courses/${featuredPaidCourse.slug}`}>
+              <Link
+                className="secondary-button"
+                href={getCourseCatalogHref(featuredPaidCourse.slug)}
+              >
                 {isStartedPreviewCourse(featuredPaidCourse)
                   ? 'Продолжить обучение'
                   : 'Открыть первые уроки'}
@@ -591,7 +602,9 @@ export default function LandingClient({
                       </span>
                     </div>
                     <div className="showcase-course-card__body">
-                      <h3>{course.title}</h3>
+                      <h3>
+                        <Link href={getCourseCatalogHref(course.slug)}>{course.title}</Link>
+                      </h3>
                       <p className="showcase-course-card__description">
                         {course.description}
                       </p>
@@ -638,7 +651,10 @@ export default function LandingClient({
                           userEmail={user?.email ?? null}
                         />
                         {course.status === 'paid' && course.previewLessonsCount > 0 ? (
-                          <Link className="ghost-button" href={`/courses/${course.slug}`}>
+                          <Link
+                            className="ghost-button"
+                            href={getCourseCatalogHref(course.slug)}
+                          >
                             {course.isStarted ? 'Продолжить обучение' : 'Открыть первые уроки'}
                           </Link>
                         ) : null}
