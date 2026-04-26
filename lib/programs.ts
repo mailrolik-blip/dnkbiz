@@ -1,3 +1,5 @@
+// Archived showcase data for the secondary `/programs/:slug` route.
+// The main product flow uses the self-serve LMS catalog and `/catalog/:slug`.
 export type ShowcaseCourseStatus = 'ACTIVE' | 'SHOWCASE' | 'SOON';
 
 export type ShowcaseCourse = {

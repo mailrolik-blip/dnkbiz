@@ -1,54 +1,32 @@
 # DNK Biz MVP
 
-Локальный MVP self-serve LMS-платформы Бизнес Школы ДНК: бесплатная регистрация, бесплатные курсы, первые уроки у платных программ до покупки, аккуратный экран покупки курса, автоматическая выдача доступа и прохождение уроков в личном кабинете.
+DNK Biz is a self-serve LMS MVP for short professional courses. The current product model is:
 
-### Статус MVP
+- free registration
+- free courses with immediate access
+- paid courses with preview lessons before purchase
+- checkout inside the LMS
+- course progress inside the learner account
 
-- Работают `auth`, каталог, `/lk`, страницы курсов, preview-доступ, progress и payment-ready checkout.
-- В системе уже есть `3` живых платных курса и `2` живых бесплатных курса.
-- Основной пользовательский путь: регистрация -> каталог -> страница курса -> preview или покупка -> обучение.
-- Legacy-контур `/programs/:slug` и `ProgramRequest` сохранен в кодовой базе как вторичный маршрут, но не участвует в основном LMS UX.
+## What Works Now
 
-### Запуск
+- auth and session-based login
+- main catalog on `/`
+- course product pages on `/catalog/:slug`
+- learning flow on `/courses/:slug`
+- learner dashboard on `/lk`
+- free / paid / showcase course model
+- preview-enabled paid courses
+- payment-ready checkout on `/checkout/test`
+- order states: `PENDING`, `PROCESSING`, `PAID`, `FAILED`, `CANCELED`, `EXPIRED`
+- dev/test payment fallback with `ENABLE_TEST_PAYMENTS=true`
 
-Установка зависимостей:
+The platform currently includes:
 
-```bash
-npm install
-```
+- 3 live paid courses
+- 2 live free courses
 
-Dev-режим на `3002`:
-
-```bash
-npm run dev:3002
-```
-
-Локальный production-режим на `3002`:
-
-```bash
-npm run build
-npm run start:3002
-```
-
-Заполнение базы тестовыми данными:
-
-```bash
-npm run db:seed
-```
-
-### ENV
-
-- `DATABASE_URL`
-- `AUTH_SECRET`
-- `ENABLE_TEST_PAYMENTS=true` включает dev/test fallback подтверждения оплаты на экране покупки; флаг работает и в локальном `dev`, и в локальном `start`
-- `SESSION_COOKIE_NAME` опционально, если нужно переопределить имя session cookie
-
-### Тестовые аккаунты
-
-- `admin@example.com / Admin123!`
-- `user@example.com / User12345!`
-
-### Основные маршруты
+## Main Routes
 
 - `/`
 - `/catalog/:slug`
@@ -58,7 +36,102 @@ npm run db:seed
 - `/checkout/test?orderId=:id`
 - `/courses/:slug`
 
-### Основные API
+## User Flow
+
+1. A guest opens the catalog or a course product page.
+2. The user registers for free.
+3. On `/catalog/:slug`, the user sees the course status, description, lesson count, preview info, and the main CTA.
+4. A free course opens immediately.
+5. A paid course opens preview lessons first, then leads to checkout.
+6. After payment, the course opens in full access inside `/courses/:slug`.
+7. Progress and homework stay attached to the learner account and are visible from `/lk`.
+
+## Course Model
+
+- `free`: published course without purchase required
+- `paid`: published course with an active tariff
+- `showcase`: visible in the catalog, but not available for self-serve learning yet
+- `preview-enabled`: paid course with 1-2 preview lessons available before purchase
+
+## Dashboard
+
+`/lk` is the main learner hub and contains:
+
+- `Мои курсы`
+- `Бесплатные курсы`
+- `Платные курсы`
+- `Продолжить оплату`
+
+Primary user actions across the product are kept consistent:
+
+- `Начать бесплатно`
+- `Купить курс`
+- `Продолжить оплату`
+- `Открыть курс`
+- `Продолжить обучение`
+- `Скоро`
+
+## Checkout
+
+`/checkout/test` is the current MVP checkout screen.
+
+- It already behaves like a normal purchase flow from the user perspective.
+- The app is ready for real provider integration through `lib/payments/*`.
+- `TEST` payment is only a local/dev fallback and is controlled by `ENABLE_TEST_PAYMENTS=true`.
+
+## Local Run
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Development:
+
+```bash
+npm run dev:3002
+```
+
+Production build locally:
+
+```bash
+npm run build
+npm run start:3002
+```
+
+Seed local test data:
+
+```bash
+npm run db:seed
+```
+
+## Environment
+
+- `DATABASE_URL`
+- `AUTH_SECRET`
+- `ENABLE_TEST_PAYMENTS=true`
+- `SESSION_COOKIE_NAME` optional
+
+## Useful Scripts
+
+- `npm run dev`
+- `npm run dev:3002`
+- `npm run dev:local`
+- `npm run build`
+- `npm run start`
+- `npm run start:3002`
+- `npm run start:local`
+- `npm run lint`
+- `npm run db:generate`
+- `npm run db:seed`
+
+## Test Accounts
+
+- `admin@example.com / Admin123!`
+- `user@example.com / User12345!`
+
+## Main API
 
 - `POST /api/auth/register`
 - `POST /api/auth/login`
@@ -73,107 +146,18 @@ npm run db:seed
 - `GET /api/courses/:slug`
 - `POST /api/lessons/:id/progress`
 
-### Продуктовая модель
+## Legacy / Secondary Flow
 
-- Главный маршрут сайта ведет в бесплатную регистрацию, а не в форму заявки.
-- Каталог и личный кабинет работают в модели `free / paid / showcase`.
-- Бесплатные курсы можно начать сразу после входа.
-- Платные курсы открывают первые ознакомительные уроки без покупки и полный доступ после оплаты.
-- Showcase-направления остаются витриной и не участвуют в основном LMS-сценарии.
+The old lead-flow is no longer part of the product.
 
-### Личный кабинет
+- `/programs/:slug` is now only an archived secondary route
+- the main UI no longer links to `ProgramRequest`
+- the request form is removed from the MVP flow
+- `POST /api/program-requests` is kept only as an archived `410 Gone` stub for compatibility
+- the real product path is `/` -> `/catalog/:slug` -> `/checkout/test` -> `/courses/:slug`
 
-- `Мои курсы`: купленные программы, начатые бесплатные курсы и paid-курсы с уже открытыми первыми уроками.
-- `Бесплатные курсы`: можно запустить сразу без оплаты.
-- `Платные курсы`: можно открыть первые уроки или купить полный доступ.
-- `Оплата и обработка`: показывается, если уже есть активный заказ со статусом `PENDING` или `PROCESSING`.
+## Notes
 
-### Покупка курса
-
-- Любая точка входа в платный курс использует один и тот же purchase UX: `Купить курс` -> экран покупки -> выбор способа оплаты -> `Продолжить оплату` или `Проверить статус` для активного заказа -> `Открыть курс` после `PAID`.
-- Экран покупки показывает название курса, краткое описание, цену, количество уроков, что входит в доступ, сколько первых уроков доступно до покупки, способ оплаты и статус заказа.
-- Реальная платежка пока не подключена, но checkout уже provider-ready: основной способ оплаты переводит заказ в `PROCESSING`, а dev/test fallback подтверждает оплату локально.
-
-### Order и Payment states
-
-- `PENDING`: заказ создан, пользователь еще не завершил оплату.
-- `PROCESSING`: платежная сессия запущена, система ожидает подтверждения от провайдера или webhook.
-- `PAID`: оплата подтверждена, доступ к курсу открыт автоматически.
-- `FAILED`: платеж завершился ошибкой, можно создать новый заказ и повторить оплату.
-- `CANCELED`: оплата отменена до подтверждения.
-- `EXPIRED`: у заказа истек срок действия, нужен новый заказ.
-
-### Payment abstraction
-
-- Серверный слой вынесен в `lib/payments/*`.
-- `lib/payments/service.ts` отвечает за создание заказа, запуск checkout, обновление статуса, dev/test fallback и обработку provider callback.
-- `lib/payments/providers/test.ts` хранит сценарий dev/test оплаты.
-- `lib/payments/providers/manual.ts` хранит provider-ready placeholder для будущей онлайн-оплаты.
-- `POST /api/payments/webhook/:provider` уже подготовлен как точка подключения реального callback от провайдера.
-
-### Preview-доступ
-
-- Preview встроен в существующий маршрут `/courses/:slug`.
-- Уроки с `Lesson.isPreview=true` доступны зарегистрированному пользователю без покупки.
-- Для закрытых уроков показывается paywall с CTA `Купить курс`, `Продолжить оплату` или `Проверить статус`, если заказ уже перешел в обработку.
-- После оплаты курс автоматически переходит в режим полного доступа без отдельной страницы.
-
-### Content model урока
-
-- `Lesson.description`: краткое summary урока.
-- `Lesson.content`: основной body урока в текстовом формате с поддержкой `##`, списков и цитат.
-- `Lesson.videoUrl` и `Lesson.videoProvider`: video block внутри курса.
-- `Lesson.homeworkTitle`, `Lesson.homeworkPrompt`, `Lesson.homeworkType`, `Lesson.homeworkOptions`: домашнее задание урока.
-- `Lesson.isPreview`: признак preview-урока у платного курса.
-- Для `homeworkType=CHECKLIST` выбранные пункты и текст ответа сохраняются в `LessonProgress.answer` как JSON-строка. Для остальных типов используется обычный текстовый ответ.
-
-### Основной пользовательский flow
-
-1. Гость видит главный CTA на бесплатную регистрацию.
-2. Из каталога пользователь открывает product page курса на `/catalog/:slug`.
-3. На странице курса он видит статус курса, краткое описание, кому подходит курс, что внутри и что доступно до покупки.
-4. После входа пользователь может сразу открыть бесплатный курс или перейти в preview платного курса.
-5. В `/lk` доступны блоки `Мои курсы`, `Бесплатные курсы`, `Платные курсы`, `Оплата и обработка`.
-6. `POST /api/orders` создает новый заказ со статусом `PENDING` или возвращает уже существующий активный order.
-7. UI переводит пользователя на экран покупки курса `/checkout/test`.
-8. `POST /api/orders/:id/checkout` запускает выбранный способ оплаты и переводит заказ в нужное состояние, например `PROCESSING`.
-9. Локальное dev/test подтверждение оплаты через `POST /api/orders/:id/test-pay` сохраняется как fallback и переводит заказ в `PAID`.
-10. После `PAID` автоматически создается или переиспользуется `Enrollment`, а курс открывается в `/courses/:slug`.
-11. Прогресс и домашка сохраняются через `POST /api/lessons/:id/progress`.
-
-### Основные сценарии MVP
-
-- Гость видит главный CTA на бесплатную регистрацию и каталог живых курсов.
-- Гость может открыть product page курса на `/catalog/:slug`.
-- Зарегистрированный пользователь может сразу открыть бесплатный курс.
-- У платных курсов доступны ознакомительные уроки до покупки.
-- Покупка курса идет через единый checkout screen с выбором способа оплаты и статусом заказа.
-- После `PAID` курс открывается в полном доступе и появляется в `Моих курсах`.
-
-### Seed и тестовые курсы
-
-- `npm run db:seed` пересоздает 3 живых платных курса и 2 живых бесплатных курса.
-- Платные курсы: `practical-course`, `1c-accounting-83`, `occupational-safety`.
-- Бесплатные курсы: `microsoft-excel-basic`, `microsoft-word-basic`.
-- У всех платных курсов есть первые ознакомительные уроки до покупки.
-- В seed уже включены summary, content body, домашние задания и demo-video ссылки для части уроков.
-- Showcase-курсы сидятся как не опубликованные направления каталога без LMS-доступа.
-
-### Video block и demo-части
-
-- Если у урока есть `videoUrl`, курс показывает встроенное видео или embed-блок в зависимости от `videoProvider` и формата ссылки.
-- Если видео нет или ссылка не встраивается, курс показывает fallback с возможностью открыть источник отдельно.
-- AI modal в курсе остается demo-блоком без реальной AI-интеграции.
-
-### Legacy / secondary flow
-
-- Маршрут `/programs/:slug` и контур `ProgramRequest` сохранены в кодовой базе, но не участвуют в главном пользовательском маршруте MVP.
-- Основной UI больше не использует `/programs/:slug` как продуктовую страницу курса.
-- `PATCH /api/orders/:id/status` сохранен как резервный admin-only flow для локальной отладки.
-- `POST /api/orders/:id/test-pay` остается dev fallback и не является пользовательским боевым сценарием оплаты.
-- Основной пользовательский путь для MVP идет через регистрацию, каталог, `/catalog/:slug`, экран покупки, `/checkout/test`, provider-ready payment layer и `/courses/:slug`.
-
-### Локальная изоляция
-
-- Для локального запуска рядом с другим проектом добавлены scripts на порт `3002`.
-- Имя session cookie по умолчанию: `dnkbiz_session`.
+- Real payment provider integration is not connected yet.
+- No CRM or admin panel is included in this MVP.
+- The corporate/request-based flow is intentionally not part of the main product.
