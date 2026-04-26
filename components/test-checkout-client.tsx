@@ -369,6 +369,9 @@ export default function TestCheckoutClient({
           <span>Бизнес школа ДНК</span>
         </Link>
         <div className="row-actions" style={{ marginTop: 0 }}>
+          <Link href="/catalog" className="ghost-button">
+            В каталог
+          </Link>
           <Link href="/lk" className="ghost-button">
             В кабинет
           </Link>

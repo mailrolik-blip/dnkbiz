@@ -26,22 +26,25 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       <div className="top-nav">
         <Link href="/" className="brand">
           <span className="brand-mark" />
-          <span>Р‘РР—РќР•РЎ РЁРљРћР›Рђ Р”РќРљ</span>
+          <span>Бизнес школа ДНК</span>
         </Link>
         <div className="row-actions" style={{ marginTop: 0 }}>
+          <Link className="ghost-button" href="/help">
+            Помощь
+          </Link>
           <Link className="ghost-button" href={buildAuthHref('register', nextPath)}>
-            Р РµРіРёСЃС‚СЂР°С†РёСЏ
+            Регистрация
           </Link>
         </div>
       </div>
 
       <section className="stack-grid">
         <article className="panel">
-          <span className="eyebrow">Р’С…РѕРґ</span>
-          <h1 style={{ marginTop: '0.9rem' }}>Р’РѕР·РІСЂР°С‚ РІ Р»РёС‡РЅС‹Р№ РєР°Р±РёРЅРµС‚ СѓС‡РµРЅРёРєР°.</h1>
+          <span className="eyebrow">Вход</span>
+          <h1 style={{ marginTop: '0.9rem' }}>Вернитесь в личный кабинет ученика.</h1>
           <p className="panel-copy" style={{ marginTop: '0.85rem' }}>
-            Р’С…РѕРґ РїРѕ email Рё РїР°СЂРѕР»СЋ РІРµРґС‘С‚ РІ РєР°Р±РёРЅРµС‚, РіРґРµ РґРѕСЃС‚СѓРїРЅС‹ СЂРµР°Р»СЊРЅС‹Рµ Р·Р°РєР°Р·С‹, С‚Р°СЂРёС„С‹ Рё
-            РѕС‚РєСЂС‹С‚С‹Рµ РєСѓСЂСЃС‹ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ.
+            Вход по email и паролю ведет в кабинет, где собраны ваши курсы, заказы,
+            история прогресса и следующие шаги по LMS-маршруту.
           </p>
         </article>
 
@@ -49,19 +52,31 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <AuthForm mode="login" nextPath={nextPath} />
 
           <article className="feature-card">
-            <span className="eyebrow">РўРµСЃС‚РѕРІС‹Р№ РґРѕСЃС‚СѓРї</span>
-            <h2 style={{ marginTop: '0.8rem' }}>Seed-Р°РєРєР°СѓРЅС‚С‹</h2>
+            <span className="eyebrow">Тестовый доступ</span>
+            <h2 style={{ marginTop: '0.8rem' }}>Seed-аккаунты</h2>
             <div className="stat-list">
               <div>
-                <dt>РђРґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂ</dt>
+                <dt>Администратор</dt>
                 <dd className="mono">admin@example.com / Admin123!</dd>
               </div>
               <div>
-                <dt>РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ</dt>
+                <dt>Пользователь</dt>
                 <dd className="mono">user@example.com / User12345!</dd>
               </div>
             </div>
           </article>
+        </div>
+
+        <div className="row-actions auth-page__links">
+          <Link className="ghost-button" href="/catalog">
+            В каталог
+          </Link>
+          <Link className="ghost-button" href="/privacy">
+            Политика конфиденциальности
+          </Link>
+          <Link className="ghost-button" href="/terms">
+            Условия использования
+          </Link>
         </div>
       </section>
     </main>

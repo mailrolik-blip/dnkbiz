@@ -26,22 +26,27 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
       <div className="top-nav">
         <Link href="/" className="brand">
           <span className="brand-mark" />
-          <span>Р‘РР—РќР•РЎ РЁРљРћР›Рђ Р”РќРљ</span>
+          <span>Бизнес школа ДНК</span>
         </Link>
         <div className="row-actions" style={{ marginTop: 0 }}>
+          <Link className="ghost-button" href="/help">
+            Помощь
+          </Link>
           <Link className="ghost-button" href={buildAuthHref('login', nextPath)}>
-            Р’РѕР№С‚Рё
+            Войти
           </Link>
         </div>
       </div>
 
       <section className="stack-grid">
         <article className="panel">
-          <span className="eyebrow">Р РµРіРёСЃС‚СЂР°С†РёСЏ</span>
-          <h1 style={{ marginTop: '0.9rem' }}>РќРѕРІС‹Р№ СѓС‡РµРЅРёРє РїРѕР»СѓС‡Р°РµС‚ РґРѕСЃС‚СѓРї С‡РµСЂРµР· РєР°Р±РёРЅРµС‚.</h1>
+          <span className="eyebrow">Регистрация</span>
+          <h1 style={{ marginTop: '0.9rem' }}>
+            Новый ученик получает доступ ко всей LMS через кабинет.
+          </h1>
           <p className="panel-copy" style={{ marginTop: '0.85rem' }}>
-            РџРѕСЃР»Рµ СЂРµРіРёСЃС‚СЂР°С†РёРё РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ СЃСЂР°Р·Сѓ РїРѕРїР°РґР°РµС‚ РІ Р»РёС‡РЅС‹Р№ РєР°Р±РёРЅРµС‚, РіРґРµ РјРѕР¶РµС‚
-            РѕС„РѕСЂРјРёС‚СЊ Р·Р°РєР°Р· РЅР° С‚Р°СЂРёС„ Рё РѕС‚РєСЂС‹С‚СЊ РєСѓСЂСЃ РїРѕСЃР»Рµ РѕРїР»Р°С‚С‹.
+            После регистрации пользователь сразу попадает в личный кабинет, где может
+            начать бесплатный курс, открыть preview платного курса или перейти к покупке.
           </p>
         </article>
 
@@ -49,23 +54,35 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
           <AuthForm mode="register" nextPath={nextPath} />
 
           <article className="feature-card">
-            <span className="eyebrow">РљР°Рє СЌС‚Рѕ СЂР°Р±РѕС‚Р°РµС‚</span>
-            <h2 style={{ marginTop: '0.8rem' }}>Р РµРіРёСЃС‚СЂР°С†РёСЏ в†’ Р·Р°РєР°Р· в†’ РґРѕСЃС‚СѓРї Рє РєСѓСЂСЃСѓ</h2>
+            <span className="eyebrow">Как это работает</span>
+            <h2 style={{ marginTop: '0.8rem' }}>Регистрация → курс → покупка → обучение</h2>
             <div className="stat-list">
               <div>
-                <dt>РЁР°Рі 1</dt>
-                <dd>РЎРѕР·РґР°Р№С‚Рµ Р°РєРєР°СѓРЅС‚ РїРѕ email Рё РїР°СЂРѕР»СЋ</dd>
+                <dt>Шаг 1</dt>
+                <dd>Создайте аккаунт по email и паролю</dd>
               </div>
               <div>
-                <dt>РЁР°Рі 2</dt>
-                <dd>РћС„РѕСЂРјРёС‚Рµ Р·Р°РєР°Р· РЅР° Р°РєС‚РёРІРЅС‹Р№ С‚Р°СЂРёС„</dd>
+                <dt>Шаг 2</dt>
+                <dd>Начните бесплатный курс или откройте preview у платного</dd>
               </div>
               <div>
-                <dt>РЁР°Рі 3</dt>
-                <dd>РџРѕСЃР»Рµ СЃС‚Р°С‚СѓСЃР° PAID РєСѓСЂСЃ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё РѕС‚РєСЂРѕРµС‚СЃСЏ РІ РєР°Р±РёРЅРµС‚Рµ</dd>
+                <dt>Шаг 3</dt>
+                <dd>После оплаты полный доступ откроется автоматически внутри кабинета</dd>
               </div>
             </div>
           </article>
+        </div>
+
+        <div className="row-actions auth-page__links">
+          <Link className="ghost-button" href="/catalog">
+            В каталог
+          </Link>
+          <Link className="ghost-button" href="/privacy">
+            Политика конфиденциальности
+          </Link>
+          <Link className="ghost-button" href="/terms">
+            Условия использования
+          </Link>
         </div>
       </section>
     </main>

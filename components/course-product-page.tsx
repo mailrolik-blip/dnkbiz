@@ -265,6 +265,9 @@ export default function CourseProductPage({
         </Link>
 
         <div className="row-actions" style={{ marginTop: 0 }}>
+          <Link href="/catalog" className="ghost-button">
+            Каталог
+          </Link>
           {user ? (
             <Link href="/lk" className="ghost-button">
               Личный кабинет

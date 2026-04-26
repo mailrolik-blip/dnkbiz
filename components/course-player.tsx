@@ -962,6 +962,9 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
           <span>Бизнес школа ДНК</span>
         </Link>
         <div className="row-actions" style={{ marginTop: 0 }}>
+          <Link className="ghost-button" href="/catalog">
+            В каталог
+          </Link>
           <Link className="secondary-button" href="/lk">
             Вернуться в кабинет
           </Link>

@@ -535,6 +535,17 @@ export default function DashboardClient({
           <Link href="/catalog" className="ghost-button">
             Каталог
           </Link>
+          <Link href="/profile" className="ghost-button">
+            Профиль
+          </Link>
+          <Link href="/help" className="ghost-button">
+            Помощь
+          </Link>
+          {user.role === 'ADMIN' ? (
+            <Link href="/admin" className="ghost-button">
+              Admin
+            </Link>
+          ) : null}
           <button
             className="ghost-button"
             disabled={logoutPending}
@@ -558,6 +569,9 @@ export default function DashboardClient({
             <div className="row-actions">
               <Link href="/catalog" className="secondary-button">
                 Перейти в каталог
+              </Link>
+              <Link href="/help" className="ghost-button">
+                Как это работает
               </Link>
             </div>
           </div>
@@ -654,58 +668,56 @@ export default function DashboardClient({
           </div>
         </section>
 
-        <div className="grid-two dashboard-split">
-          <section className="panel dashboard-section">
-            <SectionIntro
-              eyebrow="Бесплатные курсы"
-              title="Можно начать сразу"
-              description="Доступ к этим курсам открывается после входа без оплаты и без ожидания подтверждения."
-            />
+        <section className="panel dashboard-section">
+          <SectionIntro
+            eyebrow="Бесплатные курсы"
+            title="Можно начать сразу"
+            description="Доступ к этим курсам открывается после входа без оплаты и без ожидания подтверждения."
+          />
 
-            <div className="course-grid dashboard-grid">
-              {freeCourses.length === 0 ? (
-                <EmptyCard>
-                  Все бесплатные курсы уже начаты. Продолжить их можно в блоке «Мои курсы».
-                </EmptyCard>
-              ) : (
-                freeCourses.map((course) => (
-                  <DashboardCourseCard
-                    key={course.slug}
-                    course={course}
-                    mode="free"
-                    renderBuyAction={renderBuyAction}
-                  />
-                ))
-              )}
-            </div>
-          </section>
+          <div className="course-grid dashboard-grid">
+            {freeCourses.length === 0 ? (
+              <EmptyCard>
+                Все бесплатные курсы уже начаты. Продолжить их можно в блоке «Мои курсы».
+              </EmptyCard>
+            ) : (
+              freeCourses.map((course) => (
+                <DashboardCourseCard
+                  key={course.slug}
+                  course={course}
+                  mode="free"
+                  renderBuyAction={renderBuyAction}
+                />
+              ))
+            )}
+          </div>
+        </section>
 
-          <section className="panel dashboard-section">
-            <SectionIntro
-              eyebrow="Платные курсы"
-              title="Можно начать с первых уроков"
-              description="У платных курсов доступны ознакомительные уроки. Полный доступ открывается после покупки и сразу появляется в кабинете."
-            />
+        <section className="panel dashboard-section">
+          <SectionIntro
+            eyebrow="Платные курсы"
+            title="Можно начать с первых уроков"
+            description="У платных курсов доступны ознакомительные уроки. Полный доступ открывается после покупки и сразу появляется в кабинете."
+          />
 
-            <div className="course-grid dashboard-grid">
-              {paidCourses.length === 0 ? (
-                <EmptyCard>
-                  Все активные платные курсы уже куплены, начаты с preview или ждут завершения
-                  оплаты.
-                </EmptyCard>
-              ) : (
-                paidCourses.map((course) => (
-                  <DashboardCourseCard
-                    key={course.slug}
-                    course={course}
-                    mode="paid"
-                    renderBuyAction={renderBuyAction}
-                  />
-                ))
-              )}
-            </div>
-          </section>
-        </div>
+          <div className="course-grid dashboard-grid">
+            {paidCourses.length === 0 ? (
+              <EmptyCard>
+                Все активные платные курсы уже куплены, начаты с preview или ждут завершения
+                оплаты.
+              </EmptyCard>
+            ) : (
+              paidCourses.map((course) => (
+                <DashboardCourseCard
+                  key={course.slug}
+                  course={course}
+                  mode="paid"
+                  renderBuyAction={renderBuyAction}
+                />
+              ))
+            )}
+          </div>
+        </section>
       </section>
     </main>
   );

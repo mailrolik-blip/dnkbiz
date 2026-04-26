@@ -36,6 +36,10 @@ The platform currently includes:
 - `/register`
 - `/login`
 - `/lk`
+- `/profile`
+- `/help`
+- `/privacy`
+- `/terms`
 - `/admin`
 - `/checkout/test?orderId=:id`
 - `/courses/:slug`
@@ -52,6 +56,7 @@ The platform currently includes:
 8. A paid course opens preview lessons first, then leads to checkout.
 9. After payment, the course opens in full access inside `/courses/:slug`.
 10. Progress and homework stay attached to the learner account and are visible from `/lk`.
+11. Utility pages support the MVP around the core route: `/profile`, `/help`, `/privacy`, `/terms`.
 
 ## Course Model
 
@@ -86,6 +91,13 @@ Primary user actions across the product are kept consistent:
 - It already behaves like a normal purchase flow from the user perspective.
 - The app is ready for real provider integration through `lib/payments/*`.
 - `TEST` payment is only a local/dev fallback and is controlled by `ENABLE_TEST_PAYMENTS=true`.
+
+## Utility Pages
+
+- `/profile`: basic account summary with logout and quick links back into the LMS
+- `/help`: short learner guide for free course, preview, purchase, and continued study
+- `/privacy`: MVP privacy summary
+- `/terms`: MVP usage terms
 
 ## Local Run
 

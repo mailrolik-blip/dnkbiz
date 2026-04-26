@@ -3584,6 +3584,7 @@ a.bento-card:hover {
 
 .dashboard-card {
   display: grid;
+  grid-template-rows: auto 1fr auto auto;
   gap: 0.95rem;
   min-height: 100%;
 }
@@ -3630,6 +3631,47 @@ a.bento-card:hover {
 
 .dashboard-card__actions {
   gap: 0.65rem;
+}
+
+.auth-page__links {
+  justify-content: center;
+}
+
+.utility-page,
+.utility-page__hero,
+.utility-grid,
+.utility-card,
+.utility-list,
+.logout-button-wrap {
+  display: grid;
+  gap: 1rem;
+}
+
+.utility-page__hero .panel-copy,
+.utility-card .panel-copy {
+  margin: 0;
+  max-width: 48rem;
+}
+
+.utility-card h2,
+.utility-page__hero h1 {
+  margin: 0;
+}
+
+.utility-card__actions {
+  gap: 0.7rem;
+}
+
+.utility-list--bullets {
+  list-style: disc;
+  margin: 0;
+  padding-left: 1.2rem;
+  color: var(--muted-strong);
+  line-height: 1.65;
+}
+
+.logout-button-wrap .feedback {
+  margin-top: 0;
 }
 
 .dashboard-focus {
@@ -3930,6 +3972,11 @@ a.bento-card:hover {
     );
   }
 
+  .dashboard-grid,
+  .utility-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .catalog-directory__stats,
   .catalog-directory__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3975,6 +4022,10 @@ a.bento-card:hover {
     );
   }
 
+  .dashboard-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .catalog-directory__stats {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
@@ -3995,6 +4046,16 @@ a.bento-card:hover {
 
   .dashboard-card__actions .primary-button,
   .dashboard-card__actions .secondary-button {
+    width: 100%;
+  }
+
+  .auth-page__links .ghost-button,
+  .utility-card__actions .primary-button,
+  .utility-card__actions .secondary-button,
+  .utility-card__actions .ghost-button,
+  .logout-button-wrap .primary-button,
+  .logout-button-wrap .secondary-button,
+  .logout-button-wrap .ghost-button {
     width: 100%;
   }
 
