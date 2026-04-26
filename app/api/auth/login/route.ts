@@ -6,10 +6,8 @@ import {
   verifyPassword,
 } from '@/lib/auth';
 import prisma from '@/lib/prisma';
-
-function normalizeEmail(value: unknown) {
-  return typeof value === 'string' ? value.trim().toLowerCase() : '';
-}
+import { isValidEmail, isValidLoginPasswordLength, normalizeEmail } from '@/lib/security/input';
+import { consumeRateLimit, getRequestClientIp } from '@/lib/security/rate-limit';
 
 export async function POST(request: Request) {
   try {
@@ -19,12 +17,35 @@ export async function POST(request: Request) {
 
     const email = normalizeEmail(body?.email);
     const password = typeof body?.password === 'string' ? body.password : '';
+    const rateLimit = consumeRateLimit({
+      bucket: 'auth-login',
+      key: `${getRequestClientIp(request)}:${email || 'unknown'}`,
+      limit: 10,
+      windowMs: 10 * 60 * 1000,
+    });
+
+    if (!rateLimit.allowed) {
+      return Response.json(
+        { error: 'Слишком много попыток входа. Повторите позже.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimit.retryAfterSeconds),
+          },
+        }
+      );
+    }
 
     if (!email || !password) {
-      return Response.json(
-        { error: 'Укажите email и пароль.' },
-        { status: 400 }
-      );
+      return Response.json({ error: 'Укажите email и пароль.' }, { status: 400 });
+    }
+
+    if (!isValidEmail(email)) {
+      return Response.json({ error: 'Укажите корректный email.' }, { status: 400 });
+    }
+
+    if (!isValidLoginPasswordLength(password)) {
+      return Response.json({ error: 'Некорректный пароль.' }, { status: 400 });
     }
 
     const user = await prisma.user.findUnique({
@@ -41,10 +62,7 @@ export async function POST(request: Request) {
     });
 
     if (!user || !(await verifyPassword(password, user.passwordHash))) {
-      return Response.json(
-        { error: 'Неверный email или пароль.' },
-        { status: 401 }
-      );
+      return Response.json({ error: 'Неверный email или пароль.' }, { status: 401 });
     }
 
     const token = await createSessionToken(user.id);

@@ -4,6 +4,7 @@ import {
   getOrderCheckoutUrl,
   normalizePaymentMethod,
 } from '@/lib/payments/service';
+import { consumeRateLimit, getRequestClientIp } from '@/lib/security/rate-limit';
 
 function toPositiveInt(value: unknown) {
   const parsed = Number(value);
@@ -17,6 +18,25 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Требуется авторизация.' }, { status: 401 });
   }
 
+  const rateLimit = consumeRateLimit({
+    bucket: 'orders-create',
+    key: `${user.id}:${getRequestClientIp(request)}`,
+    limit: 15,
+    windowMs: 10 * 60 * 1000,
+  });
+
+  if (!rateLimit.allowed) {
+    return Response.json(
+      { error: 'Слишком много попыток создать заказ. Повторите позже.' },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(rateLimit.retryAfterSeconds),
+        },
+      }
+    );
+  }
+
   const body = (await request.json().catch(() => null)) as
     | { tariffId?: unknown; paymentMethod?: unknown }
     | null;
@@ -26,6 +46,13 @@ export async function POST(request: Request) {
   if (!tariffId) {
     return Response.json(
       { error: 'Поле tariffId должно быть положительным целым числом.' },
+      { status: 400 }
+    );
+  }
+
+  if (body && 'paymentMethod' in body && !paymentMethod) {
+    return Response.json(
+      { error: 'Указан неподдерживаемый способ оплаты.' },
       { status: 400 }
     );
   }

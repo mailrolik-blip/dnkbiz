@@ -31,10 +31,7 @@ export async function POST(request: Request, { params }: RouteParams) {
   }
 
   if (!paymentMethod) {
-    return Response.json(
-      { error: 'Нужно выбрать способ оплаты.' },
-      { status: 400 }
-    );
+    return Response.json({ error: 'Нужно выбрать способ оплаты.' }, { status: 400 });
   }
 
   try {
@@ -60,13 +57,9 @@ export async function POST(request: Request, { params }: RouteParams) {
       courseSlug: order.tariff.course.slug,
     });
   } catch (error) {
+    console.error(error);
     return Response.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Не удалось запустить оплату.',
-      },
+      { error: 'Не удалось запустить оплату. Попробуйте еще раз.' },
       { status: 409 }
     );
   }

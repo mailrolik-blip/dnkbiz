@@ -51,14 +51,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
       courseSlug: updatedOrder.tariff.course.slug,
     });
   } catch (error) {
-    return Response.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Не удалось подтвердить оплату.',
-      },
-      { status: 409 }
-    );
+    console.error(error);
+    return Response.json({ error: 'Не удалось подтвердить оплату.' }, { status: 409 });
   }
 }

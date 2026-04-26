@@ -114,6 +114,7 @@ npm run db:seed
 - `AUTH_SECRET`
 - `ENABLE_TEST_PAYMENTS=true`
 - `SESSION_COOKIE_NAME` optional
+- `PAYMENT_WEBHOOK_SECRET` for `/api/payments/webhook/:provider`
 
 ## Useful Scripts
 
@@ -128,10 +129,9 @@ npm run db:seed
 - `npm run db:generate`
 - `npm run db:seed`
 
-## Test Accounts
+## Local Seed Accounts
 
-- `admin@example.com / Admin123!`
-- `user@example.com / User12345!`
+`npm run db:seed` creates local development users for smoke tests. Their credentials are printed only to the local seed output and must not be reused outside local development.
 
 ## Main API
 

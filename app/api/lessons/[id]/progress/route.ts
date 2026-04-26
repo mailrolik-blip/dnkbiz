@@ -1,6 +1,11 @@
 import { getOptionalCurrentUser } from '@/lib/auth';
 import { getLessonAccessForUser } from '@/lib/course-access';
 import prisma from '@/lib/prisma';
+import {
+  isValidLessonAnswer,
+  normalizeLessonAnswer,
+  securityInputLimits,
+} from '@/lib/security/input';
 
 type RouteParams = {
   params: Promise<{ id: string }>;
@@ -26,23 +31,40 @@ export async function POST(request: Request, { params }: RouteParams) {
   const body = (await request.json().catch(() => null)) as
     | { completed?: unknown; answer?: unknown }
     | null;
+  const hasCompleted = Boolean(body && Object.hasOwn(body, 'completed'));
+  const hasAnswer = Boolean(body && Object.hasOwn(body, 'answer'));
+
+  if (hasCompleted && typeof body?.completed !== 'boolean') {
+    return Response.json(
+      { error: 'Поле completed должно быть логическим значением.' },
+      { status: 400 }
+    );
+  }
+
+  if (hasAnswer && body?.answer !== null && typeof body?.answer !== 'string') {
+    return Response.json(
+      { error: 'Поле answer должно быть строкой или null.' },
+      { status: 400 }
+    );
+  }
 
   const completed =
     typeof body?.completed === 'boolean' ? body.completed : undefined;
-  const answer =
-    typeof body?.answer === 'string'
-      ? body.answer.trim().length > 0
-        ? body.answer.trim()
-        : null
-      : undefined;
+  const answer = normalizeLessonAnswer(body?.answer);
+
+  if (!isValidLessonAnswer(answer)) {
+    return Response.json(
+      {
+        error: `Ответ слишком длинный. Максимум ${securityInputLimits.lessonAnswerMaxLength} символов.`,
+      },
+      { status: 400 }
+    );
+  }
 
   const access = await getLessonAccessForUser(lessonId, user.id);
 
   if (!access?.canAccess) {
-    return Response.json(
-      { error: 'Доступ к этому уроку не открыт.' },
-      { status: 403 }
-    );
+    return Response.json({ error: 'Доступ к этому уроку не открыт.' }, { status: 403 });
   }
 
   const progress = await prisma.lessonProgress.upsert({

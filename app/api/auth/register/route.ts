@@ -7,16 +7,15 @@ import {
   hashPassword,
 } from '@/lib/auth';
 import prisma from '@/lib/prisma';
-
-function normalizeEmail(value: unknown) {
-  return typeof value === 'string' ? value.trim().toLowerCase() : '';
-}
-
-function normalizeName(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0
-    ? value.trim()
-    : null;
-}
+import {
+  isValidEmail,
+  isValidName,
+  isValidPasswordLength,
+  normalizeEmail,
+  normalizeName,
+  securityInputLimits,
+} from '@/lib/security/input';
+import { consumeRateLimit, getRequestClientIp } from '@/lib/security/rate-limit';
 
 export async function POST(request: Request) {
   try {
@@ -27,14 +26,47 @@ export async function POST(request: Request) {
     const email = normalizeEmail(body?.email);
     const password = typeof body?.password === 'string' ? body.password : '';
     const name = normalizeName(body?.name);
+    const rateLimit = consumeRateLimit({
+      bucket: 'auth-register',
+      key: `${getRequestClientIp(request)}:${email || 'unknown'}`,
+      limit: 5,
+      windowMs: 15 * 60 * 1000,
+    });
+
+    if (!rateLimit.allowed) {
+      return Response.json(
+        { error: 'Слишком много попыток регистрации. Повторите позже.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimit.retryAfterSeconds),
+          },
+        }
+      );
+    }
 
     if (!email) {
       return Response.json({ error: 'Укажите email.' }, { status: 400 });
     }
 
-    if (password.length < 8) {
+    if (!isValidEmail(email)) {
+      return Response.json({ error: 'Укажите корректный email.' }, { status: 400 });
+    }
+
+    if (!isValidPasswordLength(password)) {
       return Response.json(
-        { error: 'Пароль должен содержать минимум 8 символов.' },
+        {
+          error: `Пароль должен содержать от ${securityInputLimits.passwordMinLength} до ${securityInputLimits.passwordMaxLength} символов.`,
+        },
+        { status: 400 }
+      );
+    }
+
+    if (!isValidName(name)) {
+      return Response.json(
+        {
+          error: `Имя не должно быть длиннее ${securityInputLimits.nameMaxLength} символов.`,
+        },
         { status: 400 }
       );
     }
@@ -69,9 +101,6 @@ export async function POST(request: Request) {
     }
 
     console.error(error);
-    return Response.json(
-      { error: 'Не удалось завершить регистрацию.' },
-      { status: 500 }
-    );
+    return Response.json({ error: 'Не удалось завершить регистрацию.' }, { status: 500 });
   }
 }
