@@ -737,6 +737,8 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
     : 'TEXT';
   const currentHomeworkOptions = currentLesson?.homeworkOptions ?? [];
   const currentLessonLocked = currentLesson?.isLocked ?? false;
+  const assistantUiEnabled = false;
+  const relatedCatalogRailEnabled = false;
 
   function updateLesson(
     lessonId: number,
@@ -1294,10 +1296,12 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
               ))}
             </div>
 
-            <button className="ai-btn" onClick={() => setAssistantOpen(true)} type="button">
+            {assistantUiEnabled ? (
+              <button className="ai-btn" onClick={() => setAssistantOpen(true)} type="button">
               <ChatIcon />
               <span>Задать вопрос</span>
-            </button>
+              </button>
+            ) : null}
           </aside>
         </div>
 
@@ -1337,7 +1341,8 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
           </div>
         ) : null}
 
-        <div className="gallery-wrapper">
+        {relatedCatalogRailEnabled ? (
+          <div className="gallery-wrapper">
           <div className="gallery-track">
             {dnkFeaturedPrograms.map((program, index) => (
               <article key={program.title} className="gallery-course-card glow-target">
@@ -1355,10 +1360,11 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
               </article>
             ))}
           </div>
-        </div>
+          </div>
+        ) : null}
       </section>
 
-      {assistantOpen ? (
+      {assistantUiEnabled && assistantOpen ? (
         <div
           className="ai-modal-overlay open"
           onClick={(event) => {

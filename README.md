@@ -160,6 +160,8 @@ The old lead-flow is no longer part of the product.
 
 ## Notes
 
+- The MVP is ready for manual product testing across registration, catalog, checkout, dashboard, and course progress.
 - Real payment provider integration is not connected yet.
+- Before public launch, the main remaining hardening items are durable rate limiting, CSRF/CSP pass, and server-side session revocation.
 - No CRM or admin panel is included in this MVP.
 - The corporate/request-based flow is intentionally not part of the main product.

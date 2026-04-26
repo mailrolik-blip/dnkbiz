@@ -51,6 +51,7 @@ export default function CourseProductPage({
   const router = useRouter();
   const [buyingTariffId, setBuyingTariffId] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const startedPreview = isStartedPreviewCourse(course);
 
   async function handleCreateOrder() {
     if (!course.tariffId) {
@@ -123,6 +124,14 @@ export default function CourseProductPage({
       );
     }
 
+    if (startedPreview) {
+      return (
+        <Link href={`/courses/${course.slug}`} className="primary-button">
+          {course.progressPercent > 0 ? 'Продолжить обучение' : 'Открыть курс'}
+        </Link>
+      );
+    }
+
     if (course.isOwned) {
       return (
         <Link href={`/courses/${course.slug}`} className="primary-button">
@@ -164,11 +173,16 @@ export default function CourseProductPage({
       );
     }
 
-    if (isStartedPreviewCourse(course)) {
+    if (startedPreview && course.tariffId) {
       return (
-        <Link href={`/courses/${course.slug}`} className="secondary-button">
-          Открыть курс
-        </Link>
+        <button
+          className="secondary-button"
+          disabled={buyingTariffId === course.tariffId}
+          onClick={handleCreateOrder}
+          type="button"
+        >
+          {buyingTariffId === course.tariffId ? 'Открываем оплату...' : 'Купить курс'}
+        </button>
       );
     }
 
