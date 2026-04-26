@@ -390,11 +390,19 @@ export default function LandingClient({
 
         <div className="row-actions" style={{ marginTop: 0 }}>
           {user ? (
-            <Link href="/lk" className="ghost-button">
-              Личный кабинет
-            </Link>
+            <>
+              <Link href="/catalog" className="ghost-button">
+                Каталог курсов
+              </Link>
+              <Link href="/lk" className="ghost-button">
+                Личный кабинет
+              </Link>
+            </>
           ) : (
             <>
+              <Link href="/catalog" className="ghost-button">
+                Каталог
+              </Link>
               <Link href="/login" className="ghost-button">
                 Войти
               </Link>
@@ -619,10 +627,15 @@ export default function LandingClient({
       </section>
 
       <section id="catalog" className="dnk-section">
-        <div className="section-heading">
-          <span className="section-heading__main">Каталог</span>
-          <span className="section-heading__divider">/</span>
-          <span className="section-heading__sub">Выберите тему и откройте следующий курс</span>
+        <div className="panel-head landing-catalog__head">
+          <div className="section-heading">
+            <span className="section-heading__main">Каталог</span>
+            <span className="section-heading__divider">/</span>
+            <span className="section-heading__sub">Выберите тему и откройте следующий курс</span>
+          </div>
+          <Link href="/catalog" className="ghost-button">
+            Смотреть все курсы
+          </Link>
         </div>
 
         {featuredPaidCourse ? (

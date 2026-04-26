@@ -3298,6 +3298,212 @@ a.bento-card:hover {
   color: #ffe59a;
 }
 
+.landing-catalog__head {
+  align-items: flex-end;
+  margin-bottom: 1rem;
+}
+
+.landing-catalog__head .section-heading {
+  margin-bottom: 0;
+  padding-left: 0;
+}
+
+.catalog-directory,
+.catalog-directory__hero,
+.catalog-directory__copy,
+.catalog-directory__stats,
+.catalog-directory__filters,
+.catalog-directory__filter-group,
+.catalog-directory__grid,
+.catalog-directory__empty,
+.catalog-directory-card,
+.catalog-directory-card__body,
+.catalog-directory-card__details,
+.catalog-directory-card__pricing,
+.catalog-directory-card__footer {
+  display: grid;
+  gap: 1rem;
+}
+
+.catalog-directory__hero {
+  background:
+    radial-gradient(circle at top right, rgba(1, 247, 246, 0.16), transparent 24rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0)),
+    var(--surface-strong);
+}
+
+.catalog-directory__copy .panel-copy,
+.catalog-directory__filter-summary .panel-copy {
+  margin: 0;
+}
+
+.catalog-directory__copy .panel-copy {
+  max-width: 48rem;
+}
+
+.catalog-directory__stat {
+  display: grid;
+  gap: 0.2rem;
+  padding: 1rem 1.05rem;
+  border-radius: 1.1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.catalog-directory__stat span {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.catalog-directory__stat strong {
+  color: var(--foreground);
+  font-size: clamp(1.55rem, 4vw, 2rem);
+  line-height: 1;
+  letter-spacing: -0.05em;
+}
+
+.catalog-directory__filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.catalog-directory__filter-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.7rem;
+  padding: 0.7rem 1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--muted-strong);
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    background 180ms ease,
+    color 180ms ease;
+}
+
+.catalog-directory__filter-pill:hover {
+  transform: translateY(-1px);
+  border-color: rgba(1, 247, 246, 0.22);
+  background: rgba(1, 247, 246, 0.07);
+  color: var(--foreground);
+}
+
+.catalog-directory__filter-pill--active {
+  border-color: rgba(1, 247, 246, 0.34);
+  background: rgba(1, 247, 246, 0.12);
+  color: var(--foreground);
+  box-shadow: 0 0 0 1px rgba(1, 247, 246, 0.18);
+}
+
+.catalog-directory__grid {
+  align-items: stretch;
+}
+
+.catalog-directory-card {
+  grid-template-rows: auto 1fr auto auto;
+  min-height: 100%;
+}
+
+.catalog-directory-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.catalog-directory-card__meta {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.95rem;
+  padding: 0.34rem 0.72rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted-strong);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.catalog-directory-card h2 {
+  margin: 0;
+  font-size: 1.18rem;
+  line-height: 1.35;
+  letter-spacing: -0.03em;
+}
+
+.catalog-directory-card__description,
+.catalog-directory-card__hint {
+  margin: 0;
+}
+
+.catalog-directory-card__description {
+  color: var(--muted);
+  line-height: 1.65;
+  display: -webkit-box;
+  overflow: hidden;
+  min-height: 4.95em;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.catalog-directory-card__details {
+  gap: 0.75rem;
+}
+
+.catalog-directory-card__pricing {
+  gap: 0.2rem;
+}
+
+.catalog-directory-card__label {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.catalog-directory-card__value {
+  color: var(--foreground);
+  font-size: 1.04rem;
+  line-height: 1.4;
+}
+
+.catalog-directory-card__hint {
+  color: var(--muted-strong);
+  font-size: 0.92rem;
+  line-height: 1.58;
+}
+
+.catalog-directory-card__footer {
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.catalog-directory-card__actions {
+  gap: 0.65rem;
+}
+
+.catalog-directory__empty {
+  justify-items: start;
+}
+
+.catalog-directory__empty h2,
+.catalog-directory__empty .panel-copy {
+  margin: 0;
+}
+
 .showcase-course-card__next {
   color: var(--muted-strong);
   line-height: 1.55;
@@ -3626,6 +3832,11 @@ a.bento-card:hover {
       (100% - (var(--catalog-cards-tablet, 2) - 1) * 1rem) / var(--catalog-cards-tablet, 2)
     );
   }
+
+  .catalog-directory__stats,
+  .catalog-directory__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (min-width: 860px) {
@@ -3661,6 +3872,14 @@ a.bento-card:hover {
     grid-auto-columns: calc(
       (100% - (var(--catalog-cards-desktop, 3) - 1) * 1rem) / var(--catalog-cards-desktop, 3)
     );
+  }
+
+  .catalog-directory__stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .catalog-directory__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
@@ -3747,6 +3966,14 @@ a.bento-card:hover {
     min-height: 22rem;
   }
 
+  .landing-catalog__head {
+    align-items: stretch;
+  }
+
+  .landing-catalog__head .ghost-button {
+    width: 100%;
+  }
+
   .catalog-carousel-card h3,
   .catalog-carousel-card__description {
     min-height: auto;
@@ -3767,6 +3994,10 @@ a.bento-card:hover {
   .catalog-carousel-card__cta .secondary-button,
   .catalog-carousel-card__cta .ghost-button,
   .catalog-carousel-card__cta .landing-card-disabled,
+  .catalog-directory-card__actions .primary-button,
+  .catalog-directory-card__actions .secondary-button,
+  .catalog-directory-card__actions .ghost-button,
+  .catalog-directory-card__actions .landing-card-disabled,
   .funnel-live-card__actions .primary-button,
   .funnel-live-card__actions .secondary-button,
   .funnel-live-card__actions .landing-card-disabled {

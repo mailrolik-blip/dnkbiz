@@ -12,6 +12,7 @@ DNK Biz is a self-serve LMS MVP for short professional courses. The current prod
 
 - auth and session-based login
 - main catalog on `/`
+- full course catalog on `/catalog`
 - course product pages on `/catalog/:slug`
 - learning flow on `/courses/:slug`
 - learner dashboard on `/lk`
@@ -29,6 +30,7 @@ The platform currently includes:
 ## Main Routes
 
 - `/`
+- `/catalog`
 - `/catalog/:slug`
 - `/register`
 - `/login`
@@ -38,14 +40,15 @@ The platform currently includes:
 
 ## User Flow
 
-1. A guest opens the catalog or a course product page.
+1. A guest opens the landing page, then moves into `/catalog` or directly into a course product page.
 2. The user registers for free.
 3. `/lk` works as the first learner hub: new users see onboarding with a free-course start and a paid-course preview path.
-4. On `/catalog/:slug`, the user sees the course status, description, lesson count, preview info, and the main CTA.
-5. A free course opens immediately.
-6. A paid course opens preview lessons first, then leads to checkout.
-7. After payment, the course opens in full access inside `/courses/:slug`.
-8. Progress and homework stay attached to the learner account and are visible from `/lk`.
+4. On `/catalog`, the user filters the library and opens the product page of the chosen course.
+5. On `/catalog/:slug`, the user sees the course status, description, lesson count, preview info, and the main CTA.
+6. A free course opens immediately.
+7. A paid course opens preview lessons first, then leads to checkout.
+8. After payment, the course opens in full access inside `/courses/:slug`.
+9. Progress and homework stay attached to the learner account and are visible from `/lk`.
 
 ## Course Model
 
@@ -156,7 +159,7 @@ The old lead-flow is no longer part of the product.
 - the main UI no longer links to `ProgramRequest`
 - the request form is removed from the MVP flow
 - `POST /api/program-requests` is kept only as an archived `410 Gone` stub for compatibility
-- the real product path is `/` -> `/catalog/:slug` -> `/checkout/test` -> `/courses/:slug`
+- the real product path is `/` -> `/catalog` -> `/catalog/:slug` -> `/checkout/test` -> `/courses/:slug`
 
 ## Notes
 

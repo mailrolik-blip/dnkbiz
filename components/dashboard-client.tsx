@@ -532,6 +532,9 @@ export default function DashboardClient({
           <span>Бизнес школа ДНК</span>
         </Link>
         <div className="row-actions" style={{ marginTop: 0 }}>
+          <Link href="/catalog" className="ghost-button">
+            Каталог
+          </Link>
           <button
             className="ghost-button"
             disabled={logoutPending}
@@ -552,6 +555,11 @@ export default function DashboardClient({
               Здесь собраны ваши доступные курсы, бесплатные старты, покупки в процессе и
               следующий шаг по каждому маршруту внутри LMS.
             </p>
+            <div className="row-actions">
+              <Link href="/catalog" className="secondary-button">
+                Перейти в каталог
+              </Link>
+            </div>
           </div>
 
           <div className="dashboard-hero__stats">
