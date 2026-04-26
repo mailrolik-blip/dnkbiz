@@ -16,6 +16,7 @@ DNK Biz is a self-serve LMS MVP for short professional courses. The current prod
 - course product pages on `/catalog/:slug`
 - learning flow on `/courses/:slug`
 - learner dashboard on `/lk`
+- internal admin overview on `/admin`
 - free / paid / showcase course model
 - preview-enabled paid courses
 - payment-ready checkout on `/checkout/test`
@@ -35,6 +36,7 @@ The platform currently includes:
 - `/register`
 - `/login`
 - `/lk`
+- `/admin`
 - `/checkout/test?orderId=:id`
 - `/courses/:slug`
 
@@ -151,6 +153,14 @@ npm run db:seed
 - `POST /api/payments/webhook/:provider`
 - `GET /api/courses/:slug`
 - `POST /api/lessons/:id/progress`
+
+## Internal Admin
+
+`/admin` is an internal-only read-only ops screen for the platform owner.
+
+- access is limited to `ADMIN` users only
+- it is not part of the public learner flow
+- it shows users, orders, enrollments, and current course catalog state
 
 ## Legacy / Secondary Flow
 
