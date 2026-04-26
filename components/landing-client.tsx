@@ -1,8 +1,9 @@
 'use client';
 
+import type { CSSProperties } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import {
   dnkFunnelHeroPoints,
@@ -38,6 +39,14 @@ function CheckIcon() {
   );
 }
 
+function ChevronIcon({ direction }: { direction: 'left' | 'right' }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      {direction === 'left' ? <path d="m15 6-6 6 6 6" /> : <path d="m9 6 6 6-6 6" />}
+    </svg>
+  );
+}
+
 function getCatalogAnchorId(groupId: string) {
   if (groupId === 'office-accounting') {
     return 'catalog-office';
@@ -48,6 +57,59 @@ function getCatalogAnchorId(groupId: string) {
   }
 
   return 'catalog-management';
+}
+
+function getCatalogShelfCountLabel(count: number) {
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+
+  if (mod10 === 1 && mod100 !== 11) {
+    return `${count} курс`;
+  }
+
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
+    return `${count} курса`;
+  }
+
+  return `${count} курсов`;
+}
+
+function getCatalogCardValueLabel(course: CatalogCourseCard) {
+  if (course.status === 'showcase') {
+    return 'Статус';
+  }
+
+  if (course.pendingOrder) {
+    return 'Заказ';
+  }
+
+  if (course.isOwned || course.status === 'free') {
+    return 'Доступ';
+  }
+
+  return 'Стоимость';
+}
+
+function getCatalogCardValue(course: CatalogCourseCard) {
+  if (course.status === 'showcase') {
+    return 'Скоро в каталоге';
+  }
+
+  if (course.pendingOrder) {
+    return course.pendingOrder.status === 'PROCESSING'
+      ? 'Оплата в обработке'
+      : 'Продолжить оплату';
+  }
+
+  if (course.isOwned) {
+    return 'Полный доступ открыт';
+  }
+
+  if (course.status === 'free') {
+    return 'Открывается сразу';
+  }
+
+  return formatCoursePrice(course.price);
 }
 
 type CatalogActionProps = {
@@ -138,6 +200,29 @@ export default function LandingClient({
   const directionShelves = groupCatalogCourses(
     catalogCourses.filter((course) => course.slug !== featuredPaidCourse?.slug)
   );
+  const [activeShelfId, setActiveShelfId] = useState(directionShelves[0]?.id ?? '');
+  const activeShelfTrackRef = useRef<HTMLDivElement | null>(null);
+  const activeShelf =
+    directionShelves.find((shelf) => shelf.id === activeShelfId) ?? directionShelves[0] ?? null;
+  const activeShelfCardsStyle: CSSProperties | undefined = activeShelf
+    ? ({
+        ['--catalog-cards-mobile' as string]: 1,
+        ['--catalog-cards-tablet' as string]: Math.min(activeShelf.courses.length, 2),
+        ['--catalog-cards-desktop' as string]: Math.min(activeShelf.courses.length, 3),
+      } as CSSProperties)
+    : undefined;
+
+  useEffect(() => {
+    if (activeShelf || !directionShelves[0]) {
+      return;
+    }
+
+    setActiveShelfId(directionShelves[0].id);
+  }, [activeShelf, directionShelves]);
+
+  useEffect(() => {
+    activeShelfTrackRef.current?.scrollTo({ left: 0, behavior: 'auto' });
+  }, [activeShelfId]);
 
   async function handleCreateOrder(course: CatalogCourseCard) {
     if (!course.tariffId) {
@@ -185,6 +270,21 @@ export default function LandingClient({
     } finally {
       setBuyingTariffId(null);
     }
+  }
+
+  function handleShelfScroll(direction: 'left' | 'right') {
+    const track = activeShelfTrackRef.current;
+
+    if (!track) {
+      return;
+    }
+
+    const shift = Math.max(track.clientWidth * 0.9, 280);
+
+    track.scrollBy({
+      left: direction === 'right' ? shift : -shift,
+      behavior: 'smooth',
+    });
   }
 
   function renderHeroPrimaryAction() {
@@ -522,15 +622,15 @@ export default function LandingClient({
         <div className="section-heading">
           <span className="section-heading__main">Каталог</span>
           <span className="section-heading__divider">/</span>
-          <span className="section-heading__sub">Курсы и следующий шаг по каждому из них</span>
+          <span className="section-heading__sub">Выберите тему и откройте следующий курс</span>
         </div>
 
         {featuredPaidCourse ? (
-          <article className="panel funnel-live-card">
+          <article className="panel funnel-live-card funnel-live-card--featured">
             <div className="funnel-live-card__content">
               <div className="funnel-live-card__meta">
-                <span className="eyebrow">Основной платный курс</span>
-                <span className="funnel-card-pill">Preview + покупка + LMS</span>
+                <span className="eyebrow">Главный курс платформы</span>
+                <span className="funnel-card-pill">Флагман self-serve LMS</span>
               </div>
               <div className="funnel-live-card__body">
                 <h2>
@@ -538,134 +638,187 @@ export default function LandingClient({
                     {featuredPaidCourse.title}
                   </Link>
                 </h2>
-                <p className="panel-copy">
-                  {getCatalogCourseNextStep(featuredPaidCourse, hasUser)}
-                </p>
+                <p className="panel-copy">{featuredPaidCourse.description}</p>
+                <div className="badge-row funnel-live-card__feature-list">
+                  {featuredPaidCourse.lessonsCount ? (
+                    <span className="badge badge-pending">
+                      {formatLessonCount(featuredPaidCourse.lessonsCount)}
+                    </span>
+                  ) : null}
+                  <span className="badge badge-pending">
+                    {formatPreviewLessons(featuredPaidCourse.previewLessonsCount)}
+                  </span>
+                  <span className="badge badge-complete">
+                    {featuredPaidCourse.isOwned
+                      ? 'Полный доступ уже открыт'
+                      : formatCoursePrice(featuredPaidCourse.price)}
+                  </span>
+                </div>
                 <p className="funnel-live-card__hint">
-                  Следующий шаг: {getCatalogCourseActionHint(featuredPaidCourse, hasUser)}
+                  {getCatalogCourseNextStep(featuredPaidCourse, hasUser)}
                 </p>
               </div>
             </div>
-            <div className="funnel-live-card__stats">
+            <div className="funnel-live-card__aside">
               <span className={getCatalogCourseStatusClass(featuredPaidCourse)}>
                 {getCatalogCourseStatusLabel(featuredPaidCourse)}
               </span>
-              <span className="badge badge-pending">
-                {formatPreviewLessons(featuredPaidCourse.previewLessonsCount)}
-              </span>
-              <span className="badge badge-complete">
-                {formatCoursePrice(featuredPaidCourse.price)}
-              </span>
-            </div>
-            <div className="row-actions funnel-live-card__actions">
-              <CatalogCourseAction
-                buyingTariffId={buyingTariffId}
-                course={featuredPaidCourse}
-                onCreateOrder={handleCreateOrder}
-                userEmail={user?.email ?? null}
-              />
-              <Link
-                className="secondary-button"
-                href={getCourseCatalogHref(featuredPaidCourse.slug)}
-              >
-                {isStartedPreviewCourse(featuredPaidCourse)
-                  ? 'Продолжить обучение'
-                  : 'Открыть первые уроки'}
-              </Link>
+              <div className="funnel-live-card__pricing">
+                <span>{getCatalogCardValueLabel(featuredPaidCourse)}</span>
+                <strong>{getCatalogCardValue(featuredPaidCourse)}</strong>
+              </div>
+              <p className="funnel-live-card__support">
+                {getCatalogCourseActionHint(featuredPaidCourse, hasUser)}
+              </p>
+              <div className="funnel-live-card__actions">
+                <CatalogCourseAction
+                  buyingTariffId={buyingTariffId}
+                  course={featuredPaidCourse}
+                  onCreateOrder={handleCreateOrder}
+                  userEmail={user?.email ?? null}
+                />
+                <Link className="funnel-live-card__link" href={getCourseCatalogHref(featuredPaidCourse.slug)}>
+                  {isStartedPreviewCourse(featuredPaidCourse)
+                    ? 'Страница курса и preview'
+                    : 'Посмотреть страницу курса'}
+                </Link>
+              </div>
             </div>
           </article>
         ) : null}
 
-        <div className="funnel-catalog">
-          {directionShelves.map((shelf) => (
-            <article key={shelf.id} id={getCatalogAnchorId(shelf.id)} className="panel funnel-shelf">
-              <div className="funnel-shelf__head">
-                <span className="eyebrow">{shelf.title}</span>
-                <h2>{shelf.title}</h2>
-                <p className="panel-copy">{shelf.description}</p>
+        {activeShelf ? (
+          <article
+            id={getCatalogAnchorId(activeShelf.id)}
+            className="panel funnel-shelf funnel-shelf--carousel"
+          >
+            <div className="funnel-shelf__toolbar">
+              <div className="funnel-shelf__tabs" aria-label="Темы каталога курсов">
+                {directionShelves.map((shelf) => {
+                  const isActive = shelf.id === activeShelf.id;
+
+                  return (
+                    <button
+                      key={shelf.id}
+                      aria-pressed={isActive}
+                      className={`funnel-shelf__tab ${isActive ? 'funnel-shelf__tab--active' : ''}`}
+                      onClick={() => setActiveShelfId(shelf.id)}
+                      type="button"
+                    >
+                      {shelf.title}
+                    </button>
+                  );
+                })}
               </div>
 
-              <div className="funnel-shelf__grid">
-                {shelf.courses.map((course) => (
+              {activeShelf.courses.length > 1 ? (
+                <div className="funnel-shelf__nav">
+                  <button
+                    aria-label="Показать предыдущие курсы"
+                    className="funnel-shelf__nav-button"
+                    onClick={() => handleShelfScroll('left')}
+                    type="button"
+                  >
+                    <ChevronIcon direction="left" />
+                  </button>
+                  <button
+                    aria-label="Показать следующие курсы"
+                    className="funnel-shelf__nav-button"
+                    onClick={() => handleShelfScroll('right')}
+                    type="button"
+                  >
+                    <ChevronIcon direction="right" />
+                  </button>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="funnel-shelf__head">
+              <div>
+                <span className="eyebrow">Тема каталога</span>
+                <h2>{activeShelf.title}</h2>
+              </div>
+              <div className="funnel-shelf__summary">
+                <p className="panel-copy">{activeShelf.description}</p>
+                <span className="funnel-shelf__count">
+                  {getCatalogShelfCountLabel(activeShelf.courses.length)}
+                </span>
+              </div>
+            </div>
+
+            <div className="catalog-carousel">
+              <div
+                ref={activeShelfTrackRef}
+                className="catalog-carousel__track"
+                style={activeShelfCardsStyle}
+              >
+                {activeShelf.courses.map((course) => (
                   <article
                     key={course.slug}
-                    className={`program-highlight-card showcase-course-card showcase-course-card--${course.status} ${getCatalogCourseToneClass(
+                    className={`program-highlight-card showcase-course-card catalog-carousel-card ${getCatalogCourseToneClass(
                       course
                     )}`}
                   >
-                    <div className="showcase-course-card__meta">
-                      <span className="showcase-course-card__category">
-                        {course.category}
-                      </span>
+                    <div className="catalog-carousel-card__head">
                       <span className={getCatalogCourseStatusClass(course)}>
                         {getCatalogCourseStatusLabel(course)}
                       </span>
+                      {course.lessonsCount ? (
+                        <span className="catalog-carousel-card__meta">
+                          {formatLessonCount(course.lessonsCount)}
+                        </span>
+                      ) : null}
                     </div>
-                    <div className="showcase-course-card__body">
+
+                    <div className="catalog-carousel-card__body">
                       <h3>
                         <Link href={getCourseCatalogHref(course.slug)}>{course.title}</Link>
                       </h3>
-                      <p className="showcase-course-card__description">
-                        {course.description}
-                      </p>
-                      <p className="showcase-course-card__next">
-                        Следующий шаг: {getCatalogCourseActionHint(course, hasUser)}
-                      </p>
+                      <p className="catalog-carousel-card__description">{course.description}</p>
                     </div>
-                    <div className="showcase-course-card__footer">
-                      <div className="showcase-course-card__pricing">
-                        <span className="showcase-course-card__label">
-                          {course.status === 'showcase'
-                            ? 'Статус'
-                            : course.isOwned
-                            ? 'Доступ'
-                            : 'Следующий шаг'}
-                        </span>
-                        <span className="showcase-course-card__price">
-                          {course.status === 'showcase'
-                            ? 'В каталоге'
-                            : course.status === 'free'
-                            ? 'Открывается сразу'
-                            : course.isOwned
-                            ? 'Курс уже доступен'
-                            : formatCoursePrice(course.price)}
-                        </span>
-                      </div>
-                      <div className="badge-row">
-                        {course.lessonsCount ? (
-                          <span className="badge badge-pending">
-                            {formatLessonCount(course.lessonsCount)}
+
+                    <div className="catalog-carousel-card__footer">
+                      <div className="catalog-carousel-card__details">
+                        <div className="catalog-carousel-card__pricing">
+                          <span className="catalog-carousel-card__label">
+                            {getCatalogCardValueLabel(course)}
                           </span>
-                        ) : null}
-                        {course.previewEnabled ? (
-                          <span className="badge badge-pending">
-                            {formatPreviewLessons(course.previewLessonsCount)}
+                          <span className="catalog-carousel-card__price">
+                            {getCatalogCardValue(course)}
                           </span>
-                        ) : null}
+                        </div>
+
+                        <div className="catalog-carousel-card__badges">
+                          {course.previewEnabled && course.previewLessonsCount > 0 ? (
+                            <span className="badge badge-pending">
+                              {formatPreviewLessons(course.previewLessonsCount)}
+                            </span>
+                          ) : null}
+                          {course.status === 'free' ? (
+                            <span className="badge badge-complete">Доступ сразу</span>
+                          ) : null}
+                        </div>
+
+                        <p className="catalog-carousel-card__support">
+                          {getCatalogCourseActionHint(course, hasUser)}
+                        </p>
                       </div>
-                      <div className="showcase-course-card__actions">
+
+                      <div className="catalog-carousel-card__cta">
                         <CatalogCourseAction
                           buyingTariffId={buyingTariffId}
                           course={course}
                           onCreateOrder={handleCreateOrder}
                           userEmail={user?.email ?? null}
                         />
-                        {course.status === 'paid' && course.previewLessonsCount > 0 ? (
-                          <Link
-                            className="ghost-button"
-                            href={getCourseCatalogHref(course.slug)}
-                          >
-                            {course.isStarted ? 'Продолжить обучение' : 'Открыть первые уроки'}
-                          </Link>
-                        ) : null}
                       </div>
                     </div>
                   </article>
                 ))}
               </div>
-            </article>
-          ))}
-        </div>
+            </div>
+          </article>
+        ) : null}
       </section>
 
       <section id="final-cta" className="dnk-section">

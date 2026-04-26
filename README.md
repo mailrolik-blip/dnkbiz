@@ -40,11 +40,12 @@ The platform currently includes:
 
 1. A guest opens the catalog or a course product page.
 2. The user registers for free.
-3. On `/catalog/:slug`, the user sees the course status, description, lesson count, preview info, and the main CTA.
-4. A free course opens immediately.
-5. A paid course opens preview lessons first, then leads to checkout.
-6. After payment, the course opens in full access inside `/courses/:slug`.
-7. Progress and homework stay attached to the learner account and are visible from `/lk`.
+3. `/lk` works as the first learner hub: new users see onboarding with a free-course start and a paid-course preview path.
+4. On `/catalog/:slug`, the user sees the course status, description, lesson count, preview info, and the main CTA.
+5. A free course opens immediately.
+6. A paid course opens preview lessons first, then leads to checkout.
+7. After payment, the course opens in full access inside `/courses/:slug`.
+8. Progress and homework stay attached to the learner account and are visible from `/lk`.
 
 ## Course Model
 
@@ -57,6 +58,7 @@ The platform currently includes:
 
 `/lk` is the main learner hub and contains:
 
+- onboarding / zero-state for new users
 - `Мои курсы`
 - `Бесплатные курсы`
 - `Платные курсы`

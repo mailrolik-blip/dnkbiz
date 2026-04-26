@@ -2858,8 +2858,12 @@ a.bento-card:hover {
 
 .funnel-live-card {
   position: relative;
-  gap: 1.2rem;
+  gap: 1.35rem;
   border-color: rgba(1, 247, 246, 0.28);
+  background:
+    radial-gradient(circle at top right, rgba(1, 247, 246, 0.16), transparent 24rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0)),
+    rgba(8, 18, 29, 0.92);
   box-shadow:
     0 28px 90px -42px rgba(1, 247, 246, 0.18),
     var(--shadow);
@@ -2878,12 +2882,19 @@ a.bento-card:hover {
 }
 
 .funnel-live-card__content,
-.funnel-live-card__body {
+.funnel-live-card__body,
+.funnel-live-card__aside,
+.funnel-live-card__actions {
   display: grid;
-  gap: 0.75rem;
 }
 
-.funnel-live-card__meta {
+.funnel-live-card__content,
+.funnel-live-card__body {
+  gap: 0.85rem;
+}
+
+.funnel-live-card__meta,
+.funnel-live-card__feature-list {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -2905,142 +2916,38 @@ a.bento-card:hover {
   text-transform: uppercase;
 }
 
+.funnel-live-card__body .panel-copy,
+.funnel-live-card__hint,
+.showcase-course-card__next {
+  margin: 0;
+}
+
 .funnel-live-card__body .panel-copy {
-  margin: 0;
-  max-width: 38rem;
-}
-
-.funnel-live-card__stats {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 0.65rem;
-}
-
-.funnel-live-card__actions {
-  margin-top: auto;
-}
-
-.funnel-shelf {
-  display: grid;
-  gap: 1rem;
-}
-
-.funnel-shelf__head {
-  display: grid;
-  gap: 0.65rem;
-}
-
-.funnel-shelf__grid {
-  display: grid;
-  gap: 0.85rem;
-  align-items: stretch;
-}
-
-.funnel-shelf .showcase-course-card {
-  display: grid;
-  grid-template-rows: auto 1fr auto;
-  gap: 0.95rem;
-  min-height: 100%;
-  padding: 1.15rem;
-  border-radius: 1.45rem;
-  border-color: rgba(255, 255, 255, 0.08);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0)),
-    rgba(10, 18, 28, 0.82);
-  transition:
-    transform 180ms ease,
-    border-color 180ms ease,
-    box-shadow 180ms ease,
-    background 180ms ease;
-}
-
-.funnel-shelf .showcase-course-card:hover {
-  transform: translateY(-3px);
-  border-color: rgba(1, 247, 246, 0.24);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(1, 247, 246, 0.02)),
-    rgba(12, 20, 32, 0.9);
-  box-shadow: 0 24px 70px -40px rgba(0, 0, 0, 0.7);
-}
-
-.funnel-shelf .showcase-course-card--showcase {
-  border-color: rgba(0, 255, 136, 0.16);
-}
-
-.funnel-shelf .showcase-course-card--soon {
-  border-color: rgba(255, 201, 79, 0.2);
-}
-
-.funnel-shelf .showcase-course-card__meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.55rem;
-}
-
-.funnel-shelf .showcase-course-card__category {
-  display: inline-flex;
-  align-items: center;
-  min-height: 1.9rem;
-  padding: 0.34rem 0.72rem;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.05);
+  max-width: 42rem;
   color: var(--muted-strong);
-  font-size: 0.74rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
 }
 
-.funnel-shelf .showcase-course-card__body {
-  display: grid;
+.funnel-live-card__hint {
+  color: var(--muted-strong);
+  font-size: 0.95rem;
+  line-height: 1.62;
+}
+
+.funnel-live-card__aside {
+  gap: 0.9rem;
   align-content: start;
-  gap: 0.7rem;
+  padding: 1.15rem;
+  border-radius: 1.35rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
 }
 
-.funnel-shelf .showcase-course-card h3 {
-  margin: 0;
-  min-height: 2.8em;
-  color: var(--foreground);
-  font-size: 1.06rem;
-  line-height: 1.38;
-  letter-spacing: -0.03em;
-  display: -webkit-box;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.funnel-shelf .showcase-course-card__description {
-  margin: 0;
-  min-height: 4.7em;
-  color: var(--muted);
-  font-size: 0.92rem;
-  line-height: 1.58;
-  display: -webkit-box;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-}
-
-.funnel-shelf .showcase-course-card__footer {
+.funnel-live-card__pricing {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: end;
-  gap: 0.85rem;
-  margin-top: auto;
-  padding-top: 0.95rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  gap: 0.22rem;
 }
 
-.funnel-shelf .showcase-course-card__pricing {
-  display: grid;
-  gap: 0.2rem;
-}
-
-.funnel-shelf .showcase-course-card__label {
+.funnel-live-card__pricing span {
   color: var(--muted);
   font-size: 0.72rem;
   font-weight: 700;
@@ -3048,72 +2955,352 @@ a.bento-card:hover {
   text-transform: uppercase;
 }
 
-.funnel-shelf .showcase-course-card__price {
+.funnel-live-card__pricing strong {
   color: var(--foreground);
-  font-size: 1rem;
+  font-size: clamp(1.45rem, 3vw, 1.9rem);
+  line-height: 1.1;
+  letter-spacing: -0.05em;
+}
+
+.funnel-live-card__support {
+  margin: 0;
+  color: var(--muted-strong);
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.funnel-live-card__actions {
+  gap: 0.7rem;
+}
+
+.funnel-live-card__link {
+  color: var(--muted-strong);
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.5;
+  transition: color 180ms ease;
+}
+
+.funnel-live-card__link:hover {
+  color: var(--accent);
+}
+
+.funnel-shelf {
+  display: grid;
+  gap: 1rem;
+}
+
+.funnel-shelf--carousel {
+  gap: 1.3rem;
+  padding: 1.55rem;
+}
+
+.funnel-shelf__toolbar,
+.funnel-shelf__tabs,
+.funnel-shelf__nav,
+.catalog-carousel-card__head,
+.catalog-carousel-card__badges {
+  display: flex;
+  align-items: center;
+}
+
+.funnel-shelf__toolbar {
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.funnel-shelf__tabs {
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.funnel-shelf__tab,
+.funnel-shelf__nav-button {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--muted-strong);
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    background 180ms ease,
+    color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.funnel-shelf__tab {
+  min-height: 2.8rem;
+  padding: 0.75rem 1.1rem;
+  border-radius: 999px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.funnel-shelf__tab:hover,
+.funnel-shelf__nav-button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(1, 247, 246, 0.22);
+  background: rgba(1, 247, 246, 0.07);
+  color: var(--foreground);
+}
+
+.funnel-shelf__tab--active {
+  border-color: rgba(1, 247, 246, 0.34);
+  background: rgba(1, 247, 246, 0.12);
+  color: var(--foreground);
+  box-shadow: 0 0 0 1px rgba(1, 247, 246, 0.18);
+}
+
+.funnel-shelf__nav {
+  gap: 0.55rem;
+}
+
+.funnel-shelf__nav-button {
+  justify-content: center;
+  width: 2.8rem;
+  height: 2.8rem;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.funnel-shelf__nav-button svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.funnel-shelf__head {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.funnel-shelf__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.9rem;
+}
+
+.funnel-shelf__summary .panel-copy {
+  max-width: 42rem;
+  margin: 0;
+}
+
+.funnel-shelf__count,
+.catalog-carousel-card__meta {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.95rem;
+  padding: 0.34rem 0.72rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted-strong);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.catalog-carousel {
+  position: relative;
+}
+
+.catalog-carousel__track {
+  display: grid;
+  grid-auto-flow: column;
+  gap: 1rem;
+  grid-auto-columns: calc(
+    (100% - (var(--catalog-cards-mobile, 1) - 1) * 1rem) / var(--catalog-cards-mobile, 1)
+  );
+  overflow-x: auto;
+  padding: 0.05rem 0.05rem 0.3rem;
+  scroll-padding-inline: 0.05rem;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.catalog-carousel__track::-webkit-scrollbar {
+  display: none;
+}
+
+.catalog-carousel-card {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 1rem;
+  min-height: 23.5rem;
+  padding: 1.2rem;
+  border-radius: 1.5rem;
+  border-color: rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0)),
+    rgba(10, 18, 28, 0.84);
+  scroll-snap-align: start;
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background 180ms ease;
+}
+
+.catalog-carousel-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(1, 247, 246, 0.24);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(1, 247, 246, 0.02)),
+    rgba(12, 20, 32, 0.92);
+  box-shadow: 0 24px 70px -40px rgba(0, 0, 0, 0.7);
+}
+
+.catalog-carousel-card__head {
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.catalog-carousel-card__body,
+.catalog-carousel-card__details,
+.catalog-carousel-card__pricing,
+.catalog-carousel-card__footer,
+.catalog-carousel-card__cta {
+  display: grid;
+}
+
+.catalog-carousel-card__body {
+  align-content: start;
+  gap: 0.75rem;
+}
+
+.catalog-carousel-card h3 {
+  margin: 0;
+  min-height: 3.05em;
+  color: var(--foreground);
+  font-size: 1.12rem;
+  line-height: 1.36;
+  letter-spacing: -0.03em;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.catalog-carousel-card__description,
+.catalog-carousel-card__support {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+}
+
+.catalog-carousel-card__description {
+  margin: 0;
+  min-height: 4.9em;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.62;
+  -webkit-line-clamp: 3;
+}
+
+.catalog-carousel-card__footer {
+  gap: 0.95rem;
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.catalog-carousel-card__details {
+  gap: 0.75rem;
+}
+
+.catalog-carousel-card__pricing {
+  gap: 0.22rem;
+}
+
+.catalog-carousel-card__label {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.catalog-carousel-card__price {
+  color: var(--foreground);
+  font-size: 1.04rem;
   font-weight: 700;
   line-height: 1.35;
 }
 
-.funnel-shelf .showcase-course-card__actions {
-  display: grid;
-  gap: 0.7rem;
-  justify-items: end;
+.catalog-carousel-card__badges {
+  flex-wrap: wrap;
+  gap: 0.55rem;
 }
 
-.funnel-shelf .showcase-course-card--soon .showcase-course-card__price {
-  color: #ffe59a;
+.catalog-carousel-card__support {
+  margin: 0;
+  color: var(--muted-strong);
+  font-size: 0.9rem;
+  line-height: 1.55;
+  -webkit-line-clamp: 2;
 }
 
-.funnel-shelf .showcase-course-card__footer .secondary-button,
-.funnel-shelf .showcase-course-card__footer .ghost-button {
-  min-width: 8.6rem;
+.catalog-carousel-card__cta {
+  margin-top: auto;
+}
+
+.catalog-carousel-card__cta .primary-button,
+.catalog-carousel-card__cta .secondary-button,
+.catalog-carousel-card__cta .ghost-button,
+.catalog-carousel-card__cta .landing-card-disabled {
+  width: 100%;
 }
 
 .landing-card-disabled {
   justify-content: center;
-  min-width: 8.6rem;
-  opacity: 0.8;
+  opacity: 0.82;
   cursor: default;
   pointer-events: none;
 }
 
 .catalog-card--free {
-  border-color: rgba(0, 255, 136, 0.18);
+  border-color: rgba(0, 255, 136, 0.24);
+  background:
+    linear-gradient(180deg, rgba(0, 255, 136, 0.08), rgba(255, 255, 255, 0)),
+    rgba(10, 22, 28, 0.88);
 }
 
 .catalog-card--paid {
-  border-color: rgba(1, 247, 246, 0.2);
+  border-color: rgba(1, 247, 246, 0.22);
 }
 
 .catalog-card--preview,
 .catalog-card--pending {
-  border-color: rgba(255, 201, 79, 0.2);
+  border-color: rgba(255, 201, 79, 0.26);
+  background:
+    linear-gradient(180deg, rgba(255, 201, 79, 0.08), rgba(255, 255, 255, 0)),
+    rgba(24, 20, 26, 0.9);
 }
 
 .catalog-card--owned {
-  border-color: rgba(0, 255, 136, 0.24);
+  border-color: rgba(0, 255, 136, 0.34);
   background:
-    linear-gradient(180deg, rgba(0, 255, 136, 0.08), rgba(255, 255, 255, 0)),
-    rgba(10, 18, 28, 0.88);
+    linear-gradient(180deg, rgba(0, 255, 136, 0.12), rgba(255, 255, 255, 0)),
+    rgba(8, 24, 24, 0.92);
 }
 
 .catalog-card--showcase {
-  opacity: 0.96;
+  border-color: rgba(255, 255, 255, 0.12);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0)),
+    rgba(14, 18, 27, 0.86);
 }
 
-.funnel-live-card__hint,
+.catalog-card--showcase .catalog-carousel-card__price {
+  color: #ffe59a;
+}
+
 .showcase-course-card__next {
-  margin: 0;
   color: var(--muted-strong);
   line-height: 1.55;
-}
-
-.funnel-live-card__hint {
-  font-size: 0.94rem;
-}
-
-.showcase-course-card__next {
   font-size: 0.9rem;
 }
 
@@ -3237,6 +3424,59 @@ a.bento-card:hover {
 
 .dashboard-card__actions {
   gap: 0.65rem;
+}
+
+.dashboard-focus {
+  display: grid;
+  gap: 1rem;
+  padding: 1.45rem;
+  background:
+    radial-gradient(circle at top right, rgba(1, 247, 246, 0.14), transparent 22rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0)),
+    var(--surface-strong);
+}
+
+.dashboard-focus__copy,
+.dashboard-focus__actions {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.dashboard-focus__copy h2,
+.dashboard-focus__copy .panel-copy {
+  margin: 0;
+}
+
+.dashboard-focus__copy .panel-copy {
+  max-width: 48rem;
+}
+
+.dashboard-focus__actions {
+  align-content: start;
+}
+
+.dashboard-focus--pending {
+  border-color: rgba(255, 201, 79, 0.26);
+  background:
+    radial-gradient(circle at top right, rgba(255, 201, 79, 0.14), transparent 22rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0)),
+    rgba(22, 18, 28, 0.94);
+}
+
+.dashboard-focus--start {
+  border-color: rgba(1, 247, 246, 0.24);
+}
+
+.dashboard-focus--progress {
+  border-color: rgba(1, 247, 246, 0.2);
+}
+
+.dashboard-focus--owned {
+  border-color: rgba(0, 255, 136, 0.24);
+  background:
+    radial-gradient(circle at top right, rgba(0, 255, 136, 0.14), transparent 22rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0)),
+    rgba(10, 24, 24, 0.94);
 }
 
 .dashboard-empty-card {
@@ -3380,9 +3620,26 @@ a.bento-card:hover {
   gap: 1.1rem;
 }
 
+@media (min-width: 720px) {
+  .catalog-carousel__track {
+    grid-auto-columns: calc(
+      (100% - (var(--catalog-cards-tablet, 2) - 1) * 1rem) / var(--catalog-cards-tablet, 2)
+    );
+  }
+}
+
 @media (min-width: 860px) {
   .dashboard-hero__stats {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .dashboard-focus {
+    grid-template-columns: minmax(0, 1.2fr) auto;
+    align-items: center;
+  }
+
+  .dashboard-focus__actions {
+    justify-items: end;
   }
 
   .funnel-hero {
@@ -3394,22 +3651,16 @@ a.bento-card:hover {
   }
 
   .funnel-live-card {
-    grid-template-columns: minmax(0, 1.15fr) auto auto;
-    align-items: center;
-  }
-
-  .funnel-live-card__actions {
-    justify-self: end;
-  }
-
-  .funnel-shelf__grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1.2fr) minmax(18rem, 0.82fr);
+    align-items: stretch;
   }
 }
 
-@media (min-width: 980px) {
-  .funnel-catalog {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+@media (min-width: 1120px) {
+  .catalog-carousel__track {
+    grid-auto-columns: calc(
+      (100% - (var(--catalog-cards-desktop, 3) - 1) * 1rem) / var(--catalog-cards-desktop, 3)
+    );
   }
 }
 
@@ -3424,6 +3675,12 @@ a.bento-card:hover {
 
   .dashboard-card__actions .primary-button,
   .dashboard-card__actions .secondary-button {
+    width: 100%;
+  }
+
+  .dashboard-focus__actions .primary-button,
+  .dashboard-focus__actions .secondary-button,
+  .dashboard-focus__actions .ghost-button {
     width: 100%;
   }
 
@@ -3459,7 +3716,8 @@ a.bento-card:hover {
 
   .funnel-hero__main,
   .funnel-live-card,
-  .funnel-final-cta {
+  .funnel-final-cta,
+  .funnel-shelf--carousel {
     padding: 1.35rem;
   }
 
@@ -3468,42 +3726,50 @@ a.bento-card:hover {
     font-size: clamp(2.2rem, 10vw, 3.2rem);
   }
 
-  .funnel-live-card__stats {
-    gap: 0.55rem;
-  }
-
-  .funnel-shelf .showcase-course-card {
+  .funnel-live-card__aside {
     padding: 1rem;
   }
 
-  .funnel-shelf .showcase-course-card h3,
-  .funnel-shelf .showcase-course-card__description {
+  .funnel-shelf__toolbar {
+    align-items: flex-start;
+  }
+
+  .funnel-shelf__nav {
+    display: none;
+  }
+
+  .funnel-shelf__summary {
+    display: grid;
+  }
+
+  .catalog-carousel-card {
+    padding: 1rem;
+    min-height: 22rem;
+  }
+
+  .catalog-carousel-card h3,
+  .catalog-carousel-card__description {
     min-height: auto;
   }
 
-  .funnel-shelf .showcase-course-card__description {
+  .catalog-carousel-card__description,
+  .catalog-carousel-card__support {
     -webkit-line-clamp: 2;
   }
 
-  .funnel-shelf .showcase-course-card__footer {
-    grid-template-columns: 1fr;
-    align-items: stretch;
-  }
-
-  .funnel-shelf .showcase-course-card__actions {
-    justify-items: stretch;
-  }
-
   .funnel-live-card__hint,
-  .showcase-course-card__next {
+  .showcase-course-card__next,
+  .catalog-carousel-card__support {
     font-size: 0.88rem;
   }
 
-  .funnel-shelf .showcase-course-card__footer .secondary-button,
-  .funnel-shelf .showcase-course-card__footer .ghost-button,
-  .funnel-shelf .landing-card-disabled,
+  .catalog-carousel-card__cta .primary-button,
+  .catalog-carousel-card__cta .secondary-button,
+  .catalog-carousel-card__cta .ghost-button,
+  .catalog-carousel-card__cta .landing-card-disabled,
   .funnel-live-card__actions .primary-button,
-  .funnel-live-card__actions .secondary-button {
+  .funnel-live-card__actions .secondary-button,
+  .funnel-live-card__actions .landing-card-disabled {
     width: 100%;
   }
 }
