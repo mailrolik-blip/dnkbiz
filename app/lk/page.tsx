@@ -2,13 +2,14 @@ import { redirect } from 'next/navigation';
 
 import DashboardClient from '@/components/dashboard-client';
 import { getOptionalCurrentUser } from '@/lib/auth';
+import { buildAuthHref } from '@/lib/auth-intent';
 import { getCatalogCoursesForViewer } from '@/lib/course-access';
 
 export default async function DashboardPage() {
   const user = await getOptionalCurrentUser();
 
   if (!user) {
-    redirect('/login');
+    redirect(buildAuthHref('login', '/lk'));
   }
 
   const catalogCourses = await getCatalogCoursesForViewer(user.id);

@@ -4,11 +4,18 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { type FormEvent, useState } from 'react';
 
+import {
+  buildAuthHref,
+  getAuthIntentMessage,
+  resolvePostAuthRedirect,
+} from '@/lib/auth-intent';
+
 type AuthFormProps = {
   mode: 'login' | 'register';
+  nextPath?: string | null;
 };
 
-export default function AuthForm({ mode }: AuthFormProps) {
+export default function AuthForm({ mode, nextPath }: AuthFormProps) {
   const router = useRouter();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -17,6 +24,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
   const [pending, setPending] = useState(false);
 
   const isRegister = mode === 'register';
+  const intentMessage = getAuthIntentMessage(mode, nextPath);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -47,7 +55,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
         throw new Error(payload?.error || 'Запрос не выполнен.');
       }
 
-      router.push('/lk');
+      router.push(resolvePostAuthRedirect(nextPath));
       router.refresh();
     } catch (submitError) {
       setError(
@@ -71,6 +79,11 @@ export default function AuthForm({ mode }: AuthFormProps) {
           ? 'После регистрации пользователь автоматически получает сессию и попадает в кабинет.'
           : 'Используйте тестовый аккаунт из сид-данных или войдите под уже созданной учётной записью.'}
       </p>
+      {intentMessage ? (
+        <p className="muted-text" style={{ marginTop: '0.75rem' }}>
+          {intentMessage}
+        </p>
+      ) : null}
 
       <form onSubmit={handleSubmit} style={{ marginTop: '1.2rem', display: 'grid', gap: '1rem' }}>
         {isRegister ? (
@@ -129,7 +142,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
       <p className="muted-text" style={{ marginTop: '1rem' }}>
         {isRegister ? 'Уже есть аккаунт?' : 'Ещё не зарегистрированы?'}{' '}
         <Link
-          href={isRegister ? '/login' : '/register'}
+          href={buildAuthHref(isRegister ? 'login' : 'register', nextPath)}
           style={{ color: 'var(--accent-strong)', fontWeight: 700 }}
         >
           {isRegister ? 'Войти' : 'Создать аккаунт'}

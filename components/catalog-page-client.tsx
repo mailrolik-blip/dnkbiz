@@ -5,6 +5,11 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import {
+  buildAuthHref,
+  getCheckoutIntentPath,
+  getCourseIntentPath,
+} from '@/lib/auth-intent';
+import {
   getCourseCatalogHref,
   lmsCatalogGroups,
   type CatalogCourseCard,
@@ -137,7 +142,14 @@ function CatalogDirectoryCard({
 
     if (course.status === 'free') {
       return (
-        <Link href={hasUser ? `/courses/${course.slug}` : '/register'} className="primary-button">
+        <Link
+          href={
+            hasUser
+              ? `/courses/${course.slug}`
+              : buildAuthHref('register', getCourseIntentPath(course.slug))
+          }
+          className="primary-button"
+        >
           {hasUser
             ? course.isStarted || course.progressPercent > 0
               ? 'Продолжить обучение'
@@ -157,8 +169,11 @@ function CatalogDirectoryCard({
 
     if (!hasUser) {
       return (
-        <Link href="/register" className="primary-button">
-          Зарегистрироваться
+        <Link
+          href={buildAuthHref('register', getCheckoutIntentPath(course.tariffId!))}
+          className="primary-button"
+        >
+          Купить курс
         </Link>
       );
     }
@@ -279,10 +294,8 @@ export default function CatalogPageClient({
     (course) => course.status === 'showcase'
   ).length;
   const filteredCourses = catalogCourses.filter((course) => {
-    const matchesStatus =
-      statusFilter === 'all' ? true : course.status === statusFilter;
-    const matchesGroup =
-      groupFilter === 'all' ? true : course.groupId === groupFilter;
+    const matchesStatus = statusFilter === 'all' ? true : course.status === statusFilter;
+    const matchesGroup = groupFilter === 'all' ? true : course.groupId === groupFilter;
 
     return matchesStatus && matchesGroup;
   });
@@ -323,9 +336,7 @@ export default function CatalogPageClient({
         throw new Error(payload?.error || 'Не удалось открыть оплату.');
       }
     } catch (orderError) {
-      setFeedback(
-        orderError instanceof Error ? orderError.message : 'Не удалось открыть оплату.'
-      );
+      setFeedback(orderError instanceof Error ? orderError.message : 'Не удалось открыть оплату.');
     } finally {
       setBuyingTariffId(null);
     }
@@ -351,10 +362,10 @@ export default function CatalogPageClient({
             </>
           ) : (
             <>
-              <Link href="/login" className="ghost-button">
+              <Link href={buildAuthHref('login', '/catalog')} className="ghost-button">
                 Войти
               </Link>
-              <Link href="/register" className="secondary-button">
+              <Link href={buildAuthHref('register', '/catalog')} className="secondary-button">
                 Регистрация
               </Link>
             </>
@@ -368,9 +379,9 @@ export default function CatalogPageClient({
             <span className="eyebrow">Общий каталог</span>
             <h1>Все курсы платформы DNK Biz в одном self-serve каталоге.</h1>
             <p className="panel-copy">
-              Здесь собраны бесплатные, платные и showcase-курсы платформы. Маршрут
-              простой: выбрать курс, открыть его product page, начать бесплатно или
-              перейти к покупке, а затем пройти обучение внутри LMS.
+              Здесь собраны бесплатные, платные и showcase-курсы платформы. Маршрут простой:
+              выбрать курс, открыть его product page, начать бесплатно или перейти к покупке, а
+              затем пройти обучение внутри LMS.
             </p>
 
             <div className="row-actions">
@@ -379,7 +390,7 @@ export default function CatalogPageClient({
                   Открыть кабинет
                 </Link>
               ) : (
-                <Link href="/register" className="primary-button">
+                <Link href={buildAuthHref('register', '/catalog')} className="primary-button">
                   Зарегистрироваться бесплатно
                 </Link>
               )}
@@ -420,9 +431,7 @@ export default function CatalogPageClient({
                   key={option.id}
                   aria-pressed={statusFilter === option.id}
                   className={`catalog-directory__filter-pill ${
-                    statusFilter === option.id
-                      ? 'catalog-directory__filter-pill--active'
-                      : ''
+                    statusFilter === option.id ? 'catalog-directory__filter-pill--active' : ''
                   }`}
                   onClick={() => setStatusFilter(option.id)}
                   type="button"
@@ -451,9 +460,7 @@ export default function CatalogPageClient({
                   key={group.id}
                   aria-pressed={groupFilter === group.id}
                   className={`catalog-directory__filter-pill ${
-                    groupFilter === group.id
-                      ? 'catalog-directory__filter-pill--active'
-                      : ''
+                    groupFilter === group.id ? 'catalog-directory__filter-pill--active' : ''
                   }`}
                   onClick={() => setGroupFilter(group.id)}
                   type="button"
@@ -466,8 +473,8 @@ export default function CatalogPageClient({
 
           <div className="catalog-directory__filter-summary">
             <p className="panel-copy">
-              Показано {getCatalogCoursesCountLabel(filteredCourses.length)}. Все карточки
-              ведут в product page курса на <span className="mono">/catalog/[slug]</span>.
+              Показано {getCatalogCoursesCountLabel(filteredCourses.length)}. Все карточки ведут в
+              product page курса на <span className="mono">/catalog/[slug]</span>.
             </p>
           </div>
         </article>
@@ -488,8 +495,7 @@ export default function CatalogPageClient({
           <article className="empty-card catalog-directory__empty">
             <h2>По текущему фильтру курсов пока нет.</h2>
             <p className="panel-copy">
-              Сбросьте фильтр по доступу или теме, чтобы снова увидеть все направления
-              каталога.
+              Сбросьте фильтр по доступу или теме, чтобы снова увидеть все направления каталога.
             </p>
             <div className="row-actions">
               <button

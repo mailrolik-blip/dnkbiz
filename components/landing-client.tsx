@@ -11,6 +11,11 @@ import {
   dnkFunnelScenarios,
 } from '@/lib/dnk-content';
 import {
+  buildAuthHref,
+  getCheckoutIntentPath,
+  getCourseIntentPath,
+} from '@/lib/auth-intent';
+import {
   getCourseCatalogHref,
   groupCatalogCourses,
   type CatalogCourseCard,
@@ -125,13 +130,22 @@ function CatalogCourseAction({
   buyingTariffId,
   onCreateOrder,
 }: CatalogActionProps) {
+  const startedPreview = isStartedPreviewCourse(course);
+
   if (course.status === 'showcase') {
     return <span className="ghost-button landing-card-disabled">Скоро</span>;
   }
 
   if (course.status === 'free') {
     return (
-      <Link href={userEmail ? `/courses/${course.slug}` : '/register'} className="primary-button">
+      <Link
+        href={
+          userEmail
+            ? `/courses/${course.slug}`
+            : buildAuthHref('register', getCourseIntentPath(course.slug))
+        }
+        className="primary-button"
+      >
         {userEmail
           ? course.isStarted
             ? 'Открыть курс'
@@ -157,9 +171,20 @@ function CatalogCourseAction({
     );
   }
 
+  if (startedPreview) {
+    return (
+      <Link href={`/courses/${course.slug}`} className="primary-button">
+        {course.progressPercent > 0 ? 'Продолжить обучение' : 'Открыть курс'}
+      </Link>
+    );
+  }
+
   if (!userEmail) {
     return (
-      <Link href="/register" className="primary-button">
+      <Link
+        href={buildAuthHref('register', getCheckoutIntentPath(course.tariffId!))}
+        className="primary-button"
+      >
         Зарегистрироваться
       </Link>
     );
@@ -290,7 +315,11 @@ export default function LandingClient({
   function renderHeroPrimaryAction() {
     if (!user) {
       return (
-        <Link href="/register" className="primary-button" data-access-state="guest-register">
+        <Link
+          href={buildAuthHref('register', '/catalog')}
+          className="primary-button"
+          data-access-state="guest-register"
+        >
           Бесплатная регистрация
         </Link>
       );
@@ -355,7 +384,11 @@ export default function LandingClient({
   function renderHeroSecondaryAction() {
     if (!user) {
       return (
-        <Link href="/login" className="secondary-button" data-hero-secondary="login">
+        <Link
+          href={buildAuthHref('login', '/catalog')}
+          className="secondary-button"
+          data-hero-secondary="login"
+        >
           Войти
         </Link>
       );
@@ -403,10 +436,10 @@ export default function LandingClient({
               <Link href="/catalog" className="ghost-button">
                 Каталог
               </Link>
-              <Link href="/login" className="ghost-button">
+              <Link href={buildAuthHref('login', '/catalog')} className="ghost-button">
                 Войти
               </Link>
-              <Link href="/register" className="secondary-button">
+              <Link href={buildAuthHref('register', '/catalog')} className="secondary-button">
                 Регистрация
               </Link>
             </>

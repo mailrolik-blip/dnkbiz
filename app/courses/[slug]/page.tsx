@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 
 import CoursePlayer from '@/components/course-player';
 import { getOptionalCurrentUser } from '@/lib/auth';
+import { buildAuthHref } from '@/lib/auth-intent';
 import { getCourseForViewer } from '@/lib/course-access';
 
 export default async function CoursePage({
@@ -9,13 +10,13 @@ export default async function CoursePage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
+  const { slug } = await params;
   const user = await getOptionalCurrentUser();
 
   if (!user) {
-    redirect('/login');
+    redirect(buildAuthHref('login', `/courses/${slug}`));
   }
 
-  const { slug } = await params;
   const course = await getCourseForViewer(slug, user.id);
 
   if (!course) {

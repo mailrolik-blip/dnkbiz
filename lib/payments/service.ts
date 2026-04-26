@@ -231,6 +231,7 @@ export async function createOrderForTariff(params: {
   if (existingEnrollment) {
     return {
       kind: 'already_owned' as const,
+      tariff,
     };
   }
 

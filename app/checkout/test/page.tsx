@@ -2,30 +2,78 @@ import { redirect } from 'next/navigation';
 
 import TestCheckoutClient from '@/components/test-checkout-client';
 import { getOptionalCurrentUser } from '@/lib/auth';
-import { expireOrderIfNeeded, isTestPaymentsEnabled } from '@/lib/payments/service';
+import { buildAuthHref } from '@/lib/auth-intent';
+import {
+  createOrderForTariff,
+  expireOrderIfNeeded,
+  getOrderCheckoutUrl,
+  isTestPaymentsEnabled,
+} from '@/lib/payments/service';
 import prisma from '@/lib/prisma';
 
 type CheckoutPageProps = {
-  searchParams: Promise<{ orderId?: string | string[] | undefined }>;
+  searchParams: Promise<{
+    orderId?: string | string[] | undefined;
+    tariffId?: string | string[] | undefined;
+  }>;
 };
 
-function readOrderId(value: string | string[] | undefined) {
+function toPositiveInt(value: string | string[] | undefined) {
   const normalized = Array.isArray(value) ? value[0] : value;
   const parsed = Number(normalized);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
 }
 
+function buildCheckoutIntent(query: {
+  orderId?: string | string[] | undefined;
+  tariffId?: string | string[] | undefined;
+}) {
+  const params = new URLSearchParams();
+  const orderId = Array.isArray(query.orderId) ? query.orderId[0] : query.orderId;
+  const tariffId = Array.isArray(query.tariffId) ? query.tariffId[0] : query.tariffId;
+
+  if (orderId) {
+    params.set('orderId', orderId);
+  }
+
+  if (tariffId) {
+    params.set('tariffId', tariffId);
+  }
+
+  const search = params.toString();
+  return search ? `/checkout/test?${search}` : '/checkout/test';
+}
+
 export default async function TestCheckoutPage({
   searchParams,
 }: CheckoutPageProps) {
+  const query = await searchParams;
   const user = await getOptionalCurrentUser();
 
   if (!user) {
-    redirect('/login');
+    redirect(buildAuthHref('login', buildCheckoutIntent(query)));
   }
 
-  const query = await searchParams;
-  const orderId = readOrderId(query.orderId);
+  let orderId = toPositiveInt(query.orderId);
+  const tariffId = toPositiveInt(query.tariffId);
+
+  if (!orderId && tariffId) {
+    const result = await createOrderForTariff({
+      userId: user.id,
+      tariffId,
+    });
+
+    if (result.kind === 'missing_tariff') {
+      redirect('/catalog');
+    }
+
+    if (result.kind === 'already_owned') {
+      redirect(`/courses/${result.tariff.course.slug}`);
+    }
+
+    orderId = result.order.id;
+    redirect(getOrderCheckoutUrl(orderId));
+  }
 
   if (!orderId) {
     redirect('/lk');

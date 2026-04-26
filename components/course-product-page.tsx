@@ -5,6 +5,12 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import type { CourseProductPageData } from '@/lib/course-product';
+import {
+  buildAuthHref,
+  getCheckoutIntentPath,
+  getCourseIntentPath,
+} from '@/lib/auth-intent';
+import { getCourseCatalogHref } from '@/lib/lms-catalog';
 import { getActiveOrderActionLabel } from '@/lib/payments/constants';
 import {
   formatCoursePrice,
@@ -52,6 +58,11 @@ export default function CourseProductPage({
   const [buyingTariffId, setBuyingTariffId] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const startedPreview = isStartedPreviewCourse(course);
+  const productPageHref = getCourseCatalogHref(course.slug);
+  const courseIntentHref = getCourseIntentPath(course.slug);
+  const checkoutIntentHref = course.tariffId
+    ? getCheckoutIntentPath(course.tariffId)
+    : productPageHref;
 
   async function handleCreateOrder() {
     if (!course.tariffId) {
@@ -96,16 +107,32 @@ export default function CourseProductPage({
   }
 
   function renderPrimaryAction() {
-    if (!user) {
-      return (
-        <Link href="/register" className="primary-button">
-          Зарегистрироваться бесплатно
-        </Link>
-      );
-    }
-
     if (course.status === 'showcase') {
       return <span className="ghost-button landing-card-disabled">Скоро</span>;
+    }
+
+    if (!user) {
+      if (course.status === 'free') {
+        return (
+          <Link href={buildAuthHref('register', courseIntentHref)} className="primary-button">
+            Начать бесплатно
+          </Link>
+        );
+      }
+
+      if (course.previewEnabled && course.previewLessonsCount > 0) {
+        return (
+          <Link href={buildAuthHref('register', courseIntentHref)} className="primary-button">
+            Открыть preview
+          </Link>
+        );
+      }
+
+      return (
+        <Link href={buildAuthHref('register', checkoutIntentHref)} className="primary-button">
+          Купить курс
+        </Link>
+      );
     }
 
     if (course.status === 'free') {
@@ -157,18 +184,34 @@ export default function CourseProductPage({
   }
 
   function renderSecondaryAction() {
-    if (!user) {
+    if (course.status === 'showcase') {
       return (
-        <Link href="/login" className="secondary-button">
-          Войти
+        <Link href="/catalog" className="secondary-button">
+          В каталог
         </Link>
       );
     }
 
-    if (course.status === 'showcase') {
+    if (!user) {
+      if (course.status === 'free') {
+        return (
+          <Link href={buildAuthHref('login', courseIntentHref)} className="secondary-button">
+            Войти
+          </Link>
+        );
+      }
+
+      if (course.previewEnabled && course.previewLessonsCount > 0) {
+        return (
+          <Link href={buildAuthHref('register', checkoutIntentHref)} className="secondary-button">
+            Купить курс
+          </Link>
+        );
+      }
+
       return (
-        <Link href="/#catalog" className="secondary-button">
-          В каталог
+        <Link href={buildAuthHref('login', checkoutIntentHref)} className="secondary-button">
+          Войти
         </Link>
       );
     }
@@ -195,7 +238,7 @@ export default function CourseProductPage({
     }
 
     return (
-      <Link href="/#catalog" className="secondary-button">
+      <Link href="/catalog" className="secondary-button">
         В каталог
       </Link>
     );
@@ -228,10 +271,13 @@ export default function CourseProductPage({
             </Link>
           ) : (
             <>
-              <Link href="/login" className="ghost-button">
+              <Link href={buildAuthHref('login', productPageHref)} className="ghost-button">
                 Войти
               </Link>
-              <Link href="/register" className="secondary-button">
+              <Link
+                href={buildAuthHref('register', productPageHref)}
+                className="secondary-button"
+              >
                 Регистрация
               </Link>
             </>
@@ -315,7 +361,9 @@ export default function CourseProductPage({
             <li>{previewCopy}</li>
             <li>{afterAccessCopy}</li>
             {course.pendingOrder ? (
-              <li>Активный заказ уже создан. Можно вернуться на экран покупки и завершить оплату.</li>
+              <li>
+                Активный заказ уже создан. Можно вернуться на экран покупки и завершить оплату.
+              </li>
             ) : null}
             {course.isOwned ? (
               <li>Курс уже открыт в кабинете и готов к прохождению.</li>
@@ -345,8 +393,8 @@ export default function CourseProductPage({
             </div>
           ) : (
             <p className="panel-copy">
-              Полная программа еще не опубликована. Направление остается в каталоге как
-              витрина будущего курса.
+              Полная программа еще не опубликована. Направление остается в каталоге как витрина
+              будущего курса.
             </p>
           )}
         </article>
@@ -358,12 +406,12 @@ export default function CourseProductPage({
           <h2>{meta.title}</h2>
           <p className="panel-copy">
             Маршрут простой: каталог {'->'} страница курса {'->'} preview или покупка {'->'}{' '}
-            обучение внутри LMS без заявок и без ручного сопровождения.
+            обучение внутри LMS без заявок и ручного сопровождения.
           </p>
 
           <div className="row-actions catalog-product__actions">
             {renderPrimaryAction()}
-            <Link href="/#catalog" className="ghost-button">
+            <Link href="/catalog" className="ghost-button">
               В каталог
             </Link>
           </div>

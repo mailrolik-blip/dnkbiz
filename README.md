@@ -41,14 +41,15 @@ The platform currently includes:
 ## User Flow
 
 1. A guest opens the landing page, then moves into `/catalog` or directly into a course product page.
-2. The user registers for free.
-3. `/lk` works as the first learner hub: new users see onboarding with a free-course start and a paid-course preview path.
-4. On `/catalog`, the user filters the library and opens the product page of the chosen course.
-5. On `/catalog/:slug`, the user sees the course status, description, lesson count, preview info, and the main CTA.
-6. A free course opens immediately.
-7. A paid course opens preview lessons first, then leads to checkout.
-8. After payment, the course opens in full access inside `/courses/:slug`.
-9. Progress and homework stay attached to the learner account and are visible from `/lk`.
+2. If the guest starts a meaningful action, auth pages preserve it through `next=/internal/path`.
+3. After login or registration, the user returns to that internal LMS route. If `next` is missing or invalid, the fallback stays `/lk`.
+4. `/lk` works as the first learner hub: new users see onboarding with a free-course start and a paid-course preview path.
+5. On `/catalog`, the user filters the library and opens the product page of the chosen course.
+6. On `/catalog/:slug`, the user sees the course status, description, lesson count, preview info, and the main CTA.
+7. A free course opens immediately.
+8. A paid course opens preview lessons first, then leads to checkout.
+9. After payment, the course opens in full access inside `/courses/:slug`.
+10. Progress and homework stay attached to the learner account and are visible from `/lk`.
 
 ## Course Model
 
