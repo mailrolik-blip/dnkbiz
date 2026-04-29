@@ -216,3 +216,11 @@ Staging на Timeweb поднимается до подключения боев
 - Перед публичным запуском основными незакрытыми hardening-задачами остаются устойчивый rate limiting, полноценный CSRF/CSP-проход и server-side session revocation.
 - В этот MVP не входит CRM или отдельная административная панель.
 - Корпоративный / request-based сценарий намеренно не входит в основной продукт.
+
+## Staging Deploy на VPS
+
+- Health endpoint: `GET /api/health`
+- Подробный deploy-гайд: `docs/deploy/timeweb-staging.md`
+- Systemd template: `deploy/systemd/dnkbiz-staging.service`
+- Nginx template: `deploy/nginx/dnkbiz-staging.conf`
+- Staging env example: `deploy/env/timeweb-staging.env.example`

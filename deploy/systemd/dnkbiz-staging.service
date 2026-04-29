@@ -1,0 +1,25 @@
+[Unit]
+Description=DNK Biz staging (Next.js)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=dnkbiz
+Group=dnkbiz
+WorkingDirectory=/var/www/dnkbiz/current
+Environment=NODE_ENV=production
+EnvironmentFile=/var/www/dnkbiz/shared/dnkbiz-staging.env
+ExecStart=/usr/bin/npm run start:staging
+Restart=always
+RestartSec=5
+TimeoutStartSec=60
+KillSignal=SIGTERM
+SyslogIdentifier=dnkbiz-staging
+
+# If npm lives outside /usr/bin, replace ExecStart with the full path.
+# Example:
+# ExecStart=/home/dnkbiz/.nvm/versions/node/v20.19.0/bin/npm run start:staging
+
+[Install]
+WantedBy=multi-user.target
