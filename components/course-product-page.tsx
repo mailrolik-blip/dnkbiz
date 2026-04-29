@@ -13,6 +13,7 @@ import {
 import { getCourseCatalogHref } from '@/lib/lms-catalog';
 import { getActiveOrderActionLabel } from '@/lib/payments/constants';
 import {
+  canOpenCourseRoute,
   formatCoursePrice,
   formatLessonCount,
   formatPreviewLessons,
@@ -123,7 +124,7 @@ export default function CourseProductPage({
       if (course.previewEnabled && course.previewLessonsCount > 0) {
         return (
           <Link href={buildAuthHref('register', courseIntentHref)} className="primary-button">
-            Открыть preview
+            Открыть ознакомительные уроки
           </Link>
         );
       }
@@ -163,6 +164,14 @@ export default function CourseProductPage({
       return (
         <Link href={`/courses/${course.slug}`} className="primary-button">
           {course.progressPercent > 0 ? 'Продолжить обучение' : 'Открыть курс'}
+        </Link>
+      );
+    }
+
+    if (canOpenCourseRoute(course)) {
+      return (
+        <Link href={`/courses/${course.slug}`} className="primary-button">
+          Открыть ознакомительные уроки
         </Link>
       );
     }
@@ -226,6 +235,14 @@ export default function CourseProductPage({
         >
           {buyingTariffId === course.tariffId ? 'Открываем оплату...' : 'Купить курс'}
         </button>
+      );
+    }
+
+    if (course.pendingOrder && canOpenCourseRoute(course)) {
+      return (
+        <Link href={`/courses/${course.slug}`} className="secondary-button">
+          Открыть курс
+        </Link>
       );
     }
 
@@ -408,8 +425,8 @@ export default function CourseProductPage({
           <span className="eyebrow">Следующий шаг</span>
           <h2>{meta.title}</h2>
           <p className="panel-copy">
-            Маршрут простой: каталог {'->'} страница курса {'->'} preview или покупка {'->'}{' '}
-            обучение внутри LMS без заявок и ручного сопровождения.
+            Маршрут простой: каталог {'->'} страница курса {'->'} ознакомительные уроки
+            или покупка {'->'} обучение внутри LMS без заявок и ручного сопровождения.
           </p>
 
           <div className="row-actions catalog-product__actions">

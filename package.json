@@ -12,6 +12,8 @@
     "start:local": "next start -H 127.0.0.1 -p 3100",
     "lint": "eslint .",
     "db:generate": "prisma generate",
+    "db:migrate:dev": "prisma migrate dev",
+    "db:migrate:deploy": "prisma migrate deploy",
     "db:seed": "node --env-file=.env prisma/seed.mjs"
   },
   "dependencies": {

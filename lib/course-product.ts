@@ -7,6 +7,7 @@ import {
   getCatalogGroupById,
   type CatalogCourseCard,
 } from '@/lib/lms-catalog';
+import { formatPreviewLessons } from '@/lib/purchase-ux';
 import prisma from '@/lib/prisma';
 
 export type CourseProductPageData = {
@@ -84,10 +85,10 @@ export async function getCourseProductPageData(
         course.lessonsCount !== null ? String(course.lessonsCount) : 'Готовится к публикации',
     },
     {
-      label: 'Preview',
+      label: 'Ознакомительный доступ',
       value:
         course.previewEnabled && course.previewLessonsCount > 0
-          ? `${course.previewLessonsCount} до покупки`
+          ? `${formatPreviewLessons(course.previewLessonsCount)} до покупки`
           : course.status === 'paid'
           ? 'Откроется после оплаты'
           : 'Не нужен',

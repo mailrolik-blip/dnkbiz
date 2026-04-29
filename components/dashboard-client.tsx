@@ -10,6 +10,7 @@ import {
 } from '@/lib/lms-catalog';
 import { getActiveOrderActionLabel } from '@/lib/payments/constants';
 import {
+  canOpenCourseRoute,
   formatCoursePrice,
   formatLessonCount,
   formatPreviewLessons,
@@ -179,6 +180,9 @@ function DashboardCourseCard({
     mode === 'my' && course.nextLessonTitle
       ? `Следующий урок: ${course.nextLessonTitle}.`
       : getCatalogCourseNextStep(course, true);
+  const courseHref = canOpenCourseRoute(course)
+    ? `/courses/${course.slug}`
+    : getCourseCatalogHref(course.slug);
 
   function renderPrimaryAction() {
     if (mode === 'free') {
@@ -215,16 +219,20 @@ function DashboardCourseCard({
 
     if (mode === 'paid' && course.previewEnabled) {
       return (
-        <Link className="secondary-button" href={`/courses/${course.slug}`}>
-          Открыть курс
+        <Link className="secondary-button" href={courseHref}>
+          Открыть ознакомительные уроки
         </Link>
       );
     }
 
     if (mode === 'pending') {
       return (
-        <Link className="secondary-button" href={`/courses/${course.slug}`}>
-          {course.isStarted ? 'Вернуться к курсу' : 'Открыть курс'}
+        <Link className="secondary-button" href={courseHref}>
+          {canOpenCourseRoute(course)
+            ? course.isStarted
+              ? 'Вернуться к курсу'
+              : 'Открыть курс'
+            : 'Открыть страницу курса'}
         </Link>
       );
     }
@@ -444,8 +452,8 @@ export default function DashboardClient({
       title: `Продолжите оплату курса «${pendingPriorityCourse.title}».`,
       description:
         pendingPriorityCourse.pendingOrder.status === 'PROCESSING'
-          ? 'Платеж уже запущен. Вернитесь в checkout, чтобы проверить статус и дождаться открытия полного доступа.'
-          : 'Покупка уже начата. Вернитесь в checkout и завершите оплату, чтобы открыть курс полностью.',
+          ? 'Платеж уже запущен. Вернитесь на экран оплаты, чтобы проверить статус и дождаться открытия полного доступа.'
+          : 'Покупка уже начата. Вернитесь на экран оплаты и завершите ее, чтобы открыть курс полностью.',
       tone: 'pending',
       primaryAction: (
         <Link className="primary-button" href={pendingPriorityCourse.pendingOrder.checkoutUrl}>
@@ -453,15 +461,24 @@ export default function DashboardClient({
         </Link>
       ),
       secondaryAction: (
-        <Link className="secondary-button" href={`/courses/${pendingPriorityCourse.slug}`}>
-          Открыть курс
+        <Link
+          className="secondary-button"
+          href={
+            canOpenCourseRoute(pendingPriorityCourse)
+              ? `/courses/${pendingPriorityCourse.slug}`
+              : getCourseCatalogHref(pendingPriorityCourse.slug)
+          }
+        >
+          {canOpenCourseRoute(pendingPriorityCourse)
+            ? 'Открыть курс'
+            : 'Открыть страницу курса'}
         </Link>
       ),
     };
   } else if (isNewUser && freeStarterCourse) {
     dashboardFocus = {
       eyebrow: 'Старт в LMS',
-      title: 'Начните с бесплатного курса и затем откройте preview платного.',
+      title: 'Начните с бесплатного курса, а затем откройте ознакомительные уроки платного.',
       description:
         'Самый быстрый вход в платформу — начать бесплатный курс без оплаты. Вторым шагом можно посмотреть первые уроки платного курса и решить, нужен ли полный доступ.',
       tone: 'start',
@@ -472,13 +489,13 @@ export default function DashboardClient({
       ),
       secondaryAction: previewStarterCourse ? (
         <Link className="secondary-button" href={`/courses/${previewStarterCourse.slug}`}>
-          Посмотреть платный курс с preview
+          Открыть ознакомительные уроки
         </Link>
       ) : undefined,
     };
   } else if (activePreviewCourse) {
     dashboardFocus = {
-      eyebrow: 'Preview уже открыт',
+      eyebrow: 'Ознакомительный доступ уже открыт',
       title: `У вас уже открыты первые уроки курса «${activePreviewCourse.title}».`,
       description:
         'Продолжайте ознакомительный доступ с того места, где остановились, или завершите покупку, чтобы открыть курс полностью внутри кабинета.',
@@ -505,7 +522,7 @@ export default function DashboardClient({
       secondaryAction:
         previewStarterCourse && previewStarterCourse.slug !== activeFreeCourse.slug ? (
           <Link className="secondary-button" href={`/courses/${previewStarterCourse.slug}`}>
-            Посмотреть платный курс с preview
+            Открыть ознакомительные уроки
           </Link>
         ) : undefined,
     };
@@ -543,7 +560,7 @@ export default function DashboardClient({
           </Link>
           {user.role === 'ADMIN' ? (
             <Link href="/admin" className="ghost-button">
-              Admin
+              Админ
             </Link>
           ) : null}
           <button
@@ -644,7 +661,7 @@ export default function DashboardClient({
             title="Все, что уже начато или доступно полностью"
             description={
               isNewUser
-                ? 'После первого старта бесплатного курса или preview платного он сразу появится здесь вместе с прогрессом.'
+                ? 'После первого старта бесплатного курса или ознакомительных уроков платного он сразу появится здесь вместе с прогрессом.'
                 : 'Здесь лежат купленные курсы, бесплатные курсы с сохраненным прогрессом и платные программы, в которых уже открыты первые уроки.'
             }
           />
@@ -652,8 +669,8 @@ export default function DashboardClient({
           <div className="course-grid dashboard-grid">
             {myCourses.length === 0 ? (
               <EmptyCard>
-                Пока здесь нет начатых курсов. После первого бесплатного урока или preview этот
-                блок превратится в ваш основной хаб обучения.
+                Пока здесь нет начатых курсов. После первого бесплатного урока или
+                ознакомительного доступа этот блок превратится в ваш основной хаб обучения.
               </EmptyCard>
             ) : (
               myCourses.map((course) => (
@@ -703,8 +720,8 @@ export default function DashboardClient({
           <div className="course-grid dashboard-grid">
             {paidCourses.length === 0 ? (
               <EmptyCard>
-                Все активные платные курсы уже куплены, начаты с preview или ждут завершения
-                оплаты.
+                Все активные платные курсы уже куплены, начаты с ознакомительного доступа
+                или ждут завершения оплаты.
               </EmptyCard>
             ) : (
               paidCourses.map((course) => (

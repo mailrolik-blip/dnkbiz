@@ -77,7 +77,7 @@ export default function AuthForm({ mode, nextPath }: AuthFormProps) {
       <p className="panel-copy" style={{ marginTop: '0.85rem' }}>
         {isRegister
           ? 'После регистрации пользователь автоматически получает сессию и попадает в кабинет.'
-          : 'Используйте тестовый аккаунт из сид-данных или войдите под уже созданной учётной записью.'}
+          : 'Войдите под уже созданной учетной записью, чтобы продолжить обучение, покупку или просмотр доступных курсов.'}
       </p>
       {intentMessage ? (
         <p className="muted-text" style={{ marginTop: '0.75rem' }}>

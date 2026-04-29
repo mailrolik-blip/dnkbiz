@@ -179,13 +179,27 @@ function CatalogCourseAction({
     );
   }
 
+  if (userEmail && course.previewEnabled && course.previewLessonsCount > 0) {
+    return (
+      <Link href={`/courses/${course.slug}`} className="primary-button">
+        Открыть ознакомительные уроки
+      </Link>
+    );
+  }
+
   if (!userEmail) {
     return (
       <Link
-        href={buildAuthHref('register', getCheckoutIntentPath(course.tariffId!))}
+        href={
+          course.previewEnabled && course.previewLessonsCount > 0
+            ? buildAuthHref('register', getCourseIntentPath(course.slug))
+            : buildAuthHref('register', getCheckoutIntentPath(course.tariffId!))
+        }
         className="primary-button"
       >
-        Зарегистрироваться
+        {course.previewEnabled && course.previewLessonsCount > 0
+          ? 'Открыть ознакомительные уроки'
+          : 'Зарегистрироваться'}
       </Link>
     );
   }
@@ -490,7 +504,7 @@ export default function LandingClient({
           <span className="eyebrow">Как устроен вход</span>
           <div className="funnel-mini-stat">
             <span>Бесплатный курс</span>
-            <strong>{freeStarterCourse?.title ?? 'Откроется после seed'}</strong>
+            <strong>{freeStarterCourse?.title ?? 'Будет доступен после публикации'}</strong>
           </div>
           <div className="funnel-mini-stat">
             <span>Первые уроки до покупки</span>
@@ -501,8 +515,8 @@ export default function LandingClient({
             <strong>полный доступ к курсу</strong>
           </div>
           <div className="badge-row">
-            <span className="badge badge-complete">free / paid / showcase</span>
-            <span className="badge badge-paid">self-serve LMS</span>
+            <span className="badge badge-complete">бесплатные / платные / витрина</span>
+            <span className="badge badge-paid">самостоятельное обучение</span>
           </div>
         </aside>
       </section>
@@ -550,7 +564,7 @@ export default function LandingClient({
         <div className="lms-wrapper funnel-proof">
           <article className="lms-main glass-panel">
             <div className="lms-scroll-area">
-              <span className="lms-tag">Proof</span>
+              <span className="lms-tag">Рабочий поток</span>
               <h2 className="lms-title">
                 {featuredCourse?.title ?? 'Платформа ДНК: стартовый курс'}
               </h2>
@@ -676,7 +690,7 @@ export default function LandingClient({
             <div className="funnel-live-card__content">
               <div className="funnel-live-card__meta">
                 <span className="eyebrow">Главный курс платформы</span>
-                <span className="funnel-card-pill">Флагман self-serve LMS</span>
+                <span className="funnel-card-pill">Флагман самостоятельной LMS</span>
               </div>
               <div className="funnel-live-card__body">
                 <h2>
@@ -725,7 +739,7 @@ export default function LandingClient({
                 />
                 <Link className="funnel-live-card__link" href={getCourseCatalogHref(featuredPaidCourse.slug)}>
                   {isStartedPreviewCourse(featuredPaidCourse)
-                    ? 'Страница курса и preview'
+                    ? 'Страница курса и ознакомительные уроки'
                     : 'Посмотреть страницу курса'}
                 </Link>
               </div>

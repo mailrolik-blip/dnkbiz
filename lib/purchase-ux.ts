@@ -43,6 +43,12 @@ export function isStartedPreviewCourse(course: CatalogCourseCard) {
   return course.status === 'paid' && course.isStarted && !course.isOwned;
 }
 
+export function canOpenCourseRoute(
+  course: Pick<CatalogCourseCard, 'status' | 'isOwned' | 'previewEnabled'>
+) {
+  return course.status === 'free' || course.isOwned || course.previewEnabled;
+}
+
 export function getCatalogCourseToneClass(course: CatalogCourseCard) {
   if (course.status === 'showcase') {
     return 'catalog-card--showcase';

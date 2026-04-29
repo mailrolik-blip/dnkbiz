@@ -16,6 +16,7 @@ type LoginPageProps = {
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const [user, query] = await Promise.all([getOptionalCurrentUser(), searchParams]);
   const nextPath = sanitizeNextPath(query.next);
+  const showLocalSeedHint = process.env.NODE_ENV !== 'production';
 
   if (user) {
     redirect(resolvePostAuthRedirect(nextPath));
@@ -52,18 +53,25 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <AuthForm mode="login" nextPath={nextPath} />
 
           <article className="feature-card">
-            <span className="eyebrow">Тестовый доступ</span>
-            <h2 style={{ marginTop: '0.8rem' }}>Seed-аккаунты</h2>
+            <span className="eyebrow">После входа</span>
+            <h2 style={{ marginTop: '0.8rem' }}>Что откроется в кабинете</h2>
             <div className="stat-list">
               <div>
-                <dt>Администратор</dt>
-                <dd className="mono">admin@example.com / Admin123!</dd>
+                <dt>Курсы</dt>
+                <dd>Все доступные курсы, прогресс и следующие шаги по каждому маршруту.</dd>
               </div>
               <div>
-                <dt>Пользователь</dt>
-                <dd className="mono">user@example.com / User12345!</dd>
+                <dt>Покупки</dt>
+                <dd>Незавершенные заказы и быстрый возврат на экран оплаты без поиска вручную.</dd>
               </div>
             </div>
+            {showLocalSeedHint ? (
+              <p className="muted-text" style={{ marginTop: '1rem' }}>
+                Локально тестовые аккаунты создаются через <span className="mono">npm run db:seed</span>.
+                Их логины и пароли выводятся только в терминал seed-скрипта и не должны
+                публиковаться в публичном окружении.
+              </p>
+            ) : null}
           </article>
         </div>
 

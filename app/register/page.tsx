@@ -46,7 +46,7 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
           </h1>
           <p className="panel-copy" style={{ marginTop: '0.85rem' }}>
             После регистрации пользователь сразу попадает в личный кабинет, где может
-            начать бесплатный курс, открыть preview платного курса или перейти к покупке.
+            начать бесплатный курс, открыть ознакомительные уроки платного курса или перейти к покупке.
           </p>
         </article>
 
@@ -63,7 +63,7 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
               </div>
               <div>
                 <dt>Шаг 2</dt>
-                <dd>Начните бесплатный курс или откройте preview у платного</dd>
+                <dd>Начните бесплатный курс или откройте ознакомительные уроки у платного</dd>
               </div>
               <div>
                 <dt>Шаг 3</dt>

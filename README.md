@@ -1,34 +1,34 @@
 # DNK Biz MVP
 
-DNK Biz is a self-serve LMS MVP for short professional courses. The current product model is:
+DNK Biz — это MVP LMS для самостоятельного обучения на коротких прикладных курсах. Текущая продуктовая модель такая:
 
-- free registration
-- free courses with immediate access
-- paid courses with preview lessons before purchase
-- checkout inside the LMS
-- course progress inside the learner account
+- бесплатная регистрация
+- бесплатные курсы с мгновенным доступом
+- платные курсы с ознакомительными уроками до покупки
+- checkout внутри LMS
+- прогресс по курсам внутри кабинета ученика
 
-## What Works Now
+## Что уже работает
 
-- auth and session-based login
-- main catalog on `/`
-- full course catalog on `/catalog`
-- course product pages on `/catalog/:slug`
-- learning flow on `/courses/:slug`
-- learner dashboard on `/lk`
-- internal admin overview on `/admin`
-- free / paid / showcase course model
-- preview-enabled paid courses
-- payment-ready checkout on `/checkout/test`
-- order states: `PENDING`, `PROCESSING`, `PAID`, `FAILED`, `CANCELED`, `EXPIRED`
-- dev/test payment fallback with `ENABLE_TEST_PAYMENTS=true`
+- auth и вход по сессии
+- основной каталог на `/`
+- полный каталог курсов на `/catalog`
+- страницы курсов на `/catalog/:slug`
+- учебный маршрут на `/courses/:slug`
+- кабинет ученика на `/lk`
+- внутренний admin-обзор на `/admin`
+- модель бесплатных / платных / витринных курсов
+- платные курсы с ознакомительным доступом
+- готовый к платежной интеграции checkout на `/checkout/test`
+- статусы заказов: `PENDING`, `PROCESSING`, `PAID`, `FAILED`, `CANCELED`, `EXPIRED`
+- dev/test payment fallback через `ENABLE_TEST_PAYMENTS=true`
 
-The platform currently includes:
+Сейчас в платформе уже есть:
 
-- 3 live paid courses
-- 2 live free courses
+- 3 опубликованных платных курса
+- 2 опубликованных бесплатных курса
 
-## Main Routes
+## Основные маршруты
 
 - `/`
 - `/catalog`
@@ -44,38 +44,38 @@ The platform currently includes:
 - `/checkout/test?orderId=:id`
 - `/courses/:slug`
 
-## User Flow
+## Пользовательский маршрут
 
-1. A guest opens the landing page, then moves into `/catalog` or directly into a course product page.
-2. If the guest starts a meaningful action, auth pages preserve it through `next=/internal/path`.
-3. After login or registration, the user returns to that internal LMS route. If `next` is missing or invalid, the fallback stays `/lk`.
-4. `/lk` works as the first learner hub: new users see onboarding with a free-course start and a paid-course preview path.
-5. On `/catalog`, the user filters the library and opens the product page of the chosen course.
-6. On `/catalog/:slug`, the user sees the course status, description, lesson count, preview info, and the main CTA.
-7. A free course opens immediately.
-8. A paid course opens preview lessons first, then leads to checkout.
-9. After payment, the course opens in full access inside `/courses/:slug`.
-10. Progress and homework stay attached to the learner account and are visible from `/lk`.
-11. Utility pages support the MVP around the core route: `/profile`, `/help`, `/privacy`, `/terms`.
+1. Гость открывает лендинг, затем переходит в `/catalog` или сразу на страницу курса.
+2. Если гость начинает осмысленное действие, auth-страницы сохраняют его через `next=/internal/path`.
+3. После входа или регистрации пользователь возвращается в этот внутренний LMS-маршрут. Если `next` отсутствует или невалиден, fallback остается `/lk`.
+4. `/lk` работает как первый хаб ученика: новые пользователи видят onboarding с бесплатным стартом и маршрутом в ознакомительный доступ платного курса.
+5. В `/catalog` пользователь фильтрует библиотеку и открывает страницу выбранного курса.
+6. На `/catalog/:slug` пользователь видит статус курса, описание, число уроков, информацию об ознакомительном доступе и основной CTA.
+7. Бесплатный курс открывается сразу.
+8. Платный курс сначала открывает ознакомительные уроки, а затем ведет в checkout.
+9. После оплаты курс открывается полностью внутри `/courses/:slug`.
+10. Прогресс и домашние задания остаются привязаны к аккаунту ученика и видны из `/lk`.
+11. Вспомогательные страницы поддерживают основной маршрут MVP: `/profile`, `/help`, `/privacy`, `/terms`.
 
-## Course Model
+## Модель курсов
 
-- `free`: published course without purchase required
-- `paid`: published course with an active tariff
-- `showcase`: visible in the catalog, but not available for self-serve learning yet
-- `preview-enabled`: paid course with 1-2 preview lessons available before purchase
+- `free`: опубликованный курс без обязательной покупки
+- `paid`: опубликованный курс с активным тарифом
+- `showcase`: курс виден в каталоге, но еще не открыт для самостоятельного обучения
+- `preview-enabled`: платный курс с 1-2 ознакомительными уроками до покупки
 
-## Dashboard
+## Кабинет
 
-`/lk` is the main learner hub and contains:
+`/lk` — основной кабинет ученика. В нем есть:
 
-- onboarding / zero-state for new users
+- onboarding / zero-state для новых пользователей
 - `Мои курсы`
 - `Бесплатные курсы`
 - `Платные курсы`
 - `Продолжить оплату`
 
-Primary user actions across the product are kept consistent:
+Основные пользовательские действия по продукту уже приведены к единым CTA:
 
 - `Начать бесплатно`
 - `Купить курс`
@@ -86,55 +86,76 @@ Primary user actions across the product are kept consistent:
 
 ## Checkout
 
-`/checkout/test` is the current MVP checkout screen.
+`/checkout/test` — текущий экран покупки для MVP.
 
-- It already behaves like a normal purchase flow from the user perspective.
-- The app is ready for real provider integration through `lib/payments/*`.
-- `TEST` payment is only a local/dev fallback and is controlled by `ENABLE_TEST_PAYMENTS=true`.
+- С точки зрения пользователя он уже работает как обычный purchase-flow.
+- Приложение готово к подключению реального провайдера через `lib/payments/*`.
+- Маршрут нужен для staging-подготовки до подключения боевой платежки.
+- `TEST` payment — только dev/test fallback, который управляется через `ENABLE_TEST_PAYMENTS=true`.
+- В публичном окружении `ENABLE_TEST_PAYMENTS` должен оставаться выключенным.
 
-## Utility Pages
+## Вспомогательные страницы
 
-- `/profile`: basic account summary with logout and quick links back into the LMS
-- `/help`: short learner guide for free course, preview, purchase, and continued study
-- `/privacy`: MVP privacy summary
-- `/terms`: MVP usage terms
+- `/profile`: базовая сводка по аккаунту, logout и быстрые ссылки обратно в LMS
+- `/help`: короткая памятка по бесплатному курсу, ознакомительным урокам, покупке и продолжению обучения
+- `/privacy`: краткая политика конфиденциальности MVP
+- `/terms`: краткие условия использования MVP
 
-## Local Run
+## Локальный запуск
 
-Install dependencies:
+Установка зависимостей:
 
 ```bash
 npm install
 ```
 
-Development:
+Разработка:
 
 ```bash
 npm run dev:3002
 ```
 
-Production build locally:
+Локальная production-сборка:
 
 ```bash
 npm run build
 npm run start:3002
 ```
 
-Seed local test data:
+Применение migrations в локальной разработке:
+
+```bash
+npm run db:migrate:dev -- --name init
+```
+
+Подготовка локальных тестовых данных:
 
 ```bash
 npm run db:seed
 ```
 
-## Environment
+## Production Build
+
+Базовый production-маршрут для сервера:
+
+```bash
+npm run db:generate
+npm run db:migrate:deploy
+npm run build
+npm run start
+```
+
+Staging на Timeweb поднимается до подключения боевой платежки и нужен для ручной проверки каталога, checkout, кабинета и доступа к курсам на реальном домене.
+
+## Окружение
 
 - `DATABASE_URL`
 - `AUTH_SECRET`
-- `ENABLE_TEST_PAYMENTS=true`
-- `SESSION_COOKIE_NAME` optional
-- `PAYMENT_WEBHOOK_SECRET` for `/api/payments/webhook/:provider`
+- `ENABLE_TEST_PAYMENTS="false"` по умолчанию
+- `SESSION_COOKIE_NAME` опционально
+- `PAYMENT_WEBHOOK_SECRET` для `/api/payments/webhook/:provider`
 
-## Useful Scripts
+## Полезные скрипты
 
 - `npm run dev`
 - `npm run dev:3002`
@@ -145,13 +166,15 @@ npm run db:seed
 - `npm run start:local`
 - `npm run lint`
 - `npm run db:generate`
+- `npm run db:migrate:dev -- --name <migration-name>`
+- `npm run db:migrate:deploy`
 - `npm run db:seed`
 
-## Local Seed Accounts
+## Локальные seed-аккаунты
 
-`npm run db:seed` creates local development users for smoke tests. Their credentials are printed only to the local seed output and must not be reused outside local development.
+`npm run db:seed` создает локальных пользователей для коротких smoke-проверок. Их логины и пароли выводятся только в локальный вывод seed-скрипта и не должны использоваться вне локальной разработки.
 
-## Main API
+## Основное API
 
 - `POST /api/auth/register`
 - `POST /api/auth/login`
@@ -166,28 +189,30 @@ npm run db:seed
 - `GET /api/courses/:slug`
 - `POST /api/lessons/:id/progress`
 
-## Internal Admin
+## Внутренний admin
 
-`/admin` is an internal-only read-only ops screen for the platform owner.
+`/admin` — внутренний read-only ops-экран для владельца платформы.
 
-- access is limited to `ADMIN` users only
-- it is not part of the public learner flow
-- it shows users, orders, enrollments, and current course catalog state
+- доступ ограничен только пользователями с ролью `ADMIN`
+- маршрут не участвует в публичном ученическом UX
+- экран показывает пользователей, заказы, доступы и текущее состояние каталога
+- маршрут помечен как `noindex`
 
 ## Legacy / Secondary Flow
 
-The old lead-flow is no longer part of the product.
+Старый lead-flow больше не является частью основного продукта.
 
-- `/programs/:slug` is now only an archived secondary route
-- the main UI no longer links to `ProgramRequest`
-- the request form is removed from the MVP flow
-- `POST /api/program-requests` is kept only as an archived `410 Gone` stub for compatibility
-- the real product path is `/` -> `/catalog` -> `/catalog/:slug` -> `/checkout/test` -> `/courses/:slug`
+- `/programs/:slug` теперь остается только архивным secondary-маршрутом
+- основной UI больше не ссылается на `ProgramRequest`
+- форма заявки удалена из основного MVP-маршрута
+- `POST /api/program-requests` оставлен только как архивный `410 Gone` stub для совместимости
+- реальный продуктовый путь сейчас такой: `/` -> `/catalog` -> `/catalog/:slug` -> `/checkout/test` -> `/courses/:slug`
 
-## Notes
+## Заметки
 
-- The MVP is ready for manual product testing across registration, catalog, checkout, dashboard, and course progress.
-- Real payment provider integration is not connected yet.
-- Before public launch, the main remaining hardening items are durable rate limiting, CSRF/CSP pass, and server-side session revocation.
-- No CRM or admin panel is included in this MVP.
-- The corporate/request-based flow is intentionally not part of the main product.
+- MVP уже готов к ручной продуктовой проверке регистрации, каталога, checkout, кабинета и прогресса по курсам.
+- Интеграция с реальным платежным провайдером пока не подключена.
+- До публичного запуска staging должен пройти ручную проверку на реальном домене Timeweb с выключенным `ENABLE_TEST_PAYMENTS`.
+- Перед публичным запуском основными незакрытыми hardening-задачами остаются устойчивый rate limiting, полноценный CSRF/CSP-проход и server-side session revocation.
+- В этот MVP не входит CRM или отдельная административная панель.
+- Корпоративный / request-based сценарий намеренно не входит в основной продукт.

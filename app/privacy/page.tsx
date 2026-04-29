@@ -56,11 +56,11 @@ export default function PrivacyPage() {
 
       <section className="stack-grid utility-page">
         <article className="panel utility-page__hero">
-          <span className="eyebrow">Privacy</span>
+          <span className="eyebrow">Конфиденциальность</span>
           <h1>Политика конфиденциальности MVP</h1>
           <p className="panel-copy">
             Эта версия политики описывает только текущий MVP DNK Biz и его базовую
-            self-serve LMS-модель.
+            LMS-модель самостоятельного обучения.
           </p>
         </article>
 

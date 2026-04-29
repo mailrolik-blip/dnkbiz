@@ -96,11 +96,11 @@ export default async function ProfilePage() {
               </div>
               <div className="status-card">
                 <strong>Каталог</strong>
-                <p>Открыть все курсы платформы и перейти на нужную product page.</p>
+                <p>Открыть все курсы платформы и перейти на нужную страницу курса.</p>
               </div>
               <div className="status-card">
                 <strong>Помощь</strong>
-                <p>Быстро свериться с маршрутом: бесплатный курс, preview, покупка и обучение.</p>
+                <p>Быстро свериться с маршрутом: бесплатный курс, ознакомительные уроки, покупка и обучение.</p>
               </div>
             </div>
 

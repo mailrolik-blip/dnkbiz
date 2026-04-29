@@ -102,7 +102,7 @@ export default async function ProgramPage({
           <div className="badge-row">
             <span className="badge badge-complete">{program.category}</span>
             <span className={getStatusClass(program.status)}>{getStatusLabel(program.status)}</span>
-            <span className="badge badge-pending">secondary route</span>
+            <span className="badge badge-pending">Архивный маршрут</span>
           </div>
 
           <p className="panel-copy">

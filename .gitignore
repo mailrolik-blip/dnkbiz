@@ -36,6 +36,7 @@ yarn-error.log*
 .smoke-*.err
 .smoke-*.json
 .smoke-*.cookies
+*.tmp
 
 # env files (can opt-in for committing if needed)
 .env*

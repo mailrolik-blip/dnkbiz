@@ -7,7 +7,7 @@ import { buildAuthHref } from '@/lib/auth-intent';
 import { getAdminDashboardData, type AdminCourseRow } from '@/lib/admin-dashboard';
 
 export const metadata: Metadata = {
-  title: 'DNK Biz Admin',
+  title: 'Админ | DNK Biz',
   robots: {
     index: false,
     follow: false,
@@ -66,6 +66,14 @@ function getCourseStatusLabel(course: AdminCourseRow) {
   return 'Скоро';
 }
 
+function getRoleLabel(role: 'ADMIN' | 'USER') {
+  return role === 'ADMIN' ? 'Администратор' : 'Ученик';
+}
+
+function getEnrollmentSourceLabel(source: 'order' | 'free') {
+  return source === 'order' ? 'Из заказа' : 'Бесплатно';
+}
+
 function EmptyTableRow({
   colSpan,
   message,
@@ -118,11 +126,11 @@ export default async function AdminPage() {
       <section className="dnk-section admin-shell">
         <article className="panel admin-hero">
           <div className="admin-hero__copy">
-            <span className="eyebrow">Internal admin</span>
+            <span className="eyebrow">Внутренний раздел</span>
             <h1>Операционная сводка DNK Biz</h1>
             <p className="panel-copy">
-              Внутренний read-only экран для владельца платформы: пользователи, заказы, доступы и
-              текущий статус каталога без CRM и без редактирования продукта.
+              Внутренний экран только для чтения: пользователи, заказы, доступы и текущий
+              статус каталога без CRM и без редактирования продукта.
             </p>
           </div>
 
@@ -140,11 +148,11 @@ export default async function AdminPage() {
               <strong>{data.totals.enrollments}</strong>
             </div>
             <div className="admin-stat">
-              <span>Live-курсы</span>
+              <span>Опубликованные курсы</span>
               <strong>{data.totals.liveCourses}</strong>
             </div>
             <div className="admin-stat">
-              <span>Showcase</span>
+              <span>Витрина</span>
               <strong>{data.totals.showcaseCourses}</strong>
             </div>
           </div>
@@ -155,8 +163,8 @@ export default async function AdminPage() {
             <span className="eyebrow">Пользователи</span>
             <h2>Кто уже в системе</h2>
             <p className="panel-copy">
-              Email, роль, дата регистрации, сколько курсов реально доступно пользователю и есть ли
-              активный pending order.
+              Email, роль, дата регистрации, сколько курсов реально доступно пользователю и есть
+              ли незавершенный заказ.
             </p>
           </div>
 
@@ -165,11 +173,11 @@ export default async function AdminPage() {
               <thead>
                 <tr>
                   <th>Email</th>
-                  <th>Role</th>
+                  <th>Роль</th>
                   <th>Создан</th>
                   <th>Доступно курсов</th>
-                  <th>Owned</th>
-                  <th>Pending order</th>
+                  <th>Куплено</th>
+                  <th>Активный заказ</th>
                 </tr>
               </thead>
               <tbody>
@@ -178,7 +186,7 @@ export default async function AdminPage() {
                     <tr key={item.id}>
                       <td className="mono">{item.email}</td>
                       <td>
-                        <span className={getBadgeClass(item.role)}>{item.role}</span>
+                        <span className={getBadgeClass(item.role)}>{getRoleLabel(item.role)}</span>
                       </td>
                       <td>{formatDate(item.createdAt)}</td>
                       <td>{item.accessibleCoursesCount}</td>
@@ -199,7 +207,7 @@ export default async function AdminPage() {
             <span className="eyebrow">Заказы</span>
             <h2>Что происходит с оплатой</h2>
             <p className="panel-copy">
-              Курс, тариф, пользователь, сумма, текущий статус и используемый payment method.
+              Курс, тариф, пользователь, сумма, текущий статус и используемый способ оплаты.
             </p>
           </div>
 
@@ -246,10 +254,10 @@ export default async function AdminPage() {
 
         <article className="panel admin-section">
           <div className="admin-section__head">
-            <span className="eyebrow">Enrollments</span>
+            <span className="eyebrow">Доступы</span>
             <h2>Кому уже открыт доступ</h2>
             <p className="panel-copy">
-              Источник доступа показывает, пришел ли enrollment из оплаченного заказа или без
+              Источник доступа показывает, был ли доступ выдан из оплаченного заказа или без
               оплаты.
             </p>
           </div>
@@ -275,7 +283,7 @@ export default async function AdminPage() {
                       </td>
                       <td>
                         <span className={getBadgeClass(item.source)}>
-                          {item.source === 'order' ? 'order' : 'free'}
+                          {getEnrollmentSourceLabel(item.source)}
                         </span>
                       </td>
                       <td>{formatDate(item.createdAt)}</td>
@@ -294,8 +302,8 @@ export default async function AdminPage() {
             <span className="eyebrow">Курсы</span>
             <h2>Статус каталога</h2>
             <p className="panel-copy">
-              Видно, какие курсы live, какие остаются showcase, где включен preview и есть ли
-              активный тариф.
+              Видно, какие курсы опубликованы, какие остаются витриной, где включен
+              ознакомительный доступ и есть ли активный тариф.
             </p>
           </div>
 
@@ -306,7 +314,7 @@ export default async function AdminPage() {
                   <th>Slug</th>
                   <th>Название</th>
                   <th>Статус</th>
-                  <th>Preview</th>
+                  <th>Ознакомительный доступ</th>
                   <th>Уроки</th>
                   <th>Активный тариф</th>
                 </tr>

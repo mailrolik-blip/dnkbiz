@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 const termsSections = [
   {
     title: 'Что такое сервис',
-    body: 'DNK Biz — это self-serve LMS-платформа с бесплатными, платными и showcase-курсами. Пользовательский маршрут строится вокруг каталога, product page, checkout и обучения внутри кабинета.',
+    body: 'DNK Biz — это LMS-платформа с бесплатными, платными и витринными курсами. Пользовательский маршрут строится вокруг каталога, страницы курса, оплаты и обучения внутри кабинета.',
   },
   {
     title: 'Аккаунт пользователя',
@@ -41,14 +41,14 @@ export default function TermsPage() {
             Помощь
           </Link>
           <Link href="/privacy" className="ghost-button">
-            Privacy
+            Конфиденциальность
           </Link>
         </div>
       </div>
 
       <section className="stack-grid utility-page">
         <article className="panel utility-page__hero">
-          <span className="eyebrow">Terms</span>
+          <span className="eyebrow">Условия</span>
           <h1>Условия использования MVP</h1>
           <p className="panel-copy">
             Ниже зафиксированы базовые правила использования текущей версии платформы.

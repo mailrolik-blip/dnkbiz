@@ -17,6 +17,7 @@ import {
 } from '@/lib/lms-catalog';
 import { getActiveOrderActionLabel } from '@/lib/payments/constants';
 import {
+  canOpenCourseRoute,
   formatCoursePrice,
   formatLessonCount,
   formatPreviewLessons,
@@ -167,13 +168,27 @@ function CatalogDirectoryCard({
       );
     }
 
+    if (hasUser && canOpenCourseRoute(course)) {
+      return (
+        <Link href={`/courses/${course.slug}`} className="primary-button">
+          Открыть ознакомительные уроки
+        </Link>
+      );
+    }
+
     if (!hasUser) {
       return (
         <Link
-          href={buildAuthHref('register', getCheckoutIntentPath(course.tariffId!))}
+          href={
+            course.previewEnabled && course.previewLessonsCount > 0
+              ? buildAuthHref('register', getCourseIntentPath(course.slug))
+              : buildAuthHref('register', getCheckoutIntentPath(course.tariffId!))
+          }
           className="primary-button"
         >
-          Купить курс
+          {course.previewEnabled && course.previewLessonsCount > 0
+            ? 'Открыть ознакомительные уроки'
+            : 'Купить курс'}
         </Link>
       );
     }
@@ -205,6 +220,14 @@ function CatalogDirectoryCard({
     }
 
     if (course.pendingOrder && course.isStarted) {
+      return (
+        <Link href={`/courses/${course.slug}`} className="secondary-button">
+          Открыть курс
+        </Link>
+      );
+    }
+
+    if (course.pendingOrder && canOpenCourseRoute(course)) {
       return (
         <Link href={`/courses/${course.slug}`} className="secondary-button">
           Открыть курс
@@ -377,11 +400,11 @@ export default function CatalogPageClient({
         <article className="panel catalog-directory__hero">
           <div className="catalog-directory__copy">
             <span className="eyebrow">Общий каталог</span>
-            <h1>Все курсы платформы DNK Biz в одном self-serve каталоге.</h1>
+            <h1>Все курсы платформы DNK Biz в одном каталоге.</h1>
             <p className="panel-copy">
-              Здесь собраны бесплатные, платные и showcase-курсы платформы. Маршрут простой:
-              выбрать курс, открыть его product page, начать бесплатно или перейти к покупке, а
-              затем пройти обучение внутри LMS.
+              Здесь собраны бесплатные, платные и витринные курсы платформы. Маршрут простой:
+              выбрать курс, открыть его страницу, начать бесплатно или перейти к покупке, а затем
+              пройти обучение внутри LMS.
             </p>
 
             <div className="row-actions">
@@ -474,7 +497,7 @@ export default function CatalogPageClient({
           <div className="catalog-directory__filter-summary">
             <p className="panel-copy">
               Показано {getCatalogCoursesCountLabel(filteredCourses.length)}. Все карточки ведут в
-              product page курса на <span className="mono">/catalog/[slug]</span>.
+              страницу курса на <span className="mono">/catalog/[slug]</span>.
             </p>
           </div>
         </article>

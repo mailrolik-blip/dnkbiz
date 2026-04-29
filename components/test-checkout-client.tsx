@@ -11,6 +11,7 @@ import {
   getOrderStatusLabel,
   isRetryableOrderStatus,
 } from '@/lib/payments/constants';
+import { getCourseCatalogHref } from '@/lib/lms-catalog';
 import {
   formatCoursePrice,
   formatLessonCount,
@@ -129,10 +130,10 @@ function getPaymentMethodOptions(
   if (testPaymentsEnabled) {
     options.push({
       value: 'TEST',
-      label: 'Локальная проверка',
+      label: 'Тестовая оплата',
       description:
-        'Резервный dev-режим для локальной проверки покупки и автоматического открытия курса без боевой платежки.',
-      badge: 'dev',
+        'Временный fallback для разработки и staging-проверок. Позволяет подтвердить покупку без подключения боевой платежной системы.',
+      badge: 'dev only',
     });
   }
 
@@ -156,6 +157,14 @@ export default function TestCheckoutClient({
   } | null>(null);
 
   const methodOptions = getPaymentMethodOptions(testPaymentsEnabled);
+  const courseBackHref =
+    order.status === 'PAID' || order.previewLessonsCount > 0
+      ? `/courses/${order.courseSlug}`
+      : getCourseCatalogHref(order.courseSlug);
+  const courseBackLabel =
+    order.status === 'PAID' || order.previewLessonsCount > 0
+      ? 'Назад к курсу'
+      : 'Назад к странице курса';
 
   const canSwitchMethod = order.status !== 'PAID';
   const canStartProviderFlow =
@@ -535,15 +544,15 @@ export default function TestCheckoutClient({
 
             <div className="row-actions checkout-actions" style={{ marginTop: '1rem' }}>
               {renderPrimaryAction()}
-              <Link href={`/courses/${order.courseSlug}`} className="secondary-button">
-                Назад к курсу
+              <Link href={courseBackHref} className="secondary-button">
+                {courseBackLabel}
               </Link>
             </div>
 
             <div className="checkout-mobile-bar">
               {renderPrimaryAction()}
-              <Link href={`/courses/${order.courseSlug}`} className="secondary-button">
-                Назад к курсу
+              <Link href={courseBackHref} className="secondary-button">
+                {courseBackLabel}
               </Link>
             </div>
 
@@ -559,7 +568,7 @@ export default function TestCheckoutClient({
                     ? 'Создайте новый заказ и повторите оплату через нужный способ.'
                     : selectedMethod === 'MANUAL'
                     ? 'После запуска оплаты заказ перейдет в обработку и будет ждать подтверждения платежного провайдера.'
-                    : 'Подтвердите покупку через локальную проверку и сразу откройте курс.'}
+                    : 'Подтвердите покупку тестовым способом и сразу откройте курс.'}
                 </p>
               </div>
               {order.paymentFailureText ? (
@@ -576,11 +585,12 @@ export default function TestCheckoutClient({
               ) : null}
               {testPaymentsEnabled ? (
                 <div className="status-card">
-                  <strong>Локальная проверка</strong>
+                  <strong>Тестовый fallback</strong>
                   <p>
-                    Локально доступен резервный способ подтверждения оплаты. Он не меняет
-                    основной пользовательский сценарий покупки и нужен только для разработки и
-                    smoke-проверок.
+                    Этот способ подтверждения оплаты включается только через
+                    <span className="mono"> ENABLE_TEST_PAYMENTS=true</span>. В публичном
+                    окружении он должен оставаться выключенным и нужен только для разработки
+                    и коротких staging-проверок.
                   </p>
                 </div>
               ) : null}
