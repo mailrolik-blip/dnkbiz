@@ -66,8 +66,8 @@ type DashboardFocusProps = {
 function getDashboardCourseHint(course: CatalogCourseCard) {
   if (course.pendingOrder) {
     return course.pendingOrder.status === 'PROCESSING'
-      ? 'Оплата уже в обработке.'
-      : 'Оплата уже начата и ждет завершения.';
+      ? 'Платеж отправлен на проверку.'
+      : 'Оплатите по QR и нажмите «Я оплатил».';
   }
 
   if (course.isOwned) {
@@ -279,8 +279,8 @@ function DashboardCourseCard({
           <strong>Заказ #{course.pendingOrder.id}</strong>
           <p>
             {course.pendingOrder.status === 'PROCESSING'
-              ? 'Платеж уже запущен и сейчас находится в обработке.'
-              : 'Оплата еще не завершена. Можно вернуться на экран покупки и продолжить ее.'}
+              ? 'Платеж отправлен на ручную проверку. Дождитесь подтверждения менеджера и затем проверьте статус заказа.'
+              : 'Оплатите курс по QR и нажмите «Я оплатил», чтобы отправить платеж на ручную проверку.'}
           </p>
         </div>
       ) : null}
@@ -452,8 +452,8 @@ export default function DashboardClient({
       title: `Продолжите оплату курса «${pendingPriorityCourse.title}».`,
       description:
         pendingPriorityCourse.pendingOrder.status === 'PROCESSING'
-          ? 'Платеж уже запущен. Вернитесь на экран оплаты, чтобы проверить статус и дождаться открытия полного доступа.'
-          : 'Покупка уже начата. Вернитесь на экран оплаты и завершите ее, чтобы открыть курс полностью.',
+          ? 'Платеж уже отправлен на ручную проверку. Повторно оплачивать заказ не нужно: дождитесь подтверждения менеджера и затем обновите статус.'
+          : 'Откройте экран оплаты, оплатите курс по QR и нажмите «Я оплатил». После этого заказ уйдет на ручную проверку.',
       tone: 'pending',
       primaryAction: (
         <Link className="primary-button" href={pendingPriorityCourse.pendingOrder.checkoutUrl}>
@@ -639,7 +639,7 @@ export default function DashboardClient({
             <SectionIntro
               eyebrow="Продолжить оплату"
               title="Покупки, которые ждут завершения"
-              description="Если оплата уже начата, вернитесь на экран покупки, чтобы завершить ее или проверить текущий статус заказа."
+              description="Здесь лежат заказы, которые еще не оплачены по QR или уже отправлены на ручную проверку менеджеру."
             />
 
             <div className="course-grid dashboard-grid">

@@ -5,9 +5,9 @@ export function createManualCheckoutSession(orderId: number): ProviderCheckoutSe
     nextStatus: 'PROCESSING',
     paymentMethod: 'MANUAL',
     provider: 'manual',
-    paymentReference: `manual-${orderId}`,
+    paymentReference: `sbp-manual-${orderId}`,
     statusText:
-      'Платеж создан и ожидает подтверждения платежного провайдера. После подключения реальной интеграции этот статус будет обновляться автоматически.',
+      'Платеж отправлен на ручную проверку. Менеджер подтвердит оплату и откроет полный доступ к курсу.',
   };
 }
 
@@ -15,47 +15,50 @@ export function mapManualProviderStatus(status: string): ProviderWebhookResult |
   if (status === 'pending') {
     return {
       status: 'PENDING',
-      statusText: 'Заказ создан и ожидает оплаты.',
+      statusText:
+        'Заказ создан. Оплатите по QR и нажмите «Я оплатил», чтобы отправить платеж на проверку.',
     };
   }
 
   if (status === 'processing') {
     return {
       status: 'PROCESSING',
-      statusText: 'Платеж обрабатывается платежным провайдером.',
+      statusText:
+        'Платеж отправлен на ручную проверку. Менеджер подтвердит оплату и откроет полный доступ к курсу.',
     };
   }
 
   if (status === 'paid') {
     return {
       status: 'PAID',
-      statusText: 'Оплата подтверждена платежным провайдером.',
+      statusText: 'Оплата подтверждена. Полный доступ к курсу открыт.',
     };
   }
 
   if (status === 'failed') {
     return {
       status: 'FAILED',
-      paymentFailureCode: 'provider_failed',
-      paymentFailureText: 'Платежный провайдер вернул ошибку оплаты.',
-      statusText: 'Не удалось подтвердить оплату.',
+      paymentFailureCode: 'manual_review_failed',
+      paymentFailureText: 'Менеджер не смог подтвердить поступление оплаты по этому заказу.',
+      statusText:
+        'Оплата не подтверждена. Проверьте перевод и создайте новый заказ при необходимости.',
     };
   }
 
   if (status === 'canceled') {
     return {
       status: 'CANCELED',
-      paymentFailureCode: 'provider_canceled',
-      paymentFailureText: 'Платеж был отменен до подтверждения.',
-      statusText: 'Оплата была отменена.',
+      paymentFailureCode: 'manual_review_canceled',
+      paymentFailureText: 'Заказ отменен до подтверждения ручной проверки.',
+      statusText: 'Оплата отменена.',
     };
   }
 
   if (status === 'expired') {
     return {
       status: 'EXPIRED',
-      paymentFailureCode: 'provider_expired',
-      paymentFailureText: 'Истек срок жизни платежной сессии.',
+      paymentFailureCode: 'manual_review_expired',
+      paymentFailureText: 'Истек срок ожидания оплаты по QR.',
       statusText: 'Время на оплату истекло.',
     };
   }

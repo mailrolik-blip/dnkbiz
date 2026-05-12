@@ -1,17 +1,18 @@
 'use client';
 
 import type { PaymentMethod } from '@prisma/client';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
+import { getCourseCatalogHref } from '@/lib/lms-catalog';
 import {
   getPaymentMethodLabel,
   getOrderStatusBadgeClass,
   getOrderStatusLabel,
   isRetryableOrderStatus,
 } from '@/lib/payments/constants';
-import { getCourseCatalogHref } from '@/lib/lms-catalog';
 import {
   formatCoursePrice,
   formatLessonCount,
@@ -51,6 +52,8 @@ type PaymentMethodOption = {
   badge?: string;
 };
 
+const MANUAL_SBP_QR_SRC = '/payments/sbp-qr-manual.png';
+
 function formatDateTime(value: string | null) {
   if (!value) {
     return 'не указано';
@@ -62,31 +65,59 @@ function formatDateTime(value: string | null) {
   }).format(new Date(value));
 }
 
-function getOrderTitle(status: CheckoutOrder['status']) {
-  if (status === 'PAID') {
+function getOrderTitle(order: CheckoutOrder) {
+  if (order.status === 'PAID') {
     return 'Доступ к курсу открыт';
   }
 
-  if (status === 'PROCESSING') {
-    return 'Оплата обрабатывается';
+  if (order.status === 'PROCESSING') {
+    return 'Платеж отправлен на проверку';
   }
 
-  if (status === 'FAILED') {
-    return 'Оплата не прошла';
+  if (order.status === 'FAILED') {
+    return 'Оплата не подтверждена';
   }
 
-  if (status === 'CANCELED') {
+  if (order.status === 'CANCELED') {
     return 'Оплата отменена';
   }
 
-  if (status === 'EXPIRED') {
+  if (order.status === 'EXPIRED') {
     return 'Срок действия заказа истек';
+  }
+
+  if (order.paymentMethod === 'MANUAL') {
+    return 'Оплатите курс по СБП';
   }
 
   return 'Завершите покупку курса';
 }
 
 function getOrderSummary(order: CheckoutOrder) {
+  if (order.paymentMethod === 'MANUAL') {
+    if (order.status === 'PAID') {
+      return 'Оплата подтверждена менеджером. Курс уже доступен в полном объеме.';
+    }
+
+    if (order.status === 'PROCESSING') {
+      return 'Платеж отправлен на ручную проверку. Повторно оплачивать заказ не нужно: дождитесь подтверждения менеджера и затем обновите статус.';
+    }
+
+    if (order.status === 'FAILED') {
+      return 'Менеджер не смог подтвердить поступление оплаты по этому заказу. Проверьте перевод и создайте новый заказ при необходимости.';
+    }
+
+    if (order.status === 'CANCELED') {
+      return 'Этот заказ отменен. При необходимости создайте новый заказ и оплатите его заново.';
+    }
+
+    if (order.status === 'EXPIRED') {
+      return 'У этого заказа истек срок действия. Создайте новый заказ, чтобы снова открыть QR для оплаты.';
+    }
+
+    return 'Отсканируйте QR в банковском приложении, оплатите заказ и нажмите «Я оплатил». После этого платеж уйдет на ручную проверку менеджеру.';
+  }
+
   if (order.statusText) {
     return order.statusText;
   }
@@ -96,7 +127,7 @@ function getOrderSummary(order: CheckoutOrder) {
   }
 
   if (order.status === 'PROCESSING') {
-    return 'Платеж ожидает ответа от провайдера. Обновите статус позже или вернитесь в кабинет.';
+    return 'Платеж ожидает обновления статуса. Обновите страницу позже или вернитесь в кабинет.';
   }
 
   if (order.status === 'FAILED') {
@@ -120,9 +151,9 @@ function getPaymentMethodOptions(
   const options: PaymentMethodOption[] = [
     {
       value: 'MANUAL',
-      label: 'Онлайн-оплата',
+      label: 'СБП / ручная проверка',
       description:
-        'Основной пользовательский сценарий покупки. Заказ перейдет в обработку и будет готов к подтверждению после подключения платежного провайдера.',
+        'Оплатите заказ по QR в приложении банка и нажмите «Я оплатил». После этого менеджер проверит платеж вручную.',
       badge: 'основной',
     },
   ];
@@ -132,7 +163,7 @@ function getPaymentMethodOptions(
       value: 'TEST',
       label: 'Тестовая оплата',
       description:
-        'Временный fallback для разработки и staging-проверок. Позволяет подтвердить покупку без подключения боевой платежной системы.',
+        'Временный fallback для разработки и staging-проверок. Позволяет подтвердить покупку без боевого эквайринга.',
       badge: 'dev only',
     });
   }
@@ -157,6 +188,14 @@ export default function TestCheckoutClient({
   } | null>(null);
 
   const methodOptions = getPaymentMethodOptions(testPaymentsEnabled);
+  const isManualSelected = selectedMethod === 'MANUAL';
+  const canSwitchMethod = order.status === 'PENDING';
+  const canRetry = isRetryableOrderStatus(order.status);
+  const canSubmitManualReview = order.status === 'PENDING' && isManualSelected;
+  const canConfirmTestPayment =
+    testPaymentsEnabled && selectedMethod === 'TEST' && order.status === 'PENDING';
+  const showManualQr =
+    isManualSelected && (order.status === 'PENDING' || order.status === 'PROCESSING');
   const courseBackHref =
     order.status === 'PAID' || order.previewLessonsCount > 0
       ? `/courses/${order.courseSlug}`
@@ -166,16 +205,7 @@ export default function TestCheckoutClient({
       ? 'Назад к курсу'
       : 'Назад к странице курса';
 
-  const canSwitchMethod = order.status !== 'PAID';
-  const canStartProviderFlow =
-    order.status === 'PENDING' && selectedMethod === 'MANUAL';
-  const canConfirmTestPayment =
-    testPaymentsEnabled &&
-    selectedMethod === 'TEST' &&
-    (order.status === 'PENDING' || order.status === 'PROCESSING');
-  const canRetry = isRetryableOrderStatus(order.status);
-
-  async function handleStartCheckout() {
+  async function handleManualSubmit() {
     setPending(true);
     setFeedback(null);
 
@@ -186,35 +216,36 @@ export default function TestCheckoutClient({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          paymentMethod: selectedMethod,
+          paymentMethod: 'MANUAL',
         }),
       });
 
       const payload = (await response.json().catch(() => null)) as
         | {
             error?: string;
-            order?: { status: CheckoutOrder['status']; statusText?: string | null };
-            checkoutUrl?: string;
+            order?: { status: CheckoutOrder['status'] };
           }
         | null;
 
       if (!response.ok) {
-        throw new Error(payload?.error || 'Не удалось запустить оплату.');
+        throw new Error(payload?.error || 'Не удалось отправить платеж на проверку.');
       }
 
       setFeedback({
         tone: 'success',
         message:
           payload?.order?.status === 'PROCESSING'
-            ? 'Платеж переведен в обработку. После подключения провайдера этот статус будет обновляться автоматически.'
-            : 'Заказ обновлен. Можно продолжить оплату.',
+            ? 'Платеж отправлен на ручную проверку. Как только менеджер подтвердит оплату, доступ к курсу откроется.'
+            : 'Статус заказа обновлен.',
       });
       router.refresh();
     } catch (error) {
       setFeedback({
         tone: 'error',
         message:
-          error instanceof Error ? error.message : 'Не удалось запустить оплату.',
+          error instanceof Error
+            ? error.message
+            : 'Не удалось отправить платеж на проверку.',
       });
     } finally {
       setPending(false);
@@ -247,9 +278,7 @@ export default function TestCheckoutClient({
       setFeedback({
         tone: 'error',
         message:
-          error instanceof Error
-            ? error.message
-            : 'Не удалось подтвердить оплату.',
+          error instanceof Error ? error.message : 'Не удалось подтвердить оплату.',
       });
       setPending(false);
       return;
@@ -291,9 +320,7 @@ export default function TestCheckoutClient({
       setFeedback({
         tone: 'error',
         message:
-          error instanceof Error
-            ? error.message
-            : 'Не удалось создать новый заказ.',
+          error instanceof Error ? error.message : 'Не удалось создать новый заказ.',
       });
       setPending(false);
       return;
@@ -337,15 +364,15 @@ export default function TestCheckoutClient({
       );
     }
 
-    if (canStartProviderFlow) {
+    if (canSubmitManualReview) {
       return (
         <button
           className="primary-button"
           disabled={pending}
-          onClick={handleStartCheckout}
+          onClick={handleManualSubmit}
           type="button"
         >
-          {pending ? 'Переходим к оплате...' : 'Перейти к оплате'}
+          {pending ? 'Отправляем на проверку...' : 'Я оплатил'}
         </button>
       );
     }
@@ -395,7 +422,7 @@ export default function TestCheckoutClient({
               {getOrderStatusLabel(order.status)}
             </span>
           </div>
-          <h1 style={{ marginTop: '0.9rem' }}>{getOrderTitle(order.status)}</h1>
+          <h1 style={{ marginTop: '0.9rem' }}>{getOrderTitle(order)}</h1>
           <p className="panel-copy" style={{ marginTop: '0.75rem' }}>
             {getOrderSummary(order)}
           </p>
@@ -441,8 +468,8 @@ export default function TestCheckoutClient({
               <div className="status-card">
                 <strong>Что входит в доступ</strong>
                 <p>
-                  Все уроки курса, домашние задания, сохранение прогресса и возврат
-                  в кабинет с того места, где вы остановились.
+                  Все уроки курса, домашние задания, сохранение прогресса и возврат в
+                  кабинет с того места, где вы остановились.
                 </p>
               </div>
               <div className="status-card">
@@ -456,10 +483,10 @@ export default function TestCheckoutClient({
                 </p>
               </div>
               <div className="status-card">
-                <strong>После оплаты</strong>
+                <strong>После подтверждения оплаты</strong>
                 <p>
-                  Курс сразу открывается в режиме FULL и появляется в личном
-                  кабинете без ручной выдачи доступа.
+                  Курс откроется в режиме FULL и появится в личном кабинете сразу после
+                  ручного подтверждения менеджером.
                 </p>
               </div>
             </div>
@@ -492,6 +519,42 @@ export default function TestCheckoutClient({
               {getOrderSummary(order)}
             </p>
 
+            {showManualQr ? (
+              <div className="manual-qr-card" style={{ marginTop: '1rem' }}>
+                <div className="manual-qr-card__image">
+                  <Image
+                    alt="QR-код СБП для ручной оплаты"
+                    height={320}
+                    src={MANUAL_SBP_QR_SRC}
+                    width={320}
+                  />
+                </div>
+                <div className="manual-qr-card__content">
+                  <div className="status-card">
+                    <strong>Как оплатить</strong>
+                    <p>
+                      Отсканируйте QR в банковском приложении, переведите{' '}
+                      {formatCoursePrice(order.amount)} и затем нажмите «Я оплатил».
+                    </p>
+                  </div>
+                  <div className="status-card">
+                    <strong>Что проверить перед отправкой</strong>
+                    <p>
+                      Номер заказа: #{order.id}. Курс: {order.courseTitle}. Сумма:{' '}
+                      {formatCoursePrice(order.amount)}.
+                    </p>
+                  </div>
+                  <div className="status-card">
+                    <strong>После кнопки «Я оплатил»</strong>
+                    <p>
+                      Заказ перейдет в ожидание ручной проверки. Если статус уже «Проверка
+                      оплаты», повторно оплачивать заказ не нужно.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
             {feedback ? (
               <p
                 className={`feedback ${
@@ -506,8 +569,8 @@ export default function TestCheckoutClient({
               <div className="status-card">
                 <strong>Способ оплаты</strong>
                 <p>
-                  Выберите способ оплаты. Текущий заказ сохранит выбранный вариант,
-                  а экран будет показывать соответствующее состояние оплаты.
+                  Выберите подходящий сценарий. Для СБП платеж проверяется вручную, а
+                  тестовая оплата нужна только для внутренней разработки.
                 </p>
               </div>
 
@@ -563,11 +626,11 @@ export default function TestCheckoutClient({
                   {order.status === 'PAID'
                     ? 'Перейдите в курс или вернитесь в кабинет, чтобы продолжить обучение.'
                     : order.status === 'PROCESSING'
-                    ? 'Ожидайте подтверждения от провайдера или обновите статус позже.'
+                    ? 'Платеж уже на ручной проверке. Дождитесь подтверждения менеджера и затем обновите статус заказа.'
                     : canRetry
                     ? 'Создайте новый заказ и повторите оплату через нужный способ.'
-                    : selectedMethod === 'MANUAL'
-                    ? 'После запуска оплаты заказ перейдет в обработку и будет ждать подтверждения платежного провайдера.'
+                    : isManualSelected
+                    ? 'Оплатите заказ по QR и нажмите «Я оплатил», чтобы передать платеж на ручную проверку.'
                     : 'Подтвердите покупку тестовым способом и сразу откройте курс.'}
                 </p>
               </div>
@@ -589,8 +652,8 @@ export default function TestCheckoutClient({
                   <p>
                     Этот способ подтверждения оплаты включается только через
                     <span className="mono"> ENABLE_TEST_PAYMENTS=true</span>. В публичном
-                    окружении он должен оставаться выключенным и нужен только для разработки
-                    и коротких staging-проверок.
+                    окружении он должен оставаться выключенным и нужен только для
+                    разработки и коротких staging-проверок.
                   </p>
                 </div>
               ) : null}

@@ -17,11 +17,11 @@ export function getOrderStatusLabel(status: OrderStatus) {
   }
 
   if (status === 'PROCESSING') {
-    return 'Платеж обрабатывается';
+    return 'Проверка оплаты';
   }
 
   if (status === 'FAILED') {
-    return 'Ошибка оплаты';
+    return 'Оплата не подтверждена';
   }
 
   if (status === 'CANCELED') {
@@ -48,7 +48,7 @@ export function getOrderStatusBadgeClass(status: OrderStatus) {
 }
 
 export function getActiveOrderActionLabel(status: OrderStatus) {
-  return status === 'PROCESSING' ? 'Проверить статус' : 'Продолжить оплату';
+  return status === 'PROCESSING' ? 'Проверить статус' : 'Открыть оплату';
 }
 
 export function getPaymentMethodLabel(method: PaymentMethod) {
@@ -56,5 +56,5 @@ export function getPaymentMethodLabel(method: PaymentMethod) {
     return 'Локальная проверка';
   }
 
-  return 'Онлайн-оплата';
+  return 'СБП / ручная проверка';
 }

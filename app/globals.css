@@ -3863,6 +3863,53 @@ a.bento-card:hover {
   cursor: default;
 }
 
+.manual-qr-card {
+  display: grid;
+  gap: 1rem;
+  align-items: start;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.manual-qr-card__image {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  border-radius: 1.2rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(circle at top right, rgba(1, 247, 246, 0.1), transparent 14rem),
+    rgba(255, 255, 255, 0.03);
+}
+
+.manual-qr-card__image img {
+  width: 100%;
+  max-width: 320px;
+  height: auto;
+  border-radius: 1rem;
+  box-shadow: 0 16px 34px -26px rgba(0, 0, 0, 0.72);
+}
+
+.manual-qr-card__content {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.admin-review-actions {
+  display: grid;
+  gap: 0.65rem;
+  min-width: 14rem;
+}
+
+.admin-review-actions .primary-button,
+.admin-review-actions .secondary-button {
+  width: 100%;
+}
+
+.admin-review-actions .feedback {
+  margin-top: 0;
+}
+
 .checkout-mobile-bar,
 .course-mobile-bar {
   display: none;

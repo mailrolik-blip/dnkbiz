@@ -319,13 +319,13 @@ export default function LandingSales({
             <h2>{featuredCourse?.title ?? 'Платформа ДНК: стартовый курс'}</h2>
             <p className="panel-copy">
               Рабочий курс уже подключен к checkout, личному кабинету, доступу
-              после оплаты и lesson-view с прогрессом.
+              после подтверждения оплаты и lesson-view с прогрессом.
             </p>
             <div className="badge-row">
               <span className="badge badge-paid">
                 {featuredCourse?.lessonsCount ?? 0} уроков
               </span>
-              <span className="badge badge-complete">доступ после оплаты</span>
+              <span className="badge badge-complete">доступ после подтверждения</span>
               <span className="badge badge-complete">обучение в кабинете</span>
             </div>
             <div className="row-actions" style={{ marginTop: '1rem' }}>
@@ -542,7 +542,7 @@ export default function LandingSales({
                 </div>
                 <div>
                   <dt>Выдача доступа</dt>
-                  <dd>сразу после оплаты</dd>
+                  <dd>после подтверждения оплаты</dd>
                 </div>
                 <div>
                   <dt>Домашка</dt>

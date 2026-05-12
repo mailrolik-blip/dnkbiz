@@ -59,7 +59,10 @@ export async function POST(request: Request, { params }: RouteParams) {
   } catch (error) {
     console.error(error);
     return Response.json(
-      { error: 'Не удалось запустить оплату. Попробуйте еще раз.' },
+      {
+        error:
+          'Не удалось открыть оплату или отправить платеж на ручную проверку. Попробуйте еще раз.',
+      },
       { status: 409 }
     );
   }

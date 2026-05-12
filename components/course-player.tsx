@@ -554,12 +554,12 @@ function PaywallBlock({
         <LockIcon />
       </div>
       <div className="course-paywall__copy">
-        <span className="eyebrow">Полный доступ после оплаты</span>
+        <span className="eyebrow">Полный доступ после подтверждения оплаты</span>
         <h3>{lesson.title}</h3>
         <p>
           Этот урок закрыт. До покупки доступны{' '}
-          {formatPreviewLessons(course.access.previewLessonsCount)}, а после оплаты откроются
-          остальные модули, домашние задания и полный маршрут курса внутри LMS.
+          {formatPreviewLessons(course.access.previewLessonsCount)}, а после подтверждения оплаты
+          менеджером откроются остальные модули, домашние задания и полный маршрут курса внутри LMS.
         </p>
       </div>
       <div className="badge-row course-paywall__badges">
@@ -1234,15 +1234,17 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
                   {previewCompletedCount}/{courseState.access.previewLessonsCount} урока открыто
                 </span>
                 <p className="muted-text">
-                  Сначала можно пройти первые уроки и оценить формат курса. После покупки
-                  откроются остальные модули, практика и полный доступ в кабинете.
+                  Сначала можно пройти первые уроки и оценить формат курса. После подтверждения
+                  оплаты менеджером откроются остальные модули, практика и полный доступ в кабинете.
                 </p>
                 {courseState.access.tariff ? (
                   <div className="badge-row">
                     <span className="badge badge-paid">
                       {formatMoney(courseState.access.tariff.price)}
                     </span>
-                    <span className="badge badge-pending">Полный доступ после оплаты</span>
+                    <span className="badge badge-pending">
+                      Полный доступ после подтверждения оплаты
+                    </span>
                   </div>
                 ) : null}
                 <div className="row-actions" style={{ marginTop: '0.9rem' }}>
@@ -1285,7 +1287,7 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
                     </span>
                     <span className="lesson-btn__meta">
                       {lesson.isLocked
-                        ? 'Откроется после оплаты'
+                        ? 'Откроется после подтверждения оплаты'
                         : lesson.isPreview && courseState.access.accessMode === 'PREVIEW'
                         ? 'Открыто до покупки'
                         : lesson.description ||
@@ -1313,7 +1315,9 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
             <div className="course-mobile-bar__copy">
               <span>
                 {courseState.access.pendingOrder
-                  ? 'Покупка уже начата'
+                  ? courseState.access.pendingOrder.status === 'PROCESSING'
+                    ? 'Платеж на проверке'
+                    : 'Открыта оплата'
                   : 'Открыт ознакомительный доступ'}
               </span>
               <strong>

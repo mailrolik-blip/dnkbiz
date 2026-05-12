@@ -67,7 +67,7 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
               </div>
               <div>
                 <dt>Шаг 3</dt>
-                <dd>После оплаты полный доступ откроется автоматически внутри кабинета</dd>
+                <dd>После подтверждения оплаты менеджером полный доступ откроется внутри кабинета</dd>
               </div>
             </div>
           </article>

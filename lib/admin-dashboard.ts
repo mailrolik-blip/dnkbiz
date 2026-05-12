@@ -24,12 +24,26 @@ export type AdminOrderRow = {
   courseTitle: string;
   courseSlug: string;
   tariffTitle: string;
+  userName: string | null;
   userEmail: string;
   amount: number;
   status: OrderStatus;
   paymentMethod: PaymentMethod;
   createdAt: Date;
   updatedAt: Date;
+};
+
+export type AdminManualReviewOrderRow = {
+  id: number;
+  userName: string | null;
+  userEmail: string;
+  courseTitle: string;
+  courseSlug: string;
+  tariffTitle: string;
+  amount: number;
+  status: OrderStatus;
+  paymentMethod: PaymentMethod;
+  createdAt: Date;
 };
 
 export type AdminEnrollmentRow = {
@@ -60,6 +74,7 @@ export type AdminDashboardData = {
     showcaseCourses: number;
   };
   users: AdminUserRow[];
+  manualReviewOrders: AdminManualReviewOrderRow[];
   orders: AdminOrderRow[];
   enrollments: AdminEnrollmentRow[];
   courses: AdminCourseRow[];
@@ -122,6 +137,7 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
         updatedAt: true,
         user: {
           select: {
+            name: true,
             email: true,
           },
         },
@@ -217,6 +233,7 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
     courseTitle: order.tariff.course.title,
     courseSlug: order.tariff.course.slug,
     tariffTitle: order.tariff.title,
+    userName: order.user.name,
     userEmail: order.user.email,
     amount: order.amount,
     status: order.status,
@@ -224,6 +241,21 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
     createdAt: order.createdAt,
     updatedAt: order.updatedAt,
   }));
+
+  const manualReviewOrders: AdminManualReviewOrderRow[] = orderRows
+    .filter((order) => order.paymentMethod === 'MANUAL' && order.status === 'PROCESSING')
+    .map((order) => ({
+      id: order.id,
+      userName: order.userName,
+      userEmail: order.userEmail,
+      courseTitle: order.courseTitle,
+      courseSlug: order.courseSlug,
+      tariffTitle: order.tariffTitle,
+      amount: order.amount,
+      status: order.status,
+      paymentMethod: order.paymentMethod,
+      createdAt: order.createdAt,
+    }));
 
   const enrollmentRows: AdminEnrollmentRow[] = enrollments.map((enrollment) => ({
     id: enrollment.id,
@@ -285,6 +317,7 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
       showcaseCourses: courseRows.filter((course) => course.status === 'showcase').length,
     },
     users: userRows,
+    manualReviewOrders,
     orders: orderRows,
     enrollments: enrollmentRows,
     courses: courseRows,

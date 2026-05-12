@@ -147,6 +147,16 @@ npm run start
 
 Staging на Timeweb поднимается до подключения боевой платежки и нужен для ручной проверки каталога, checkout, кабинета и доступа к курсам на реальном домене.
 
+## Manual SBP Flow (temporary)
+
+- Paid checkout defaults to `MANUAL` and shows a static SBP QR from `public/payments/sbp-qr-manual.png`.
+- User flow: open checkout -> pay in the banking app -> click `Я оплатил` -> order moves to `PROCESSING`.
+- `PROCESSING` means the payment is waiting for manual manager review. The order is not treated as paid yet.
+- `/lk` keeps the order visible with a neutral waiting-for-review status and a link back to checkout.
+- `/admin` includes a manual review queue for `MANUAL` + `PROCESSING` orders. Admin can confirm payment (`PAID`) or reject it (`FAILED`).
+- Confirming payment upserts enrollment and opens full course access exactly like a regular successful payment.
+- This is a temporary bridge before real acquiring. Replace the static QR asset if the bank changes it, and connect a real provider later.
+
 ## Окружение
 
 - `DATABASE_URL`
@@ -191,11 +201,11 @@ Staging на Timeweb поднимается до подключения боев
 
 ## Внутренний admin
 
-`/admin` — внутренний read-only ops-экран для владельца платформы.
+`/admin` — внутренний ops-экран для владельца платформы.
 
 - доступ ограничен только пользователями с ролью `ADMIN`
 - маршрут не участвует в публичном ученическом UX
-- экран показывает пользователей, заказы, доступы и текущее состояние каталога
+- экран показывает пользователей, заказы, доступы, текущее состояние каталога и очередь ручной проверки оплаты
 - маршрут помечен как `noindex`
 
 ## Legacy / Secondary Flow

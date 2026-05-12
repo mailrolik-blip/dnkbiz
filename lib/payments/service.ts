@@ -57,26 +57,26 @@ function buildExpiresAt(base = new Date()) {
 
 function getDefaultStatusText(status: ManagedOrder['status']) {
   if (status === 'PAID') {
-    return 'Оплата подтверждена. Доступ к курсу уже открыт.';
+    return 'Оплата подтверждена. Полный доступ к курсу открыт.';
   }
 
   if (status === 'PROCESSING') {
-    return 'Платеж создан и ожидает подтверждения провайдера.';
+    return 'Платеж отправлен на ручную проверку. Менеджер подтвердит оплату и откроет полный доступ к курсу.';
   }
 
   if (status === 'FAILED') {
-    return 'Не удалось подтвердить оплату.';
+    return 'Оплата не подтверждена.';
   }
 
   if (status === 'CANCELED') {
-    return 'Оплата была отменена.';
+    return 'Оплата отменена.';
   }
 
   if (status === 'EXPIRED') {
     return 'Время на оплату истекло.';
   }
 
-  return 'Заказ создан. Завершите оплату, чтобы открыть курс.';
+  return 'Заказ создан. Оплатите по QR и нажмите «Я оплатил», чтобы отправить платеж на ручную проверку.';
 }
 
 function getProviderWebhookResult(
@@ -378,6 +378,10 @@ export async function startOrderCheckout(params: {
   }
 
   if (order.status === 'PAID') {
+    return order;
+  }
+
+  if (order.status === 'PROCESSING') {
     return order;
   }
 

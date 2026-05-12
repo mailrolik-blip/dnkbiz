@@ -90,7 +90,7 @@ export async function getCourseProductPageData(
         course.previewEnabled && course.previewLessonsCount > 0
           ? `${formatPreviewLessons(course.previewLessonsCount)} до покупки`
           : course.status === 'paid'
-          ? 'Откроется после оплаты'
+          ? 'Откроется после подтверждения оплаты'
           : 'Не нужен',
     },
   ];

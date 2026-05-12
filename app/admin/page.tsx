@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
+import AdminManualReviewActions from '@/components/admin-manual-review-actions';
 import { getOptionalCurrentUser } from '@/lib/auth';
 import { buildAuthHref } from '@/lib/auth-intent';
 import { getAdminDashboardData, type AdminCourseRow } from '@/lib/admin-dashboard';
@@ -129,8 +130,8 @@ export default async function AdminPage() {
             <span className="eyebrow">Внутренний раздел</span>
             <h1>Операционная сводка DNK Biz</h1>
             <p className="panel-copy">
-              Внутренний экран только для чтения: пользователи, заказы, доступы и текущий
-              статус каталога без CRM и без редактирования продукта.
+              Внутренний ops-экран для контроля пользователей, заказов, доступов и ручного
+              подтверждения оплаты по временному SBP flow без отдельной CRM.
             </p>
           </div>
 
@@ -155,6 +156,65 @@ export default async function AdminPage() {
               <span>Витрина</span>
               <strong>{data.totals.showcaseCourses}</strong>
             </div>
+          </div>
+        </article>
+
+        <article className="panel admin-section">
+          <div className="admin-section__head">
+            <span className="eyebrow">Ручная проверка</span>
+            <h2>Заказы, ожидающие подтверждения оплаты</h2>
+            <p className="panel-copy">
+              Временный MVP-flow для СБП QR: пользователь оплачивает вручную, нажимает
+              «Я оплатил», а менеджер подтверждает или отклоняет заказ здесь.
+            </p>
+          </div>
+
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Пользователь</th>
+                  <th>Email</th>
+                  <th>Курс / тариф</th>
+                  <th>Сумма</th>
+                  <th>Создан</th>
+                  <th>Статус</th>
+                  <th>Действия</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.manualReviewOrders.length > 0 ? (
+                  data.manualReviewOrders.map((item) => (
+                    <tr key={item.id}>
+                      <td>
+                        <strong>{item.userName || 'Без имени'}</strong>
+                        <div className="muted-text admin-cell__sub mono">Заказ #{item.id}</div>
+                      </td>
+                      <td className="mono">{item.userEmail}</td>
+                      <td>
+                        <strong>{item.courseTitle}</strong>
+                        <div className="muted-text admin-cell__sub">
+                          {item.tariffTitle} / <span className="mono">{item.courseSlug}</span>
+                        </div>
+                      </td>
+                      <td>{formatMoney(item.amount)}</td>
+                      <td>{formatDate(item.createdAt)}</td>
+                      <td>
+                        <span className={getBadgeClass(item.status)}>{item.status}</span>
+                      </td>
+                      <td>
+                        <AdminManualReviewActions orderId={item.id} />
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <EmptyTableRow
+                    colSpan={7}
+                    message="Заказов, ожидающих ручной проверки, сейчас нет."
+                  />
+                )}
+              </tbody>
+            </table>
           </div>
         </article>
 
