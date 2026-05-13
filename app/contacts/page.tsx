@@ -5,8 +5,8 @@ import { PublicPageShell } from '@/components/public-shell';
 import { publicContact } from '@/lib/public-site';
 
 export const metadata: Metadata = {
-  title: 'Контакты | Бизнес Школа ДНК',
-  description: 'Контакты DNK Biz: адрес, телефон и мессенджеры для вопросов по курсам и оплате.',
+  title: 'Контакты | DNK Biz',
+  description: 'Контакты DNK Biz: телефон, Telegram, Instagram и адрес для вопросов по курсам и оплате.',
 };
 
 export default function ContactsPage() {
@@ -17,8 +17,8 @@ export default function ContactsPage() {
           <span className="eyebrow">Контакты</span>
           <h1>Связь по выбору курса, оплате и доступу к обучению.</h1>
           <p className="panel-copy">
-            Если вам нужно подобрать программу, уточнить формат оплаты или проверить статус
-            заказа, используйте удобный канал связи ниже.
+            Если нужно подобрать программу, уточнить формат оплаты или проверить статус заказа,
+            используйте удобный канал связи ниже.
           </p>
         </article>
 
@@ -26,8 +26,8 @@ export default function ContactsPage() {
           <article className="panel public-copy-card public-contact-sheet">
             <h2>Каналы связи</h2>
             <p className="panel-copy">
-              Для быстрых вопросов по выбору курса подойдет телефон. Если нужно прислать номер
-              заказа или уточнить оплату, удобнее написать в Telegram.
+              Для быстрого вопроса по выбору курса подойдет телефон. Если нужно уточнить оплату или
+              передать номер заказа, удобнее написать в Telegram.
             </p>
 
             <div className="public-contact-sheet__list">
@@ -62,10 +62,10 @@ export default function ContactsPage() {
           </article>
 
           <article className="panel public-copy-card">
-            <h2>{publicContact.address[1]}</h2>
+            <h2>{publicContact.locationLabel}</h2>
             <p className="panel-copy">
-              Если вопрос связан с оплатой, подготовьте номер заказа и название курса, чтобы
-              быстрее сверить статус.
+              Если вопрос связан с оплатой, подготовьте номер заказа и название курса, чтобы быстрее
+              сверить статус и доступ.
             </p>
             <ul className="utility-list utility-list--bullets">
               {publicContact.address.map((line) => (
@@ -76,10 +76,10 @@ export default function ContactsPage() {
         </div>
 
         <article className="panel public-copy-card public-copy-card--accent public-contact-next">
-          <h2>Если вы только выбираете курс, начните с каталога.</h2>
+          <h2>Если вы только выбираете направление, начните с каталога.</h2>
           <p className="panel-copy">
-            Так проще понять, какое направление вам подходит и есть ли у курса ознакомительные
-            уроки до оплаты.
+            Так проще понять, какие программы доступны бесплатно, у каких курсов есть первые уроки
+            до покупки и что подходит именно под вашу задачу.
           </p>
           <div className="row-actions">
             <Link href="/catalog" className="primary-button">

@@ -80,14 +80,14 @@ export function PublicFooter() {
     <footer className="site-footer public-footer">
       <div className="public-footer__lead-block">
         <div className="public-footer__brand">
-          <span className="eyebrow">DNK Biz</span>
+          <span className="eyebrow">Бизнес-школа ДНК</span>
           <h2>{publicBrandName}</h2>
           <p className="site-footer__lead">{publicBrandLead}</p>
         </div>
 
         <div className="public-footer__contact-card">
-          <strong>Связаться с нами</strong>
-          <div className="public-contact-list">
+          <strong>Контакты</strong>
+          <div className="public-contact-list public-contact-list--stack">
             <a href={publicContact.phoneHref}>{publicContact.phoneLabel}</a>
             <a href={publicContact.telegramHref} rel="noreferrer" target="_blank">
               Telegram {publicContact.telegramLabel}
@@ -96,7 +96,7 @@ export function PublicFooter() {
               Instagram {publicContact.instagramLabel}
             </a>
           </div>
-          <p>{publicContact.address.join(', ')}</p>
+          <p>{publicContact.locationLabel}</p>
         </div>
       </div>
 

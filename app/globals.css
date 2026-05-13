@@ -5078,6 +5078,11 @@ a.bento-card:hover {
   gap: 0.65rem 1rem;
 }
 
+.public-contact-list--stack {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
 .public-contact-list a,
 .public-footer__links a,
 .footer-note__links a {
@@ -5113,6 +5118,324 @@ a.bento-card:hover {
   color: rgba(214, 225, 235, 0.68);
   font-size: 0.88rem;
   line-height: 1.5;
+}
+
+.home-hero {
+  margin-top: 0.3rem;
+}
+
+.home-hero__panel {
+  position: relative;
+  display: grid;
+  align-content: center;
+  gap: 1.45rem;
+  min-height: calc(100svh - 7rem);
+  padding: clamp(1.5rem, 4vw, 3rem);
+  border-radius: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(circle at 82% 18%, rgba(1, 247, 246, 0.18), transparent 21rem),
+    radial-gradient(circle at 18% 100%, rgba(0, 184, 217, 0.14), transparent 18rem),
+    linear-gradient(145deg, rgba(11, 18, 27, 0.98), rgba(14, 24, 35, 0.94));
+  box-shadow: 0 30px 60px -46px rgba(0, 0, 0, 0.78);
+  overflow: hidden;
+}
+
+.home-hero__panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.06), transparent 32%),
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.06), transparent 28%);
+  pointer-events: none;
+}
+
+.home-hero__copy {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 1rem;
+  max-width: 54rem;
+}
+
+.home-hero__title {
+  margin: 0;
+  max-width: 11ch;
+  font-size: clamp(2.8rem, 6vw, 5.4rem);
+  line-height: 0.94;
+  letter-spacing: -0.08em;
+}
+
+.home-hero__lead,
+.home-review-card__support {
+  margin: 0;
+  max-width: 44rem;
+  font-size: clamp(1rem, 1.45vw, 1.08rem);
+}
+
+.home-hero__proof {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem 1rem;
+  list-style: none;
+  margin: 0.1rem 0 0;
+  padding: 0;
+  max-width: 56rem;
+}
+
+.home-hero__proof li {
+  position: relative;
+  min-height: 100%;
+  padding: 1rem 1rem 1rem 1.2rem;
+  border-radius: 1.15rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(214, 225, 235, 0.78);
+  font-size: 0.94rem;
+  line-height: 1.55;
+}
+
+.home-hero__proof li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 1.05rem;
+  bottom: 1.05rem;
+  width: 0.24rem;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--accent), rgba(1, 247, 246, 0.1));
+}
+
+.home-hero__proof strong {
+  display: block;
+  margin-bottom: 0.2rem;
+  color: var(--foreground);
+}
+
+.home-steps-grid,
+.home-results-grid,
+.home-role-grid,
+.home-catalog-shelves,
+.home-catalog-grid,
+.home-team-layout,
+.home-team-grid,
+.home-contact-grid,
+.home-team-proof,
+.home-team-sidebar {
+  display: grid;
+  gap: 1rem;
+}
+
+.home-step-card,
+.home-outcome-card,
+.home-role-card,
+.home-review-card,
+.home-team-intro,
+.home-team-card,
+.home-contact-card {
+  position: relative;
+  min-height: 100%;
+  display: grid;
+  gap: 0.85rem;
+  padding: 1.2rem 1.25rem;
+  border-radius: 1.45rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.015)),
+    rgba(10, 18, 28, 0.72);
+}
+
+.home-step-card h3,
+.home-outcome-card h3,
+.home-role-card h3,
+.home-review-card h2,
+.home-team-intro h3,
+.home-team-proof-item h3,
+.home-team-card h3,
+.home-contact-card h3 {
+  margin: 0;
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+}
+
+.home-step-card {
+  gap: 0.75rem;
+}
+
+.home-step-card__index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  min-height: 2.3rem;
+  padding: 0.3rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(1, 247, 246, 0.08);
+  color: rgba(244, 248, 251, 0.9);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.home-outcome-card,
+.home-role-card {
+  align-content: start;
+}
+
+.home-role-card {
+  background:
+    linear-gradient(180deg, rgba(1, 247, 246, 0.045), rgba(255, 255, 255, 0.015)),
+    rgba(10, 18, 28, 0.72);
+}
+
+.home-role-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.home-role-card__tags span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.9rem;
+  padding: 0.28rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(214, 225, 235, 0.82);
+  font-size: 0.82rem;
+}
+
+.home-catalog-head {
+  max-width: none;
+}
+
+.home-catalog-head > .primary-button {
+  justify-self: start;
+}
+
+.home-catalog-shelves {
+  gap: 1.75rem;
+}
+
+.home-catalog-shelf {
+  display: grid;
+  gap: 1rem;
+  padding-top: 1.35rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.home-catalog-shelf:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+.home-catalog-shelf__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 0.85rem 1rem;
+}
+
+.home-catalog-shelf__head .panel-copy {
+  max-width: 42rem;
+}
+
+.home-catalog-shelf__meta {
+  color: rgba(214, 225, 235, 0.7);
+  font-size: 0.84rem;
+  white-space: nowrap;
+}
+
+.home-course-card {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.015)),
+    rgba(11, 18, 27, 0.82);
+}
+
+.home-course-card .row-actions {
+  margin-top: auto;
+}
+
+.home-review-card {
+  gap: 1rem;
+  padding: clamp(1.35rem, 3vw, 2rem);
+}
+
+.home-review-card--accent,
+.home-contact-card--accent {
+  background:
+    radial-gradient(circle at top right, rgba(1, 247, 246, 0.12), transparent 24rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.015)),
+    rgba(10, 18, 28, 0.84);
+}
+
+.home-review-card .row-actions,
+.home-contact-card .row-actions {
+  margin-top: 0.1rem;
+}
+
+.home-team-layout {
+  align-items: start;
+}
+
+.home-team-proof {
+  gap: 0.8rem;
+}
+
+.home-team-proof-item {
+  display: grid;
+  gap: 0.4rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.home-team-proof-item:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+.home-team-card {
+  overflow: hidden;
+  padding: 0;
+}
+
+.home-team-card__media {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.home-team-card__image {
+  object-fit: cover;
+  filter: grayscale(10%);
+  transition:
+    transform 220ms ease,
+    filter 220ms ease;
+}
+
+.home-team-card__body {
+  display: grid;
+  gap: 0.55rem;
+  padding: 1rem 1.05rem 1.15rem;
+}
+
+.home-contact-grid {
+  align-items: stretch;
+}
+
+.home-contact-list {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.home-contact-card .utility-list {
+  margin: 0;
 }
 
 .public-copy-card--accent,
@@ -5402,6 +5725,11 @@ a.bento-card:hover {
     border-color: rgba(255, 255, 255, 0.12);
   }
 
+  .home-team-card:hover .home-team-card__image {
+    transform: scale(1.03);
+    filter: grayscale(0%);
+  }
+
   .public-course-card:hover .public-course-card__support,
   .public-course-card:focus-within .public-course-card__support,
   .catalog-directory-card:hover .catalog-directory-card__hint,
@@ -5449,6 +5777,18 @@ a.bento-card:hover {
   .catalog-directory__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .home-steps-grid,
+  .home-results-grid,
+  .home-role-grid,
+  .home-catalog-grid,
+  .home-team-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .home-contact-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (min-width: 960px) {
@@ -5477,6 +5817,39 @@ a.bento-card:hover {
     grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.62fr);
   }
 
+  .public-footer__cols {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .home-catalog-head {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+  }
+
+  .home-steps-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .home-results-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .home-role-grid,
+  .home-catalog-grid,
+  .home-team-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .home-team-layout {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    align-items: start;
+  }
+
+  .home-team-sidebar {
+    position: sticky;
+    top: 1rem;
+  }
+
   .catalog-directory__filters {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: start;
@@ -5484,6 +5857,10 @@ a.bento-card:hover {
 }
 
 @media (min-width: 1120px) {
+  .home-steps-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
   .catalog-directory__grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -5492,6 +5869,19 @@ a.bento-card:hover {
 @media (max-width: 959px) {
   .public-page-shell {
     padding-bottom: 4rem;
+  }
+
+  .home-hero__panel {
+    min-height: auto;
+  }
+
+  .home-hero__title {
+    max-width: none;
+    font-size: clamp(2.3rem, 10vw, 3.4rem);
+  }
+
+  .home-hero__proof {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .public-top-nav {
@@ -5552,6 +5942,13 @@ a.bento-card:hover {
 
   .public-course-card--featured {
     grid-column: auto;
+  }
+
+  .public-course-card__support,
+  .catalog-directory-card__hint {
+    max-height: none;
+    opacity: 1;
+    transform: none;
   }
 
   .public-copy-page__hero h1,

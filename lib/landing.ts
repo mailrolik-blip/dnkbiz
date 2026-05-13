@@ -53,57 +53,39 @@ function toActiveOrderStatus(value: string): 'PENDING' | 'PROCESSING' {
   return value === 'PROCESSING' ? 'PROCESSING' : 'PENDING';
 }
 
+function isDatabaseUnavailableError(error: unknown) {
+  return (
+    error instanceof Error &&
+    (error.name === 'PrismaClientInitializationError' ||
+      error.message.includes("Can't reach database server"))
+  );
+}
+
+function getLandingPageFallbackData(): LandingPageData {
+  return {
+    user: null,
+    featuredCourse: null,
+    tariffs: [],
+    catalogCourses: [],
+  };
+}
+
 export async function getLandingPageData(): Promise<LandingPageData> {
-  const user = await getOptionalCurrentUser();
+  try {
+    const user = await getOptionalCurrentUser();
 
-  if (user) {
-    await expireStaleOrdersForUser(user.id);
-  }
+    if (user) {
+      await expireStaleOrdersForUser(user.id);
+    }
 
-  const [featuredCourse, tariffs, enrollments, pendingOrders, catalogCourses] =
-    await Promise.all([
-    prisma.course.findFirst({
-      where: {
-        slug: 'practical-course',
-        isPublished: true,
-      },
-      select: {
-        title: true,
-        slug: true,
-        description: true,
-        lessons: {
+    const [featuredCourse, tariffs, enrollments, pendingOrders, catalogCourses] =
+      await Promise.all([
+        prisma.course.findFirst({
           where: {
+            slug: 'practical-course',
             isPublished: true,
           },
-          orderBy: {
-            position: 'asc',
-          },
           select: {
-            id: true,
-            title: true,
-            position: true,
-          },
-        },
-      },
-    }),
-    prisma.tariff.findMany({
-      where: {
-        isActive: true,
-        course: {
-          isPublished: true,
-        },
-      },
-      orderBy: {
-        price: 'asc',
-      },
-      select: {
-        id: true,
-        title: true,
-        price: true,
-        interval: true,
-        course: {
-          select: {
-            id: true,
             title: true,
             slug: true,
             description: true,
@@ -111,82 +93,125 @@ export async function getLandingPageData(): Promise<LandingPageData> {
               where: {
                 isPublished: true,
               },
+              orderBy: {
+                position: 'asc',
+              },
               select: {
                 id: true,
+                title: true,
+                position: true,
               },
             },
           },
-        },
-      },
-    }),
-    user
-      ? prisma.enrollment.findMany({
+        }),
+        prisma.tariff.findMany({
           where: {
-            userId: user.id,
+            isActive: true,
+            course: {
+              isPublished: true,
+            },
+          },
+          orderBy: {
+            price: 'asc',
           },
           select: {
-            courseId: true,
+            id: true,
+            title: true,
+            price: true,
+            interval: true,
+            course: {
+              select: {
+                id: true,
+                title: true,
+                slug: true,
+                description: true,
+                lessons: {
+                  where: {
+                    isPublished: true,
+                  },
+                  select: {
+                    id: true,
+                  },
+                },
+              },
+            },
           },
-        })
-      : Promise.resolve([]),
-    user
-      ? prisma.order.findMany({
-        where: {
-          userId: user.id,
-          status: {
-            in: activeOrderStatuses,
-          },
-        },
-        select: {
-          id: true,
-          tariffId: true,
-          status: true,
-        },
-      })
-      : Promise.resolve([]),
-    getCatalogCoursesForViewer(user?.id ?? null),
-  ]);
+        }),
+        user
+          ? prisma.enrollment.findMany({
+              where: {
+                userId: user.id,
+              },
+              select: {
+                courseId: true,
+              },
+            })
+          : Promise.resolve([]),
+        user
+          ? prisma.order.findMany({
+              where: {
+                userId: user.id,
+                status: {
+                  in: activeOrderStatuses,
+                },
+              },
+              select: {
+                id: true,
+                tariffId: true,
+                status: true,
+              },
+            })
+          : Promise.resolve([]),
+        getCatalogCoursesForViewer(user?.id ?? null),
+      ]);
 
-  const ownedCourseIds = new Set(enrollments.map((item) => item.courseId));
-  const pendingOrdersByTariffId = new Map(
-    pendingOrders.map((item) => [
-      item.tariffId,
-      {
-        id: item.id,
-        checkoutUrl: getOrderCheckoutUrl(item.id),
-        status: toActiveOrderStatus(item.status),
-      },
-    ])
-  );
+    const ownedCourseIds = new Set(enrollments.map((item) => item.courseId));
+    const pendingOrdersByTariffId = new Map(
+      pendingOrders.map((item) => [
+        item.tariffId,
+        {
+          id: item.id,
+          checkoutUrl: getOrderCheckoutUrl(item.id),
+          status: toActiveOrderStatus(item.status),
+        },
+      ])
+    );
 
-  return {
-    featuredCourse: featuredCourse
-      ? {
-          title: featuredCourse.title,
-          slug: featuredCourse.slug,
-          description: featuredCourse.description,
-          lessonsCount: featuredCourse.lessons.length,
-          lessons: featuredCourse.lessons,
-        }
-      : null,
-    tariffs: tariffs.map((tariff) => ({
-      id: tariff.id,
-      title: tariff.title,
-      price: tariff.price,
-      interval: tariff.interval,
-      courseTitle: tariff.course.title,
-      courseSlug: tariff.course.slug,
-      courseDescription: tariff.course.description,
-      lessonsCount: tariff.course.lessons.length,
-      isOwned: ownedCourseIds.has(tariff.course.id),
-      pendingOrder: pendingOrdersByTariffId.get(tariff.id) ?? null,
-    })),
-    catalogCourses,
-    user: user
-      ? {
-          email: user.email,
-          name: user.name,
-        }
-      : null,
-  };
+    return {
+      featuredCourse: featuredCourse
+        ? {
+            title: featuredCourse.title,
+            slug: featuredCourse.slug,
+            description: featuredCourse.description,
+            lessonsCount: featuredCourse.lessons.length,
+            lessons: featuredCourse.lessons,
+          }
+        : null,
+      tariffs: tariffs.map((tariff) => ({
+        id: tariff.id,
+        title: tariff.title,
+        price: tariff.price,
+        interval: tariff.interval,
+        courseTitle: tariff.course.title,
+        courseSlug: tariff.course.slug,
+        courseDescription: tariff.course.description,
+        lessonsCount: tariff.course.lessons.length,
+        isOwned: ownedCourseIds.has(tariff.course.id),
+        pendingOrder: pendingOrdersByTariffId.get(tariff.id) ?? null,
+      })),
+      catalogCourses,
+      user: user
+        ? {
+            email: user.email,
+            name: user.name,
+          }
+        : null,
+    };
+  } catch (error) {
+    if (isDatabaseUnavailableError(error)) {
+      return getLandingPageFallbackData();
+    }
+
+    throw error;
+  }
 }

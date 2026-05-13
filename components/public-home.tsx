@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 
 import { PublicPageShell } from '@/components/public-shell';
@@ -6,17 +7,21 @@ import {
   getCheckoutIntentPath,
   getCourseIntentPath,
 } from '@/lib/auth-intent';
-import { getCourseCatalogHref, groupCatalogCourses } from '@/lib/lms-catalog';
+import { getCourseCatalogHref } from '@/lib/lms-catalog';
 import type { LandingPageData } from '@/lib/landing';
 import { getActiveOrderActionLabel } from '@/lib/payments/constants';
 import {
+  publicCareerOrientations,
   publicContact,
+  publicHomeReviewPlaceholder,
   publicLearningFlow,
+  publicOutcomeAreas,
+  publicTeamLead,
+  publicTeamMembers,
   publicTrustReasons,
 } from '@/lib/public-site';
 import {
   canOpenCourseRoute,
-  getCatalogCourseActionHint,
   formatCoursePrice,
   formatLessonCount,
   formatPreviewLessons,
@@ -26,6 +31,97 @@ import {
 } from '@/lib/purchase-ux';
 
 type PublicHomeProps = LandingPageData;
+type HomeCourse = LandingPageData['catalogCourses'][number];
+
+function getHomeCourseAction(course: HomeCourse, hasUser: boolean) {
+  if (course.status === 'showcase') {
+    return {
+      href: getCourseCatalogHref(course.slug),
+      label: 'Скоро',
+    };
+  }
+
+  if (course.pendingOrder) {
+    return {
+      href: course.pendingOrder.checkoutUrl,
+      label: getActiveOrderActionLabel(course.pendingOrder.status),
+    };
+  }
+
+  if (course.isOwned) {
+    return {
+      href: `/courses/${course.slug}`,
+      label: 'Перейти к курсу',
+    };
+  }
+
+  if (course.status === 'free') {
+    return {
+      href: hasUser
+        ? `/courses/${course.slug}`
+        : buildAuthHref('register', getCourseIntentPath(course.slug)),
+      label: 'Начать бесплатно',
+    };
+  }
+
+  if (isStartedPreviewCourse(course)) {
+    return {
+      href: `/courses/${course.slug}`,
+      label: 'Продолжить обучение',
+    };
+  }
+
+  if (course.previewEnabled && course.previewLessonsCount > 0) {
+    return {
+      href: hasUser
+        ? canOpenCourseRoute(course)
+          ? `/courses/${course.slug}`
+          : getCheckoutIntentPath(course.tariffId!)
+        : buildAuthHref('register', getCourseIntentPath(course.slug)),
+      label: 'Открыть первые уроки',
+    };
+  }
+
+  if (!hasUser) {
+    return {
+      href: buildAuthHref('register', getCheckoutIntentPath(course.tariffId!)),
+      label: 'Купить курс',
+    };
+  }
+
+  return {
+    href: course.tariffId
+      ? getCheckoutIntentPath(course.tariffId)
+      : getCourseCatalogHref(course.slug),
+    label: 'Купить курс',
+  };
+}
+
+function getHomeCourseSupport(course: HomeCourse, hasUser: boolean) {
+  if (course.status === 'showcase') {
+    return 'Курс готовится к публикации. Пока можно посмотреть описание и структуру программы.';
+  }
+
+  if (course.pendingOrder) {
+    return 'Заказ уже создан. Можно вернуться к оплате и проверить, когда откроется доступ.';
+  }
+
+  if (course.isOwned) {
+    return 'Курс уже доступен в личном кабинете и открыт для продолжения обучения.';
+  }
+
+  if (course.status === 'free') {
+    return hasUser
+      ? 'Доступ открывается сразу: переходите в курс и начинайте обучение.'
+      : 'После бесплатной регистрации курс откроется сразу, без покупки.';
+  }
+
+  if (course.previewEnabled && course.previewLessonsCount > 0) {
+    return `${formatPreviewLessons(course.previewLessonsCount)} доступны до покупки полного доступа.`;
+  }
+
+  return 'Полный доступ к урокам открывается после оплаты курса.';
+}
 
 function formatCourseCount(count: number) {
   const mod10 = count % 10;
@@ -42,277 +138,339 @@ function formatCourseCount(count: number) {
   return `${count} курсов`;
 }
 
-function getHomeCourseAction(
-  course: LandingPageData['catalogCourses'][number],
-  hasUser: boolean
-) {
-  const progressLabel =
-    course.progressPercent > 0 || course.completedLessonsCount > 0
-      ? 'Продолжить обучение'
-      : 'Открыть курс';
-
-  if (course.pendingOrder) {
-    return {
-      href: course.pendingOrder.checkoutUrl,
-      label: getActiveOrderActionLabel(course.pendingOrder.status),
-    };
-  }
-
-  if (course.isOwned) {
-    return {
-      href: `/courses/${course.slug}`,
-      label: progressLabel,
-    };
-  }
-
-  if (course.status === 'free') {
-    return {
-      href: hasUser
-        ? `/courses/${course.slug}`
-        : buildAuthHref('register', getCourseIntentPath(course.slug)),
-      label:
-        hasUser && (course.isStarted || course.progressPercent > 0)
-          ? 'Продолжить обучение'
-          : 'Начать бесплатно',
-    };
-  }
-
-  if (isStartedPreviewCourse(course)) {
-    return {
-      href: `/courses/${course.slug}`,
-      label: progressLabel,
-    };
-  }
-
-  if (hasUser && canOpenCourseRoute(course)) {
-    return {
-      href: `/courses/${course.slug}`,
-      label: 'Открыть ознакомительные уроки',
-    };
-  }
-
-  if (!hasUser) {
-    return course.previewEnabled && course.previewLessonsCount > 0
-      ? {
-          href: buildAuthHref('register', getCourseIntentPath(course.slug)),
-          label: 'Открыть ознакомительные уроки',
-        }
-      : {
-          href: buildAuthHref('register', getCheckoutIntentPath(course.tariffId!)),
-          label: 'Купить курс',
-        };
-  }
-
-  return {
-    href: course.tariffId
-      ? getCheckoutIntentPath(course.tariffId)
-      : getCourseCatalogHref(course.slug),
-    label: 'Купить курс',
-  };
-}
-
 export default function PublicHome({ user, catalogCourses }: PublicHomeProps) {
   const hasUser = Boolean(user);
-  const liveCourses = catalogCourses.filter((course) => course.status !== 'showcase');
-  const priorityCourse =
-    liveCourses.find((course) => course.slug === 'marketing-sales-management') ??
-    liveCourses.find((course) => course.status === 'paid') ??
-    liveCourses[0] ??
-    null;
-  const directionGroups = groupCatalogCourses(liveCourses)
-    .filter((group) => group.courses.length > 0)
-    .slice(0, 3);
-  const popularCourses = [
-    ...(priorityCourse ? [priorityCourse] : []),
-    ...liveCourses.filter((course) => course.slug !== priorityCourse?.slug),
-  ].slice(0, 4);
+  const homepageCourses = catalogCourses.filter((course) => course.slug !== 'practical-course');
+  const freeCourses = homepageCourses.filter((course) => course.status === 'free').slice(0, 2);
+  const paidCourses = homepageCourses.filter((course) => course.status === 'paid').slice(0, 4);
+  const showcaseCourses = homepageCourses
+    .filter((course) => course.status === 'showcase')
+    .slice(0, 2);
+
+  const catalogShelves = [
+    {
+      id: 'free',
+      title: 'Бесплатные курсы',
+      description: 'Для первого входа в платформу и знакомства с форматом обучения.',
+      courses: freeCourses,
+    },
+    {
+      id: 'paid',
+      title: 'Платные программы',
+      description: 'Полный доступ после оплаты, а у части программ сначала открываются первые уроки.',
+      courses: paidCourses,
+    },
+    {
+      id: 'showcase',
+      title: 'Скоро будут доступны',
+      description: 'Программы, которые уже оформлены на витрине и готовятся к следующему запуску.',
+      courses: showcaseCourses,
+    },
+  ].filter((shelf) => shelf.courses.length > 0);
 
   return (
     <PublicPageShell user={user}>
-      <section className="dnk-section public-hero">
-        <article className="panel public-hero__main public-hero__main--funnel">
-          <span className="eyebrow">Обучение для бизнеса и команды</span>
-          <h1>Выберите курс и начните обучение без лишних шагов.</h1>
-          <p className="panel-copy public-hero__copy">
-            Откройте каталог, посмотрите программу курса и переходите к обучению в личном
-            кабинете. Для платных курсов доступ открывается после подтверждения оплаты.
-          </p>
+      <section className="dnk-section home-hero">
+        <article className="home-hero__panel">
+          <span className="eyebrow">Бесплатный вход в DNK Biz</span>
+
+          <div className="home-hero__copy">
+            <h1 className="home-hero__title">
+              Курсы 1С, Excel, маркетинга и охраны труда для работы и повышения квалификации.
+            </h1>
+            <p className="panel-copy home-hero__lead">
+              Бесплатная регистрация открывает стартовые курсы и ознакомительные уроки платных
+              программ. Учитесь в личном кабинете в удобное время и возвращайтесь к обучению без
+              потери прогресса.
+            </p>
+          </div>
 
           <div className="row-actions">
-            <Link href="/catalog" className="primary-button">
-              Перейти в каталог
+            <Link href={hasUser ? '/lk' : '/register'} className="primary-button">
+              {hasUser ? 'Открыть личный кабинет' : 'Зарегистрироваться бесплатно'}
             </Link>
-            <Link href={user ? '/lk' : '/register'} className="secondary-button">
-              {user ? 'Открыть личный кабинет' : 'Создать аккаунт'}
+            <Link href="/catalog" className="secondary-button">
+              Смотреть каталог курсов
             </Link>
           </div>
 
-          <p className="public-hero__meta">
-            Понятные страницы курсов. Ознакомительные уроки там, где они доступны. Обучение и
-            прогресс в одном кабинете.
-          </p>
+          <ul className="home-hero__proof">
+            <li>
+              <strong>Бесплатный старт.</strong> Первые курсы открываются сразу после регистрации.
+            </li>
+            <li>
+              <strong>Первые уроки до покупки.</strong> У части программ можно заранее открыть
+              preview.
+            </li>
+            <li>
+              <strong>Обучение в кабинете.</strong> Уроки, доступ и следующий шаг собраны в одном
+              месте.
+            </li>
+            <li>
+              <strong>Возврат к прогрессу.</strong> Можно продолжить с того места, где вы
+              остановились.
+            </li>
+          </ul>
         </article>
       </section>
 
-      <section id="catalog" className="dnk-section">
+      <section className="dnk-section">
         <div className="public-section-head">
-          <span className="eyebrow">Направления и курсы</span>
-          <h2>Сначала выберите направление, затем откройте подходящую программу.</h2>
+          <span className="eyebrow">Как проходит обучение</span>
+          <h2>Путь от выбора курса до обучения в кабинете состоит из нескольких понятных шагов.</h2>
           <p className="panel-copy">
-            На главной собраны только основные входы. Для деталей по формату и содержанию
-            переходите на страницу конкретного курса.
+            Пользователь видит курс, регистрируется бесплатно, изучает стартовые уроки и продолжает
+            обучение в своем кабинете без перегруженного маршрута.
           </p>
         </div>
 
-        {directionGroups.length > 0 ? (
-          <div className="public-grid public-grid--three">
-            {directionGroups.map((group) => (
-              <article key={group.id} className="panel public-card public-direction-card">
-                <p className="public-direction-card__eyebrow">Направление</p>
-                <h3>{group.title}</h3>
-                <p className="panel-copy public-direction-card__description">{group.description}</p>
-                <ul className="public-direction-card__list">
-                  {group.courses.slice(0, 3).map((course) => (
-                    <li key={course.slug}>
-                      <Link href={getCourseCatalogHref(course.slug)}>{course.title}</Link>
-                    </li>
-                  ))}
-                </ul>
-                <p className="public-direction-card__count">{formatCourseCount(group.courses.length)}</p>
+        <ol className="home-steps-grid" aria-label="Механика обучения">
+          {publicLearningFlow.map((step) => (
+            <li key={step.step} className="home-step-card">
+              <span className="home-step-card__index">{step.step}</span>
+              <h3>{step.title}</h3>
+              <p className="panel-copy">{step.body}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section className="dnk-section">
+        <div className="public-section-head">
+          <span className="eyebrow">Результаты и применение</span>
+          <h2>Что можно применять в работе после обучения.</h2>
+          <p className="panel-copy">
+            Курсы дают прикладную базу для повседневных задач и подготовки к новым обязанностям.
+            Здесь нет обещаний гарантированного трудоустройства или вымышленных результатов.
+          </p>
+        </div>
+
+        <div className="home-results-grid">
+          {publicOutcomeAreas.map((item) => (
+            <article key={item.title} className="home-outcome-card">
+              <h3>{item.title}</h3>
+              <p className="panel-copy">{item.body}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="dnk-section">
+        <div className="public-section-head">
+          <span className="eyebrow">Карьерные ориентиры</span>
+          <h2>К каким ролям готовят программы.</h2>
+          <p className="panel-copy">
+            Это ориентиры по рабочим направлениям, а не обещание работы или гарантированной
+            зарплаты. Они помогают понять, к каким задачам и ролям можно подготовиться через
+            обучение.
+          </p>
+        </div>
+
+        <div className="home-role-grid">
+          {publicCareerOrientations.map((role) => (
+            <article key={role.title} className="home-role-card">
+              <h3>{role.title}</h3>
+              <p className="panel-copy">{role.body}</p>
+              <div className="home-role-card__tags">
+                {role.related.map((item) => (
+                  <span key={item}>{item}</span>
+                ))}
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section id="catalog" className="dnk-section">
+        <div className="public-section-head home-catalog-head">
+          <div>
+            <span className="eyebrow">Каталог курсов</span>
+            <h2>Бесплатные, платные и готовящиеся программы без перегруженной витрины.</h2>
+            <p className="panel-copy">
+              На главной только короткий preview каталога. Полный список программ, структура и
+              детали каждой страницы доступны в полном каталоге.
+            </p>
+          </div>
+
+          <Link href="/catalog" className="primary-button">
+            Открыть весь каталог
+          </Link>
+        </div>
+
+        <div className="home-catalog-shelves">
+          {catalogShelves.length > 0 ? (
+            catalogShelves.map((shelf) => (
+              <section key={shelf.id} className="home-catalog-shelf">
+                <div className="home-catalog-shelf__head">
+                  <div>
+                    <span className="eyebrow">{shelf.title}</span>
+                    <p className="panel-copy">{shelf.description}</p>
+                  </div>
+                  <span className="home-catalog-shelf__meta">{formatCourseCount(shelf.courses.length)}</span>
+                </div>
+
+                <div className="home-catalog-grid">
+                  {shelf.courses.map((course) => {
+                    const action = getHomeCourseAction(course, hasUser);
+
+                    return (
+                      <article
+                        key={course.slug}
+                        className="panel public-card public-course-card home-course-card"
+                      >
+                        <Link
+                          aria-label={`Открыть страницу курса ${course.title}`}
+                          className="public-course-card__cover"
+                          href={getCourseCatalogHref(course.slug)}
+                        />
+
+                        <div className="public-course-card__head">
+                          <span className={getCatalogCourseStatusClass(course)}>
+                            {getCatalogCourseStatusLabel(course)}
+                          </span>
+                          <span className="public-course-card__price">
+                            {formatCoursePrice(course.price)}
+                          </span>
+                        </div>
+
+                        <div className="public-course-card__body">
+                          <h3>{course.title}</h3>
+                          <p className="panel-copy">{course.description}</p>
+                        </div>
+
+                        <div className="public-course-card__meta">
+                          {course.lessonsCount ? (
+                            <span>{formatLessonCount(course.lessonsCount)}</span>
+                          ) : null}
+                          {course.previewEnabled && course.previewLessonsCount > 0 ? (
+                            <span>{formatPreviewLessons(course.previewLessonsCount)}</span>
+                          ) : null}
+                        </div>
+
+                        <p className="public-course-card__support">
+                          {getHomeCourseSupport(course, hasUser)}
+                        </p>
+
+                        <div className="row-actions">
+                          <Link
+                            href={action.href}
+                            className={
+                              course.status === 'showcase' ? 'ghost-button' : 'primary-button'
+                            }
+                          >
+                            {action.label}
+                          </Link>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              </section>
+            ))
+          ) : (
+            <article className="home-review-card">
+              <span className="eyebrow">Локальный preview</span>
+              <h2>Карточки курсов появятся здесь после подключения локальной базы.</h2>
+              <p className="panel-copy">
+                В этой среде главная страница остается доступной для визуальной проверки, но
+                карточки курсов и их статусы берутся из базы. После запуска локального Postgres
+                блок снова покажет бесплатные, платные и готовящиеся программы.
+              </p>
+            </article>
+          )}
+        </div>
+      </section>
+
+      <section className="dnk-section">
+        <article className="home-review-card home-review-card--accent">
+          <span className="eyebrow">Отзывы</span>
+          <h2>{publicHomeReviewPlaceholder.title}</h2>
+          <p className="panel-copy">{publicHomeReviewPlaceholder.body}</p>
+          <p className="panel-copy home-review-card__support">
+            {publicHomeReviewPlaceholder.support}
+          </p>
+          <div className="row-actions">
+            <Link href="/catalog" className="primary-button">
+              Открыть каталог
+            </Link>
+            <Link href="/contacts" className="secondary-button">
+              Связаться с нами
+            </Link>
+          </div>
+        </article>
+      </section>
+
+      <section className="dnk-section">
+        <div className="public-section-head">
+          <span className="eyebrow">Команда</span>
+          <h2>Команда, которая собирает платформу и учебный контур.</h2>
+          <p className="panel-copy">
+            На главной используются только подтвержденные данные из локальных материалов проекта:
+            реальные имена, роли и фотографии без случайных заглушек.
+          </p>
+        </div>
+
+        <div className="home-team-layout">
+          <div className="home-team-sidebar">
+            <article className="home-team-intro">
+              <h3>{publicTeamLead.title}</h3>
+              <p className="panel-copy">{publicTeamLead.body}</p>
+            </article>
+
+            <div className="home-team-proof">
+              {publicTrustReasons.map((reason) => (
+                <article key={reason.title} className="home-team-proof-item">
+                  <h3>{reason.title}</h3>
+                  <p className="panel-copy">{reason.body}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+
+          <div className="home-team-grid">
+            {publicTeamMembers.map((member) => (
+              <article key={member.name} className="home-team-card">
+                <div className="home-team-card__media">
+                  <Image
+                    src={member.imageSrc}
+                    alt={`${member.name}, ${member.role}`}
+                    fill
+                    sizes="(max-width: 743px) 100vw, (max-width: 959px) 50vw, 33vw"
+                    className="home-team-card__image"
+                  />
+                </div>
+
+                <div className="home-team-card__body">
+                  <span className="eyebrow">{member.role}</span>
+                  <h3>{member.name}</h3>
+                  <p className="panel-copy">{member.direction}</p>
+                </div>
               </article>
             ))}
           </div>
-        ) : null}
-
-        {popularCourses.length > 0 ? (
-          <div className="public-grid public-grid--courses public-grid--course-highlights">
-            {popularCourses.map((course, index) => {
-              const action = getHomeCourseAction(course, hasUser);
-
-              return (
-                <article
-                  key={course.slug}
-                  className={`panel public-card public-course-card ${
-                    index === 0 ? 'public-course-card--featured' : ''
-                  }`}
-                >
-                  <Link
-                    aria-label={`Открыть страницу курса ${course.title}`}
-                    className="public-course-card__cover"
-                    href={getCourseCatalogHref(course.slug)}
-                  />
-
-                  <div className="public-course-card__head">
-                    <span className={getCatalogCourseStatusClass(course)}>
-                      {getCatalogCourseStatusLabel(course)}
-                    </span>
-                    <span className="public-course-card__price">
-                      {formatCoursePrice(course.price)}
-                    </span>
-                  </div>
-
-                  <div className="public-course-card__body">
-                    <h3>{course.title}</h3>
-                    <p className="panel-copy">{course.description}</p>
-                  </div>
-
-                  <div className="public-course-card__meta">
-                    {course.lessonsCount ? <span>{formatLessonCount(course.lessonsCount)}</span> : null}
-                    {course.previewEnabled ? (
-                      <span>{formatPreviewLessons(course.previewLessonsCount)}</span>
-                    ) : null}
-                  </div>
-
-                  <p className="public-course-card__support">
-                    {getCatalogCourseActionHint(course, hasUser)}
-                  </p>
-
-                  <div className="row-actions">
-                    <Link href={action.href} className="primary-button">
-                      {action.label}
-                    </Link>
-                    <Link href={getCourseCatalogHref(course.slug)} className="ghost-button">
-                      О программе
-                    </Link>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        ) : (
-          <article className="panel public-card">
-            <h3>Курсы скоро появятся в этой витрине.</h3>
-            <p className="panel-copy">
-              Пока можно перейти в каталог и проверить доступные программы или связаться с нами по
-              вопросам подбора обучения.
-            </p>
-            <div className="row-actions">
-              <Link href="/catalog" className="primary-button">
-                Открыть каталог
-              </Link>
-              <Link href="/contacts" className="secondary-button">
-                Связаться
-              </Link>
-            </div>
-          </article>
-        )}
-      </section>
-
-      <section id="how-it-works" className="dnk-section">
-        <div className="public-section-head">
-          <span className="eyebrow">Как проходит обучение</span>
-          <h2>Путь к курсу короткий и понятный.</h2>
-          <p className="panel-copy">
-            Без лишних переходов: от выбора программы и оплаты до доступа к урокам в личном
-            кабинете.
-          </p>
-        </div>
-
-        <div className="public-learning-flow">
-          {publicLearningFlow.map((step) => (
-            <article key={step.step} className="panel public-learning-step">
-              <span className="public-learning-step__index">{step.step}</span>
-              <h3>{step.title}</h3>
-              <p className="panel-copy">{step.body}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section id="trust" className="dnk-section">
-        <div className="public-section-head">
-          <span className="eyebrow">Почему нам можно доверять</span>
-          <h2>Только то, что пользователь действительно видит до и после покупки.</h2>
-          <p className="panel-copy">
-            Здесь нет вымышленных цифр, искусственных отзывов и обещаний мгновенного результата.
-            Только понятный путь к обучению.
-          </p>
-        </div>
-
-        <div className="public-grid public-grid--three public-trust-grid">
-          {publicTrustReasons.map((reason) => (
-            <article key={reason.title} className="panel public-card public-trust-card">
-              <h3>{reason.title}</h3>
-              <p className="panel-copy">{reason.body}</p>
-            </article>
-          ))}
         </div>
       </section>
 
       <section id="contacts" className="dnk-section">
         <div className="public-section-head">
           <span className="eyebrow">Контакты</span>
-          <h2>Если нужно выбрать курс или уточнить оплату, с нами можно связаться напрямую.</h2>
+          <h2>Связаться по выбору курса, доступу и оплате.</h2>
           <p className="panel-copy">
-            Используйте удобный канал связи. Если вопрос связан с оплатой, подготовьте номер
-            заказа и название курса.
+            Используйте любой удобный канал связи. Если вопрос связан с оплатой, подготовьте
+            название курса и номер заказа, чтобы быстрее сверить статус и доступ.
           </p>
         </div>
 
-        <div className="public-grid public-grid--split public-contact-grid">
-          <article className="panel public-card public-contact-card">
-            <h3>Телефон и мессенджеры</h3>
-            <div className="public-contact-list">
+        <div className="home-contact-grid">
+          <article className="home-contact-card">
+            <span className="eyebrow">Телефон и мессенджеры</span>
+            <h3>Быстрый канал для вопросов по выбору курса и доступу.</h3>
+            <p className="panel-copy">
+              Для короткого вопроса удобнее позвонить. Если нужно уточнить оплату или доступ,
+              быстрее написать в Telegram.
+            </p>
+
+            <div className="public-contact-list home-contact-list">
               <a href={publicContact.phoneHref}>{publicContact.phoneLabel}</a>
               <a href={publicContact.telegramHref} rel="noreferrer" target="_blank">
                 Telegram {publicContact.telegramLabel}
@@ -321,41 +479,38 @@ export default function PublicHome({ user, catalogCourses }: PublicHomeProps) {
                 Instagram {publicContact.instagramLabel}
               </a>
             </div>
-          </article>
 
-          <article className="panel public-card public-contact-card">
-            <h3>{publicContact.address[1]}</h3>
-            <ul className="utility-list utility-list--bullets">
-              {publicContact.address.map((line) => (
-                <li key={line}>{line}</li>
-              ))}
-            </ul>
             <div className="row-actions">
               <Link href="/contacts" className="secondary-button">
                 Все контакты
               </Link>
             </div>
           </article>
-        </div>
-      </section>
 
-      <section className="dnk-section">
-        <article className="panel public-final-cta">
-          <span className="eyebrow">Следующий шаг</span>
-          <h2>Откройте каталог и выберите курс, с которого хотите начать.</h2>
-          <p className="panel-copy">
-            Дальше путь уже понятен: страница курса, оплата при необходимости и обучение в личном
-            кабинете.
-          </p>
-          <div className="row-actions">
-            <Link href="/catalog" className="primary-button">
-              Перейти в каталог
-            </Link>
-            <Link href={user ? '/lk' : '/register'} className="secondary-button">
-              {user ? 'Открыть кабинет' : 'Создать аккаунт'}
-            </Link>
-          </div>
-        </article>
+          <article className="home-contact-card home-contact-card--accent">
+            <span className="eyebrow">Адрес</span>
+            <h3>{publicContact.locationLabel}</h3>
+            <p className="panel-copy">
+              Если вы только присматриваетесь к программам, начните с каталога. Если вопрос уже по
+              конкретному курсу или заказу, переходите к контактам и укажите нужное направление.
+            </p>
+
+            <ul className="utility-list utility-list--bullets">
+              {publicContact.address.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+
+            <div className="row-actions">
+              <Link href="/catalog" className="primary-button">
+                Открыть каталог
+              </Link>
+              <Link href="/contacts" className="secondary-button">
+                Страница контактов
+              </Link>
+            </div>
+          </article>
+        </div>
       </section>
     </PublicPageShell>
   );
