@@ -209,7 +209,7 @@ export async function getCatalogCoursesForViewer(
       title: course.title,
       description:
         course.description ||
-        'Онлайн-курс в личном кабинете DNK Biz с доступом к урокам и сохранением прогресса.',
+        'Онлайн-курс в личном кабинете Бизнес школы ДНК с доступом к урокам и сохранением прогресса.',
       category: group.title,
       groupId: group.id,
       status,

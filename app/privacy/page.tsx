@@ -1,16 +1,25 @@
 import type { Metadata } from 'next';
 
 import { PublicPageShell } from '@/components/public-shell';
+import { getOptionalCurrentUser } from '@/lib/auth';
 import { publicPrivacySections } from '@/lib/public-site';
 
 export const metadata: Metadata = {
-  title: 'Политика конфиденциальности | Бизнес Школа ДНК',
-  description: 'Краткая политика конфиденциальности для публичной части DNK Biz.',
+  title: 'Политика конфиденциальности | Бизнес школа ДНК',
+  description: 'Краткая политика конфиденциальности для публичной части Бизнес школы ДНК.',
 };
 
-export default function PrivacyPage() {
+export default async function PrivacyPage() {
+  const currentUser = await getOptionalCurrentUser();
+  const user = currentUser
+    ? {
+        email: currentUser.email,
+        name: currentUser.name,
+      }
+    : null;
+
   return (
-    <PublicPageShell>
+    <PublicPageShell user={user}>
       <section className="dnk-section public-copy-page">
         <article className="panel public-copy-page__hero">
           <span className="eyebrow">Конфиденциальность</span>

@@ -172,7 +172,7 @@ export default function PublicHome({ user, catalogCourses }: PublicHomeProps) {
     <PublicPageShell user={user}>
       <section className="dnk-section home-hero">
         <article className="home-hero__panel">
-          <span className="eyebrow">Бесплатный вход в DNK Biz</span>
+          <span className="eyebrow">Бесплатный вход в ДНК</span>
 
           <div className="home-hero__copy">
             <h1 className="home-hero__title">
@@ -200,7 +200,7 @@ export default function PublicHome({ user, catalogCourses }: PublicHomeProps) {
             </li>
             <li>
               <strong>Первые уроки до покупки.</strong> У части программ можно заранее открыть
-              preview.
+              первые уроки.
             </li>
             <li>
               <strong>Обучение в кабинете.</strong> Уроки, доступ и следующий шаг собраны в одном
@@ -287,7 +287,7 @@ export default function PublicHome({ user, catalogCourses }: PublicHomeProps) {
             <span className="eyebrow">Каталог курсов</span>
             <h2>Бесплатные, платные и готовящиеся программы без перегруженной витрины.</h2>
             <p className="panel-copy">
-              На главной только короткий preview каталога. Полный список программ, структура и
+              На главной только краткий обзор каталога. Полный список программ, структура и
               детали каждой страницы доступны в полном каталоге.
             </p>
           </div>
@@ -369,12 +369,12 @@ export default function PublicHome({ user, catalogCourses }: PublicHomeProps) {
             ))
           ) : (
             <article className="home-review-card">
-              <span className="eyebrow">Локальный preview</span>
-              <h2>Карточки курсов появятся здесь после подключения локальной базы.</h2>
+              <span className="eyebrow">Каталог</span>
+              <h2>Карточки курсов появятся здесь, когда будут доступны опубликованные программы.</h2>
               <p className="panel-copy">
-                В этой среде главная страница остается доступной для визуальной проверки, но
-                карточки курсов и их статусы берутся из базы. После запуска локального Postgres
-                блок снова покажет бесплатные, платные и готовящиеся программы.
+                Главная страница остается доступной для визуальной проверки, а каталог снова
+                покажет бесплатные, платные и готовящиеся программы, как только они будут
+                доступны для публикации.
               </p>
             </article>
           )}

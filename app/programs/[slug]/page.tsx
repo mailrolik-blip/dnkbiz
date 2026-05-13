@@ -106,9 +106,9 @@ export default async function ProgramPage({
           </div>
 
           <p className="panel-copy">
-            Эта страница сохранена только как архивный маршрут. Для текущего MVP основной
-            сценарий идет через LMS-каталог: страница курса, preview, покупка и обучение внутри
-            кабинета.
+            Эта страница сохранена только как архивный маршрут. Актуальный путь к программе
+            проходит через каталог курсов: страница курса, первые уроки, оплата и обучение в
+            личном кабинете.
           </p>
 
           <div className="row-actions catalog-product__actions">
@@ -127,7 +127,7 @@ export default async function ProgramPage({
             <span className="program-page__price-label">Стоимость</span>
             <strong>{formatMoney(program.price)}</strong>
             <p className="muted-text">
-              Актуальная покупка и доступ оформляются только через LMS-страницу курса.
+              Актуальная покупка и доступ оформляются только через страницу курса в каталоге.
             </p>
           </div>
           <div className="program-page__facts">
@@ -137,11 +137,11 @@ export default async function ProgramPage({
             </div>
             <div>
               <span>Основной путь</span>
-              <strong>/catalog/{program.slug}</strong>
+              <strong>Страница курса в каталоге</strong>
             </div>
             <div>
               <span>Что дальше</span>
-              <strong>Preview, покупка и обучение в LMS</strong>
+              <strong>Первые уроки, оплата и обучение в кабинете</strong>
             </div>
           </div>
         </aside>
@@ -170,11 +170,11 @@ export default async function ProgramPage({
 
         <article className="panel program-page__section">
           <span className="eyebrow">Куда идти дальше</span>
-          <h2>Основной маршрут для MVP</h2>
+          <h2>Актуальный путь к программе</h2>
           <ul className="funnel-list">
-            <li>Откройте LMS-страницу курса, чтобы увидеть актуальный статус и формат доступа.</li>
-            <li>Для платных курсов сначала доступны preview-уроки, затем обычная покупка курса.</li>
-            <li>После оплаты курс открывается в кабинете и проходится внутри `/courses/:slug`.</li>
+            <li>Откройте страницу курса в каталоге, чтобы увидеть актуальный статус и формат доступа.</li>
+            <li>Для платных курсов сначала доступны первые уроки, затем полное открытие доступа после оплаты.</li>
+            <li>После подтверждения оплаты курс открывается в личном кабинете и готов к прохождению.</li>
           </ul>
         </article>
       </section>

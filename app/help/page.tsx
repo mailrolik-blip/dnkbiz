@@ -2,16 +2,26 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 import { PublicPageShell } from '@/components/public-shell';
+import { getOptionalCurrentUser } from '@/lib/auth';
 import { publicContact, publicHelpSections } from '@/lib/public-site';
 
 export const metadata: Metadata = {
-  title: 'Помощь | Бизнес Школа ДНК',
-  description: 'Как выбрать курс, посмотреть ознакомительные уроки и получить доступ к обучению в DNK Biz.',
+  title: 'Помощь | Бизнес школа ДНК',
+  description:
+    'Как выбрать курс, посмотреть первые уроки и получить доступ к обучению в Бизнес школе ДНК.',
 };
 
-export default function HelpPage() {
+export default async function HelpPage() {
+  const currentUser = await getOptionalCurrentUser();
+  const user = currentUser
+    ? {
+        email: currentUser.email,
+        name: currentUser.name,
+      }
+    : null;
+
   return (
-    <PublicPageShell>
+    <PublicPageShell user={user}>
       <section className="dnk-section public-copy-page">
         <article className="panel public-copy-page__hero">
           <span className="eyebrow">Помощь</span>

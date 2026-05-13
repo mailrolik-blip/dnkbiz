@@ -1,16 +1,26 @@
 import type { Metadata } from 'next';
 
 import { PublicPageShell } from '@/components/public-shell';
+import { getOptionalCurrentUser } from '@/lib/auth';
 import { publicPaymentSections } from '@/lib/public-site';
 
 export const metadata: Metadata = {
-  title: 'Оплата и возврат | Бизнес Школа ДНК',
-  description: 'Как проходит оплата курсов в DNK Biz и куда обращаться по вопросам возврата.',
+  title: 'Оплата и возврат | Бизнес школа ДНК',
+  description:
+    'Как проходит оплата курсов в Бизнес школе ДНК и куда обращаться по вопросам возврата.',
 };
 
-export default function PaymentAndRefundPage() {
+export default async function PaymentAndRefundPage() {
+  const currentUser = await getOptionalCurrentUser();
+  const user = currentUser
+    ? {
+        email: currentUser.email,
+        name: currentUser.name,
+      }
+    : null;
+
   return (
-    <PublicPageShell>
+    <PublicPageShell user={user}>
       <section className="dnk-section public-copy-page">
         <article className="panel public-copy-page__hero">
           <span className="eyebrow">Оплата и возврат</span>

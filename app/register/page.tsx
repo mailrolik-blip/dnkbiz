@@ -27,7 +27,7 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
         <article className="panel">
           <span className="eyebrow">Регистрация</span>
           <h1 style={{ marginTop: '0.9rem' }}>
-            Новый ученик получает доступ ко всей LMS через кабинет.
+            Новый ученик получает доступ к курсам через личный кабинет.
           </h1>
           <p className="panel-copy" style={{ marginTop: '0.85rem' }}>
             После регистрации пользователь сразу попадает в личный кабинет, где может
@@ -52,7 +52,7 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
               </div>
               <div>
                 <dt>Шаг 3</dt>
-                <dd>После подтверждения оплаты менеджером полный доступ откроется внутри кабинета</dd>
+                <dd>После подтверждения оплаты менеджером полный доступ откроется в личном кабинете</dd>
               </div>
             </div>
           </article>

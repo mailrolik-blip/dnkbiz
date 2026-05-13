@@ -2,16 +2,26 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 import { PublicPageShell } from '@/components/public-shell';
+import { getOptionalCurrentUser } from '@/lib/auth';
 import { publicContact } from '@/lib/public-site';
 
 export const metadata: Metadata = {
-  title: 'Контакты | DNK Biz',
-  description: 'Контакты DNK Biz: телефон, Telegram, Instagram и адрес для вопросов по курсам и оплате.',
+  title: 'Контакты | Бизнес школа ДНК',
+  description:
+    'Контакты Бизнес школы ДНК: телефон, Telegram, Instagram и адрес для вопросов по курсам и оплате.',
 };
 
-export default function ContactsPage() {
+export default async function ContactsPage() {
+  const currentUser = await getOptionalCurrentUser();
+  const user = currentUser
+    ? {
+        email: currentUser.email,
+        name: currentUser.name,
+      }
+    : null;
+
   return (
-    <PublicPageShell>
+    <PublicPageShell user={user}>
       <section className="dnk-section public-copy-page">
         <article className="panel public-copy-page__hero">
           <span className="eyebrow">Контакты</span>

@@ -1,16 +1,25 @@
 import type { Metadata } from 'next';
 
 import { PublicPageShell } from '@/components/public-shell';
+import { getOptionalCurrentUser } from '@/lib/auth';
 import { publicTermsSections } from '@/lib/public-site';
 
 export const metadata: Metadata = {
-  title: 'Оферта и условия | Бизнес Школа ДНК',
-  description: 'Публичные условия использования курсов и платформы DNK Biz.',
+  title: 'Оферта и условия | Бизнес школа ДНК',
+  description: 'Публичные условия использования курсов и материалов Бизнес школы ДНК.',
 };
 
-export default function TermsPage() {
+export default async function TermsPage() {
+  const currentUser = await getOptionalCurrentUser();
+  const user = currentUser
+    ? {
+        email: currentUser.email,
+        name: currentUser.name,
+      }
+    : null;
+
   return (
-    <PublicPageShell>
+    <PublicPageShell user={user}>
       <section className="dnk-section public-copy-page">
         <article className="panel public-copy-page__hero">
           <span className="eyebrow">Условия</span>

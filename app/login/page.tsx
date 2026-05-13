@@ -29,7 +29,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <h1 style={{ marginTop: '0.9rem' }}>Вернитесь в личный кабинет ученика.</h1>
           <p className="panel-copy" style={{ marginTop: '0.85rem' }}>
             Вход по email и паролю ведет в кабинет, где собраны ваши курсы, заказы,
-            история прогресса и следующие шаги по LMS-маршруту.
+            история прогресса и следующие шаги по обучению.
           </p>
         </article>
 

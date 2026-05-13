@@ -346,7 +346,7 @@ export default function CatalogPageClient({
         <article className="panel catalog-directory__hero">
           <div className="catalog-directory__copy">
             <span className="eyebrow">Общий каталог</span>
-            <h1>Все курсы платформы DNK Biz в одном каталоге.</h1>
+            <h1>Все курсы Бизнес школы ДНК в одном каталоге.</h1>
             <p className="panel-copy">
               Здесь собраны все опубликованные программы. Выберите направление, откройте страницу
               курса и перейдите к ознакомительным урокам или покупке.

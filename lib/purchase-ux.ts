@@ -165,7 +165,7 @@ export function getCatalogCourseActionHint(course: CatalogCourseCard, hasUser: b
 
 export function getCatalogCourseNextStep(course: CatalogCourseCard, hasUser: boolean) {
   if (course.status === 'showcase') {
-    return 'Курс остается в каталоге как витрина. Он еще не открыт для самостоятельной покупки внутри LMS.';
+    return 'Курс остается в каталоге как витрина. Самостоятельное оформление доступа для него пока не открыто.';
   }
 
   if (course.status === 'free') {
