@@ -644,7 +644,7 @@ export default function AdminDashboardClient({
     <section className="dnk-section admin-shell">
       <article className="panel admin-hero">
         <div className="admin-hero__copy">
-          <span className="eyebrow">MVP admin</span>
+          <span className="eyebrow">Админ-панель</span>
           <h1>Управление курсами, уроками, тарифами и ручной оплатой</h1>
           <p className="panel-copy">
             Эта админка управляет тем, что реально живет в базе: курсами, уроками, тарифами,
@@ -682,7 +682,7 @@ export default function AdminDashboardClient({
           <span className="eyebrow">Ручная проверка</span>
           <h2>Заказы в статусе PROCESSING</h2>
           <p className="panel-copy">
-            Подтверждение и отклонение ручной СБП-оплаты осталось на текущем flow, но теперь у
+            Подтверждение и отклонение ручной СБП-оплаты осталось в текущем сценарии, но теперь у
             заказа есть быстрый переход к пользователю и редактору курса.
           </p>
         </div>
@@ -799,7 +799,7 @@ export default function AdminDashboardClient({
                       title: event.target.value,
                     }))
                   }
-                  placeholder="Новый курс DNK Biz"
+                  placeholder="Новый курс"
                   value={createCourseDraft.title}
                 />
               </div>

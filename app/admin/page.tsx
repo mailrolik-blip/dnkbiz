@@ -8,7 +8,7 @@ import { buildAuthHref } from '@/lib/auth-intent';
 import { getAdminDashboardData } from '@/lib/admin-dashboard';
 
 export const metadata: Metadata = {
-  title: 'Админка | DNK Biz',
+  title: 'Админка | Бизнес школа ДНК',
   robots: {
     index: false,
     follow: false,
