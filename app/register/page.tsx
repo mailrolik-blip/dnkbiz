@@ -2,9 +2,9 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
 import AuthForm from '@/components/auth-form';
+import { PublicPageShell } from '@/components/public-shell';
 import { getOptionalCurrentUser } from '@/lib/auth';
 import {
-  buildAuthHref,
   resolvePostAuthRedirect,
   sanitizeNextPath,
 } from '@/lib/auth-intent';
@@ -22,22 +22,7 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
   }
 
   return (
-    <main className="page-shell">
-      <div className="top-nav">
-        <Link href="/" className="brand">
-          <span className="brand-mark" />
-          <span>Бизнес школа ДНК</span>
-        </Link>
-        <div className="row-actions" style={{ marginTop: 0 }}>
-          <Link className="ghost-button" href="/help">
-            Помощь
-          </Link>
-          <Link className="ghost-button" href={buildAuthHref('login', nextPath)}>
-            Войти
-          </Link>
-        </div>
-      </div>
-
+    <PublicPageShell>
       <section className="stack-grid">
         <article className="panel">
           <span className="eyebrow">Регистрация</span>
@@ -85,6 +70,6 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
           </Link>
         </div>
       </section>
-    </main>
+    </PublicPageShell>
   );
 }

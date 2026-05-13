@@ -1,0 +1,43 @@
+import { requireAdminRouteUser } from '@/lib/admin-guard';
+import { reorderAdminLessons } from '@/lib/admin-mutations';
+import { revalidateAdminPaths } from '@/lib/admin-revalidate';
+
+type RouteParams = {
+  params: Promise<{ id: string }>;
+};
+
+type ReorderLessonsBody = {
+  lessonIds?: unknown;
+};
+
+export async function PATCH(request: Request, { params }: RouteParams) {
+  const adminGuard = await requireAdminRouteUser();
+
+  if (!adminGuard.ok) {
+    return adminGuard.response;
+  }
+
+  const { id } = await params;
+  const courseId = Number(id);
+  const body = (await request.json().catch(() => null)) as ReorderLessonsBody | null;
+
+  if (!Number.isInteger(courseId) || courseId <= 0) {
+    return Response.json({ error: 'Некорректный идентификатор курса.' }, { status: 400 });
+  }
+
+  if (!body) {
+    return Response.json({ error: 'Не удалось прочитать тело запроса.' }, { status: 400 });
+  }
+
+  try {
+    const result = await reorderAdminLessons(courseId, body.lessonIds);
+    revalidateAdminPaths(result.courseSlug);
+
+    return Response.json(result);
+  } catch (error) {
+    return Response.json(
+      { error: error instanceof Error ? error.message : 'Не удалось сохранить порядок уроков.' },
+      { status: 400 }
+    );
+  }
+}

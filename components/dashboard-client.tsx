@@ -249,7 +249,7 @@ function DashboardCourseCard({
 
       <div className="dashboard-card__body">
         <h3>
-          <Link href={getCourseCatalogHref(course.slug)}>{course.title}</Link>
+          <Link href={courseHref}>{course.title}</Link>
         </h3>
         <p className="dashboard-card__description">{course.description}</p>
       </div>

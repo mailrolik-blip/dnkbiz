@@ -52,7 +52,7 @@ export function getCourseIntentPath(slug: string) {
 }
 
 export function getCheckoutIntentPath(tariffId: number) {
-  return `/checkout/test?tariffId=${tariffId}`;
+  return `/checkout?tariffId=${tariffId}`;
 }
 
 export function getAuthIntentMessage(route: AuthRoute, next?: NextValue) {
@@ -62,7 +62,7 @@ export function getAuthIntentMessage(route: AuthRoute, next?: NextValue) {
     return null;
   }
 
-  if (pathname.startsWith('/checkout/test')) {
+  if (pathname.startsWith('/checkout')) {
     return route === 'register'
       ? 'Зарегистрируйтесь, чтобы перейти к оплате.'
       : 'Войдите, чтобы продолжить оплату.';

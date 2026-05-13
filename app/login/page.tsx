@@ -2,9 +2,9 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
 import AuthForm from '@/components/auth-form';
+import { PublicPageShell } from '@/components/public-shell';
 import { getOptionalCurrentUser } from '@/lib/auth';
 import {
-  buildAuthHref,
   resolvePostAuthRedirect,
   sanitizeNextPath,
 } from '@/lib/auth-intent';
@@ -16,29 +16,13 @@ type LoginPageProps = {
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const [user, query] = await Promise.all([getOptionalCurrentUser(), searchParams]);
   const nextPath = sanitizeNextPath(query.next);
-  const showLocalSeedHint = process.env.NODE_ENV !== 'production';
 
   if (user) {
     redirect(resolvePostAuthRedirect(nextPath));
   }
 
   return (
-    <main className="page-shell">
-      <div className="top-nav">
-        <Link href="/" className="brand">
-          <span className="brand-mark" />
-          <span>Бизнес школа ДНК</span>
-        </Link>
-        <div className="row-actions" style={{ marginTop: 0 }}>
-          <Link className="ghost-button" href="/help">
-            Помощь
-          </Link>
-          <Link className="ghost-button" href={buildAuthHref('register', nextPath)}>
-            Регистрация
-          </Link>
-        </div>
-      </div>
-
+    <PublicPageShell>
       <section className="stack-grid">
         <article className="panel">
           <span className="eyebrow">Вход</span>
@@ -65,13 +49,6 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                 <dd>Незавершенные заказы и быстрый возврат на экран оплаты без поиска вручную.</dd>
               </div>
             </div>
-            {showLocalSeedHint ? (
-              <p className="muted-text" style={{ marginTop: '1rem' }}>
-                Локально тестовые аккаунты создаются через <span className="mono">npm run db:seed</span>.
-                Их логины и пароли выводятся только в терминал seed-скрипта и не должны
-                публиковаться в публичном окружении.
-              </p>
-            ) : null}
           </article>
         </div>
 
@@ -87,6 +64,6 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           </Link>
         </div>
       </section>
-    </main>
+    </PublicPageShell>
   );
 }

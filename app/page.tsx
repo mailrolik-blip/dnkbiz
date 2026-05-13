@@ -1,8 +1,8 @@
-import LandingClient from '@/components/landing-client';
+import PublicHome from '@/components/public-home';
 import { getLandingPageData } from '@/lib/landing';
 
 export default async function Home() {
   const landingData = await getLandingPageData();
 
-  return <LandingClient {...landingData} />;
+  return <PublicHome {...landingData} />;
 }

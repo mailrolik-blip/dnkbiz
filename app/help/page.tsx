@@ -1,90 +1,59 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 
-export const metadata: Metadata = {
-  title: 'Помощь | Бизнес школа ДНК',
-  description: 'Короткая памятка по маршруту пользователя внутри LMS DNK Biz.',
-};
+import { PublicPageShell } from '@/components/public-shell';
+import { publicContact, publicHelpSections } from '@/lib/public-site';
 
-const helpSections = [
-  {
-    title: 'Как начать бесплатный курс',
-    body: 'Откройте каталог, выберите курс со статусом «Бесплатный» и нажмите «Начать бесплатно». После входа курс сразу откроется внутри LMS.',
-  },
-  {
-    title: 'Как посмотреть ознакомительные уроки',
-    body: 'У платных курсов доступны первые ознакомительные уроки. Откройте страницу курса или сам курс, чтобы пройти вводный блок до покупки.',
-  },
-  {
-    title: 'Как купить курс',
-    body: 'На странице курса или внутри курса нажмите «Купить курс». Система переведет вас на экран оплаты, где можно продолжить покупку и открыть полный доступ.',
-  },
-  {
-    title: 'Где продолжить обучение',
-    body: 'Все активные и уже доступные курсы собираются в кабинете `/lk`. Там же отображаются незавершенные оплаты и следующий шаг по каждому сценарию.',
-  },
-];
+export const metadata: Metadata = {
+  title: 'Помощь | Бизнес Школа ДНК',
+  description: 'Как выбрать курс, посмотреть ознакомительные уроки и получить доступ к обучению в DNK Biz.',
+};
 
 export default function HelpPage() {
   return (
-    <main className="page-shell">
-      <div className="top-nav">
-        <Link href="/" className="brand">
-          <span className="brand-mark" />
-          <span>Бизнес школа ДНК</span>
-        </Link>
-        <div className="row-actions" style={{ marginTop: 0 }}>
-          <Link href="/catalog" className="ghost-button">
-            Каталог
-          </Link>
-          <Link href="/login" className="ghost-button">
-            Войти
-          </Link>
-          <Link href="/register" className="secondary-button">
-            Регистрация
-          </Link>
-        </div>
-      </div>
-
-      <section className="stack-grid utility-page">
-        <article className="panel utility-page__hero">
+    <PublicPageShell>
+      <section className="dnk-section public-copy-page">
+        <article className="panel public-copy-page__hero">
           <span className="eyebrow">Помощь</span>
-          <h1>Как устроен путь ученика в DNK Biz</h1>
+          <h1>Как выбрать курс и начать обучение.</h1>
           <p className="panel-copy">
-            Это короткая памятка по основному самостоятельному маршруту: регистрация,
-            каталог, ознакомительные уроки, покупка и обучение внутри LMS.
+            Здесь собраны короткие ответы на вопросы до покупки: как подобрать программу, где
+            посмотреть ознакомительные уроки, как проходит оплата и когда открывается доступ.
           </p>
+          <div className="row-actions">
+            <Link href="/catalog" className="primary-button">
+              Открыть каталог
+            </Link>
+            <Link href="/contacts" className="secondary-button">
+              Связаться с нами
+            </Link>
+          </div>
         </article>
 
-        <div className="grid-two utility-grid">
-          {helpSections.map((section) => (
-            <article key={section.title} className="panel utility-card">
-              <span className="eyebrow">Сценарий</span>
+        <div className="public-copy-grid">
+          {publicHelpSections.map((section) => (
+            <article key={section.title} className="panel public-copy-card">
               <h2>{section.title}</h2>
               <p className="panel-copy">{section.body}</p>
             </article>
           ))}
         </div>
 
-        <article className="panel utility-card">
-          <span className="eyebrow">Быстрые ссылки</span>
-          <h2>Начать с правильной точки</h2>
-          <div className="row-actions utility-card__actions">
-            <Link href="/catalog" className="primary-button">
-              Открыть каталог
-            </Link>
-            <Link href="/register" className="secondary-button">
-              Зарегистрироваться
-            </Link>
-            <Link href="/privacy" className="ghost-button">
-              Конфиденциальность
-            </Link>
-            <Link href="/terms" className="ghost-button">
-              Условия
-            </Link>
+        <article className="panel public-copy-card public-copy-card--accent">
+          <span className="eyebrow">Поддержка</span>
+          <h2>Если вопрос связан с оплатой, подготовьте номер заказа и название курса.</h2>
+          <p className="panel-copy">
+            По вопросам до покупки и после оплаты удобнее всего использовать страницу контактов,
+            Telegram или телефон.
+          </p>
+          <div className="public-contact-list">
+            <a href={publicContact.phoneHref}>{publicContact.phoneLabel}</a>
+            <a href={publicContact.telegramHref} rel="noreferrer" target="_blank">
+              Telegram {publicContact.telegramLabel}
+            </a>
           </div>
         </article>
       </section>
-    </main>
+    </PublicPageShell>
   );
 }

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
+import { PublicPageShell } from '@/components/public-shell';
 import type { CourseProductPageData } from '@/lib/course-product';
 import {
   buildAuthHref,
@@ -152,15 +153,7 @@ export default function CourseProductPage({
       );
     }
 
-    if (startedPreview) {
-      return (
-        <Link href={`/courses/${course.slug}`} className="primary-button">
-          {course.progressPercent > 0 ? 'Продолжить обучение' : 'Открыть курс'}
-        </Link>
-      );
-    }
-
-    if (course.isOwned) {
+    if (startedPreview || course.isOwned) {
       return (
         <Link href={`/courses/${course.slug}`} className="primary-button">
           {course.progressPercent > 0 ? 'Продолжить обучение' : 'Открыть курс'}
@@ -270,60 +263,27 @@ export default function CourseProductPage({
 
   const afterAccessCopy =
     course.status === 'paid'
-      ? 'После подтверждения оплаты менеджером откроются все уроки, практика и полный маршрут обучения внутри LMS.'
-      : 'Все уроки курса доступны сразу, без paywall и без ожидания оплаты.';
+      ? 'После подтверждения оплаты откроются все уроки и полный маршрут обучения в кабинете.'
+      : 'Все уроки курса доступны сразу, без ожидания оплаты.';
 
   return (
-    <main className="page-shell">
-      <header className="top-nav">
-        <Link href="/" className="brand">
-          <span className="brand-mark" />
-          <span>Бизнес школа ДНК</span>
-        </Link>
-
-        <div className="row-actions" style={{ marginTop: 0 }}>
-          <Link href="/catalog" className="ghost-button">
-            Каталог
-          </Link>
-          {user ? (
-            <Link href="/lk" className="ghost-button">
-              Личный кабинет
-            </Link>
-          ) : (
-            <>
-              <Link href={buildAuthHref('login', productPageHref)} className="ghost-button">
-                Войти
-              </Link>
-              <Link
-                href={buildAuthHref('register', productPageHref)}
-                className="secondary-button"
-              >
-                Регистрация
-              </Link>
-            </>
-          )}
-        </div>
-      </header>
-
+    <PublicPageShell user={user}>
       <section className="dnk-section program-page program-page__hero">
         <article className={`panel program-page__main ${getCatalogCourseToneClass(course)}`}>
           <span className="eyebrow">Страница курса</span>
           <h1>{course.title}</h1>
           <p className="program-page__lead">{course.description}</p>
 
-          <div className="badge-row">
-            <span className="badge badge-complete">{course.category}</span>
+          <div className="program-page__meta-head">
+            <span className="program-page__category">{course.category}</span>
             <span className={getCatalogCourseStatusClass(course)}>
               {getCatalogCourseStatusLabel(course)}
             </span>
-            {course.lessonsCount ? (
-              <span className="badge badge-pending">{formatLessonCount(course.lessonsCount)}</span>
-            ) : null}
-            {course.previewEnabled ? (
-              <span className="badge badge-pending">
-                {formatPreviewLessons(course.previewLessonsCount)}
-              </span>
-            ) : null}
+          </div>
+
+          <div className="program-page__meta-row">
+            {course.lessonsCount ? <span>{formatLessonCount(course.lessonsCount)}</span> : null}
+            {course.previewEnabled ? <span>{formatPreviewLessons(course.previewLessonsCount)}</span> : null}
           </div>
 
           <p className="panel-copy">{getCatalogCourseNextStep(course, Boolean(user))}</p>
@@ -337,16 +297,15 @@ export default function CourseProductPage({
         </article>
 
         <aside className="panel program-page__aside">
-          <span className="eyebrow">Что важно знать</span>
           <div className="program-page__price-card">
             <span className="program-page__price-label">Стоимость</span>
             <strong>{formatCoursePrice(course.price)}</strong>
             <p className="muted-text">
               {course.status === 'showcase'
-                ? 'Направление остается в каталоге как витрина и пока не открыто для самостоятельной покупки.'
+                ? 'Направление пока остается в каталоге как витрина и еще не открыто для самостоятельной покупки.'
                 : course.status === 'free'
-                ? 'Курс открывается сразу после входа в кабинет.'
-                : 'Покупка проходит внутри LMS: оплата по СБП подтверждается менеджером вручную, после чего курс открывается в FULL.'}
+                  ? 'Курс открывается сразу после входа в кабинет.'
+                  : 'Оплата по СБП подтверждается вручную, после чего курс открывается в полном доступе.'}
             </p>
           </div>
 
@@ -362,11 +321,7 @@ export default function CourseProductPage({
       </section>
 
       <section className="dnk-section program-page__grid">
-        <ProductSection
-          eyebrow="Кому подходит"
-          title="Для кого этот курс"
-          items={meta.audience}
-        />
+        <ProductSection eyebrow="Кому подходит" title="Для кого этот курс" items={meta.audience} />
 
         <ProductSection
           eyebrow="Что внутри"
@@ -382,7 +337,8 @@ export default function CourseProductPage({
             <li>{afterAccessCopy}</li>
             {course.pendingOrder ? (
               <li>
-                Активный заказ уже создан. Вернитесь на экран оплаты: там можно оплатить курс по QR или проверить статус ручной проверки.
+                Активный заказ уже создан. Вернитесь на экран оплаты, чтобы проверить статус
+                заказа или завершить перевод.
               </li>
             ) : null}
             {course.isOwned ? (
@@ -425,8 +381,8 @@ export default function CourseProductPage({
           <span className="eyebrow">Следующий шаг</span>
           <h2>{meta.title}</h2>
           <p className="panel-copy">
-            Маршрут простой: каталог {'->'} страница курса {'->'} ознакомительные уроки
-            или покупка {'->'} обучение внутри LMS. На этом этапе оплата по СБП проходит с ручной проверкой.
+            Откройте курс, посмотрите ознакомительные уроки, если они доступны, и переходите к
+            покупке, когда будете готовы.
           </p>
 
           <div className="row-actions catalog-product__actions">
@@ -437,6 +393,6 @@ export default function CourseProductPage({
           </div>
         </article>
       </section>
-    </main>
+    </PublicPageShell>
   );
 }

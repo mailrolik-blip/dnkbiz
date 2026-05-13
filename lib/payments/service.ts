@@ -100,7 +100,7 @@ async function getManagedOrder(orderId: number) {
 }
 
 export function getOrderCheckoutUrl(orderId: number) {
-  return `/checkout/test?orderId=${orderId}`;
+  return `/checkout?orderId=${orderId}`;
 }
 
 export function isTestPaymentsEnabled() {
@@ -108,7 +108,7 @@ export function isTestPaymentsEnabled() {
 }
 
 export function getDefaultPaymentMethod(): PaymentMethod {
-  return isTestPaymentsEnabled() ? 'TEST' : 'MANUAL';
+  return 'MANUAL';
 }
 
 export function isPaymentMethodAvailable(method: PaymentMethod) {

@@ -2,18 +2,29 @@ import 'server-only';
 
 import type { OrderStatus, PaymentMethod, UserRole } from '@prisma/client';
 
-import {
-  getCatalogCourseMeta,
-  getCatalogProfileSlugs,
-  sortCatalogCourses,
-} from '@/lib/lms-catalog';
 import prisma from '@/lib/prisma';
+import {
+  getCatalogGroupById,
+  getCatalogProfile,
+  sortCatalogCourses,
+  type CatalogGroupId,
+} from '@/lib/lms-catalog';
+import {
+  getAdminCourseSlugPolicy,
+  getAdminTariffSlugPolicy,
+} from '@/lib/admin-mutations';
+
+type AdminCourseState = 'free' | 'paid' | 'showcase' | 'hidden';
+
+function toIsoString(value: Date) {
+  return value.toISOString();
+}
 
 export type AdminUserRow = {
   id: number;
   email: string;
   role: UserRole;
-  createdAt: Date;
+  createdAt: string;
   accessibleCoursesCount: number;
   ownedCoursesCount: number;
   hasPendingOrder: boolean;
@@ -21,6 +32,9 @@ export type AdminUserRow = {
 
 export type AdminOrderRow = {
   id: number;
+  userId: number;
+  courseId: number;
+  tariffId: number;
   courseTitle: string;
   courseSlug: string;
   tariffTitle: string;
@@ -29,40 +43,66 @@ export type AdminOrderRow = {
   amount: number;
   status: OrderStatus;
   paymentMethod: PaymentMethod;
-  createdAt: Date;
-  updatedAt: Date;
-};
-
-export type AdminManualReviewOrderRow = {
-  id: number;
-  userName: string | null;
-  userEmail: string;
-  courseTitle: string;
-  courseSlug: string;
-  tariffTitle: string;
-  amount: number;
-  status: OrderStatus;
-  paymentMethod: PaymentMethod;
-  createdAt: Date;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type AdminEnrollmentRow = {
   id: number;
+  userId: number;
+  courseId: number;
   userEmail: string;
   courseTitle: string;
   courseSlug: string;
   source: 'order' | 'free';
-  createdAt: Date;
+  createdAt: string;
+};
+
+export type AdminLessonRow = {
+  id: number;
+  title: string;
+  slug: string;
+  description: string | null;
+  content: string | null;
+  position: number;
+  isPreview: boolean;
+  isPublished: boolean;
+  updatedAt: string;
+};
+
+export type AdminTariffRow = {
+  id: number;
+  title: string;
+  slug: string;
+  price: number;
+  interval: string | null;
+  isActive: boolean;
+  updatedAt: string;
+  ordersCount: number;
 };
 
 export type AdminCourseRow = {
-  slug: string;
+  id: number;
   title: string;
-  status: 'free' | 'paid' | 'showcase';
-  previewEnabled: boolean;
+  slug: string;
+  description: string | null;
+  isPublished: boolean;
+  state: AdminCourseState;
+  hasCatalogProfile: boolean;
+  groupId: CatalogGroupId;
+  groupTitle: string;
+  groupDescription: string;
+  statusNote: string;
   lessonsCount: number;
+  publishedLessonsCount: number;
+  previewLessonsCount: number;
+  previewEnabled: boolean;
   hasActiveTariff: boolean;
   activeTariffTitle: string | null;
+  courseSlugPolicy: string;
+  tariffSlugPolicy: string;
+  lessons: AdminLessonRow[];
+  tariffs: AdminTariffRow[];
 };
 
 export type AdminDashboardData = {
@@ -74,15 +114,45 @@ export type AdminDashboardData = {
     showcaseCourses: number;
   };
   users: AdminUserRow[];
-  manualReviewOrders: AdminManualReviewOrderRow[];
   orders: AdminOrderRow[];
   enrollments: AdminEnrollmentRow[];
   courses: AdminCourseRow[];
 };
 
-export async function getAdminDashboardData(): Promise<AdminDashboardData> {
-  const catalogSlugs = getCatalogProfileSlugs();
+function getCourseStateLabel(course: {
+  isPublished: boolean;
+  hasCatalogProfile: boolean;
+  hasActiveTariff: boolean;
+}) {
+  if (!course.isPublished) {
+    return course.hasCatalogProfile ? 'showcase' : 'hidden';
+  }
 
+  return course.hasActiveTariff ? 'paid' : 'free';
+}
+
+function getCourseStatusNote(course: {
+  isPublished: boolean;
+  hasCatalogProfile: boolean;
+  hasActiveTariff: boolean;
+  previewLessonsCount: number;
+}) {
+  if (!course.isPublished) {
+    return course.hasCatalogProfile
+      ? 'Курс не опубликован в БД и показывается на витрине только как showcase-запись из кодового каталога.'
+      : 'Курс не опубликован и скрыт из публичного каталога.'
+  }
+
+  if (course.hasActiveTariff) {
+    return course.previewLessonsCount > 0
+      ? 'Опубликован как платный курс. Самостоятельная покупка работает через активный тариф, а preview управляется уроками.'
+      : 'Опубликован как платный курс. Самостоятельная покупка работает через активный тариф.'
+  }
+
+  return 'Опубликован как бесплатный курс: активного тарифа нет, поэтому доступ открывается сразу после входа.';
+}
+
+export async function getAdminDashboardData(): Promise<AdminDashboardData> {
   const [freeCourses, users, orders, enrollments, courses] = await Promise.all([
     prisma.course.findMany({
       where: {
@@ -130,6 +200,8 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
       },
       select: {
         id: true,
+        userId: true,
+        tariffId: true,
         amount: true,
         status: true,
         paymentMethod: true,
@@ -146,6 +218,7 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
             title: true,
             course: {
               select: {
+                id: true,
                 title: true,
                 slug: true,
               },
@@ -160,6 +233,7 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
       },
       select: {
         id: true,
+        userId: true,
         orderId: true,
         createdAt: true,
         user: {
@@ -169,6 +243,7 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
         },
         course: {
           select: {
+            id: true,
             title: true,
             slug: true,
           },
@@ -176,32 +251,58 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
       },
     }),
     prisma.course.findMany({
-      where: {
-        slug: {
-          in: catalogSlugs,
+      orderBy: [
+        {
+          createdAt: 'desc',
         },
-      },
+      ],
       select: {
-        slug: true,
+        id: true,
         title: true,
+        slug: true,
+        description: true,
         isPublished: true,
         lessons: {
-          where: {
-            isPublished: true,
+          orderBy: {
+            position: 'asc',
           },
           select: {
+            id: true,
+            title: true,
+            slug: true,
+            description: true,
+            content: true,
+            position: true,
             isPreview: true,
+            isPublished: true,
+            updatedAt: true,
           },
         },
         tariffs: {
-          where: {
-            isActive: true,
-          },
-          orderBy: {
-            id: 'asc',
-          },
+          orderBy: [
+            {
+              isActive: 'desc',
+            },
+            {
+              price: 'asc',
+            },
+            {
+              id: 'asc',
+            },
+          ],
           select: {
+            id: true,
             title: true,
+            slug: true,
+            price: true,
+            interval: true,
+            isActive: true,
+            updatedAt: true,
+            _count: {
+              select: {
+                orders: true,
+              },
+            },
           },
         },
       },
@@ -221,7 +322,7 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
       id: user.id,
       email: user.email,
       role: user.role,
-      createdAt: user.createdAt,
+      createdAt: toIsoString(user.createdAt),
       accessibleCoursesCount: accessibleCourseIds.size,
       ownedCoursesCount: user.enrollments.length,
       hasPendingOrder: user.orders.length > 0,
@@ -230,6 +331,9 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
 
   const orderRows: AdminOrderRow[] = orders.map((order) => ({
     id: order.id,
+    userId: order.userId,
+    courseId: order.tariff.course.id,
+    tariffId: order.tariffId,
     courseTitle: order.tariff.course.title,
     courseSlug: order.tariff.course.slug,
     tariffTitle: order.tariff.title,
@@ -238,73 +342,82 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
     amount: order.amount,
     status: order.status,
     paymentMethod: order.paymentMethod,
-    createdAt: order.createdAt,
-    updatedAt: order.updatedAt,
+    createdAt: toIsoString(order.createdAt),
+    updatedAt: toIsoString(order.updatedAt),
   }));
-
-  const manualReviewOrders: AdminManualReviewOrderRow[] = orderRows
-    .filter((order) => order.paymentMethod === 'MANUAL' && order.status === 'PROCESSING')
-    .map((order) => ({
-      id: order.id,
-      userName: order.userName,
-      userEmail: order.userEmail,
-      courseTitle: order.courseTitle,
-      courseSlug: order.courseSlug,
-      tariffTitle: order.tariffTitle,
-      amount: order.amount,
-      status: order.status,
-      paymentMethod: order.paymentMethod,
-      createdAt: order.createdAt,
-    }));
 
   const enrollmentRows: AdminEnrollmentRow[] = enrollments.map((enrollment) => ({
     id: enrollment.id,
+    userId: enrollment.userId,
+    courseId: enrollment.course.id,
     userEmail: enrollment.user.email,
     courseTitle: enrollment.course.title,
     courseSlug: enrollment.course.slug,
     source: enrollment.orderId ? 'order' : 'free',
-    createdAt: enrollment.createdAt,
+    createdAt: toIsoString(enrollment.createdAt),
   }));
 
-  const courseMap = new Map(courses.map((course) => [course.slug, course]));
-
   const courseRows = sortCatalogCourses(
-    catalogSlugs.flatMap<AdminCourseRow>((slug) => {
-      const meta = getCatalogCourseMeta(slug);
+    courses.map<AdminCourseRow>((course) => {
+      const profile = getCatalogProfile(course.slug);
+      const group = getCatalogGroupById(profile?.groupId ?? 'management-growth');
+      const activeTariff = course.tariffs.find((tariff) => tariff.isActive) ?? null;
+      const publishedLessons = course.lessons.filter((lesson) => lesson.isPublished);
+      const previewLessonsCount = publishedLessons.filter((lesson) => lesson.isPreview).length;
+      const hasCatalogProfile = Boolean(profile);
+      const state = getCourseStateLabel({
+        isPublished: course.isPublished,
+        hasCatalogProfile,
+        hasActiveTariff: Boolean(activeTariff),
+      });
 
-      if (!meta) {
-        return [];
-      }
-
-      const course = courseMap.get(slug);
-
-      if (!course || !course.isPublished) {
-        return [
-          {
-            slug,
-            title: meta.title,
-            status: 'showcase' as const,
-            previewEnabled: false,
-            lessonsCount: 0,
-            hasActiveTariff: false,
-            activeTariffTitle: null,
-          },
-        ];
-      }
-
-      const activeTariff = course.tariffs[0] ?? null;
-
-      return [
-        {
-          slug,
-          title: course.title,
-          status: activeTariff ? ('paid' as const) : ('free' as const),
-          previewEnabled: course.lessons.some((lesson) => lesson.isPreview),
-          lessonsCount: course.lessons.length,
+      return {
+        id: course.id,
+        title: course.title,
+        slug: course.slug,
+        description: course.description,
+        isPublished: course.isPublished,
+        state,
+        hasCatalogProfile,
+        groupId: group.id,
+        groupTitle: group.title,
+        groupDescription: group.description,
+        statusNote: getCourseStatusNote({
+          isPublished: course.isPublished,
+          hasCatalogProfile,
           hasActiveTariff: Boolean(activeTariff),
-          activeTariffTitle: activeTariff?.title ?? null,
-        },
-      ];
+          previewLessonsCount,
+        }),
+        lessonsCount: course.lessons.length,
+        publishedLessonsCount: publishedLessons.length,
+        previewLessonsCount,
+        previewEnabled: previewLessonsCount > 0,
+        hasActiveTariff: Boolean(activeTariff),
+        activeTariffTitle: activeTariff?.title ?? null,
+        courseSlugPolicy: getAdminCourseSlugPolicy(course.slug),
+        tariffSlugPolicy: getAdminTariffSlugPolicy(),
+        lessons: course.lessons.map((lesson) => ({
+          id: lesson.id,
+          title: lesson.title,
+          slug: lesson.slug,
+          description: lesson.description,
+          content: lesson.content,
+          position: lesson.position,
+          isPreview: lesson.isPreview,
+          isPublished: lesson.isPublished,
+          updatedAt: toIsoString(lesson.updatedAt),
+        })),
+        tariffs: course.tariffs.map((tariff) => ({
+          id: tariff.id,
+          title: tariff.title,
+          slug: tariff.slug,
+          price: tariff.price,
+          interval: tariff.interval,
+          isActive: tariff.isActive,
+          updatedAt: toIsoString(tariff.updatedAt),
+          ordersCount: tariff._count.orders,
+        })),
+      };
     })
   );
 
@@ -313,11 +426,11 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
       users: userRows.length,
       orders: orderRows.length,
       enrollments: enrollmentRows.length,
-      liveCourses: courseRows.filter((course) => course.status !== 'showcase').length,
-      showcaseCourses: courseRows.filter((course) => course.status === 'showcase').length,
+      liveCourses: courseRows.filter((course) => course.state === 'free' || course.state === 'paid')
+        .length,
+      showcaseCourses: courseRows.filter((course) => course.state === 'showcase').length,
     },
     users: userRows,
-    manualReviewOrders,
     orders: orderRows,
     enrollments: enrollmentRows,
     courses: courseRows,

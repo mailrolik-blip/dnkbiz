@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
+import { PublicPageShell } from '@/components/public-shell';
 import {
   buildAuthHref,
   getCheckoutIntentPath,
@@ -47,7 +48,7 @@ const statusFilterOptions: Array<{
   { id: 'free', label: 'Бесплатные' },
   { id: 'paid', label: 'Платные' },
   { id: 'showcase', label: 'Скоро' },
-];
+] as const;
 
 function getCatalogCourseValueLabel(course: CatalogCourseCard) {
   if (course.status === 'showcase') {
@@ -85,21 +86,6 @@ function getCatalogCourseValue(course: CatalogCourseCard) {
   }
 
   return formatCoursePrice(course.price);
-}
-
-function getCatalogCoursesCountLabel(count: number) {
-  const mod10 = count % 10;
-  const mod100 = count % 100;
-
-  if (mod10 === 1 && mod100 !== 11) {
-    return `${count} курс`;
-  }
-
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
-    return `${count} курса`;
-  }
-
-  return `${count} курсов`;
 }
 
 function CatalogDirectoryCard({
@@ -244,24 +230,21 @@ function CatalogDirectoryCard({
 
   return (
     <article className={`course-card catalog-directory-card ${getCatalogCourseToneClass(course)}`}>
+      <Link
+        aria-label={`Открыть страницу курса ${course.title}`}
+        className="catalog-directory-card__cover"
+        href={courseHref}
+      />
+
       <div className="catalog-directory-card__head">
-        <div className="badge-row">
-          <span className="badge badge-complete">{course.category}</span>
-          <span className={getCatalogCourseStatusClass(course)}>
-            {getCatalogCourseStatusLabel(course)}
-          </span>
-        </div>
-        {course.lessonsCount ? (
-          <span className="catalog-directory-card__meta">
-            {formatLessonCount(course.lessonsCount)}
-          </span>
-        ) : null}
+        <span className="catalog-directory-card__category">{course.category}</span>
+        <span className={getCatalogCourseStatusClass(course)}>
+          {getCatalogCourseStatusLabel(course)}
+        </span>
       </div>
 
       <div className="catalog-directory-card__body">
-        <h2>
-          <Link href={courseHref}>{course.title}</Link>
-        </h2>
+        <h2>{course.title}</h2>
         <p className="catalog-directory-card__description">{course.description}</p>
       </div>
 
@@ -273,21 +256,18 @@ function CatalogDirectoryCard({
           <strong className="catalog-directory-card__value">{getCatalogCourseValue(course)}</strong>
         </div>
 
-        <div className="badge-row catalog-directory-card__badges">
-          {course.previewEnabled && course.previewLessonsCount > 0 ? (
-            <span className="badge badge-pending">
-              {formatPreviewLessons(course.previewLessonsCount)}
-            </span>
-          ) : null}
-          {course.status === 'free' ? (
-            <span className="badge badge-complete">Доступен сразу</span>
-          ) : null}
-          {course.isOwned ? <span className="badge badge-paid">Уже открыт</span> : null}
-        </div>
+        <div className="catalog-directory-card__secondary">
+          <div className="catalog-directory-card__meta-row">
+            {course.lessonsCount ? <span>{formatLessonCount(course.lessonsCount)}</span> : null}
+            {course.previewEnabled && course.previewLessonsCount > 0 ? (
+              <span>{formatPreviewLessons(course.previewLessonsCount)}</span>
+            ) : null}
+          </div>
 
-        <p className="catalog-directory-card__hint">
-          {getCatalogCourseActionHint(course, hasUser)}
-        </p>
+          <p className="catalog-directory-card__hint">
+            {getCatalogCourseActionHint(course, hasUser)}
+          </p>
+        </div>
       </div>
 
       <div className="catalog-directory-card__footer">
@@ -311,11 +291,6 @@ export default function CatalogPageClient({
   const [feedback, setFeedback] = useState<string | null>(null);
   const hasUser = Boolean(user?.email);
 
-  const freeCoursesCount = catalogCourses.filter((course) => course.status === 'free').length;
-  const paidCoursesCount = catalogCourses.filter((course) => course.status === 'paid').length;
-  const showcaseCoursesCount = catalogCourses.filter(
-    (course) => course.status === 'showcase'
-  ).length;
   const filteredCourses = catalogCourses.filter((course) => {
     const matchesStatus = statusFilter === 'all' ? true : course.status === statusFilter;
     const matchesGroup = groupFilter === 'all' ? true : course.groupId === groupFilter;
@@ -366,45 +341,15 @@ export default function CatalogPageClient({
   }
 
   return (
-    <main className="page-shell">
-      <header className="top-nav">
-        <Link href="/" className="brand">
-          <span className="brand-mark" />
-          <span>Бизнес школа ДНК</span>
-        </Link>
-
-        <div className="row-actions" style={{ marginTop: 0 }}>
-          {user ? (
-            <>
-              <Link href="/lk" className="ghost-button">
-                Личный кабинет
-              </Link>
-              <Link href="/" className="secondary-button">
-                На главную
-              </Link>
-            </>
-          ) : (
-            <>
-              <Link href={buildAuthHref('login', '/catalog')} className="ghost-button">
-                Войти
-              </Link>
-              <Link href={buildAuthHref('register', '/catalog')} className="secondary-button">
-                Регистрация
-              </Link>
-            </>
-          )}
-        </div>
-      </header>
-
+    <PublicPageShell user={user}>
       <section className="dnk-section catalog-directory">
         <article className="panel catalog-directory__hero">
           <div className="catalog-directory__copy">
             <span className="eyebrow">Общий каталог</span>
             <h1>Все курсы платформы DNK Biz в одном каталоге.</h1>
             <p className="panel-copy">
-              Здесь собраны бесплатные, платные и витринные курсы платформы. Маршрут простой:
-              выбрать курс, открыть его страницу, начать бесплатно или перейти к покупке, а затем
-              пройти обучение внутри LMS.
+              Здесь собраны все опубликованные программы. Выберите направление, откройте страницу
+              курса и перейдите к ознакомительным урокам или покупке.
             </p>
 
             <div className="row-actions">
@@ -423,25 +368,6 @@ export default function CatalogPageClient({
             </div>
 
             {feedback ? <p className="feedback feedback-error">{feedback}</p> : null}
-          </div>
-
-          <div className="catalog-directory__stats">
-            <div className="catalog-directory__stat">
-              <span>Всего в каталоге</span>
-              <strong>{catalogCourses.length}</strong>
-            </div>
-            <div className="catalog-directory__stat">
-              <span>Бесплатные</span>
-              <strong>{freeCoursesCount}</strong>
-            </div>
-            <div className="catalog-directory__stat">
-              <span>Платные</span>
-              <strong>{paidCoursesCount}</strong>
-            </div>
-            <div className="catalog-directory__stat">
-              <span>Скоро</span>
-              <strong>{showcaseCoursesCount}</strong>
-            </div>
           </div>
         </article>
 
@@ -493,13 +419,6 @@ export default function CatalogPageClient({
               ))}
             </div>
           </div>
-
-          <div className="catalog-directory__filter-summary">
-            <p className="panel-copy">
-              Показано {getCatalogCoursesCountLabel(filteredCourses.length)}. Все карточки ведут в
-              страницу курса на <span className="mono">/catalog/[slug]</span>.
-            </p>
-          </div>
         </article>
 
         {filteredCourses.length > 0 ? (
@@ -535,6 +454,6 @@ export default function CatalogPageClient({
           </article>
         )}
       </section>
-    </main>
+    </PublicPageShell>
   );
 }

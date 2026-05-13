@@ -111,9 +111,6 @@ export async function getCatalogCoursesForViewer(
 
   const publishedCourses = await prisma.course.findMany({
     where: {
-      slug: {
-        in: profileSlugs,
-      },
       isPublished: true,
     },
     select: {
