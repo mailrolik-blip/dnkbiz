@@ -554,12 +554,12 @@ function PaywallBlock({
         <LockIcon />
       </div>
       <div className="course-paywall__copy">
-        <span className="eyebrow">Полный доступ после подтверждения оплаты</span>
+        <span className="eyebrow">Полный доступ после ручной проверки оплаты</span>
         <h3>{lesson.title}</h3>
         <p>
           Этот урок закрыт. До покупки доступны{' '}
-          {formatPreviewLessons(course.access.previewLessonsCount)}, а после подтверждения оплаты
-          менеджером откроются остальные модули, домашние задания и полный маршрут курса внутри LMS.
+          {formatPreviewLessons(course.access.previewLessonsCount)}, а после оплаты по QR СБП и
+          ручной проверки откроются остальные модули, домашние задания и весь курс.
         </p>
       </div>
       <div className="badge-row course-paywall__badges">
@@ -617,7 +617,7 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
     {
       id: 1,
       role: 'ai',
-      text: 'Привет! Я AI-ассистент курса. Сейчас это demo-блок без реальной AI-интеграции, но он показывает, как будет выглядеть помощник внутри платформы.',
+      text: 'Привет! Я помощник по курсу. Здесь можно собирать вопросы по уроку и фиксировать важные мысли по ходу обучения.',
     },
   ]);
   const chatBodyRef = useRef<HTMLDivElement | null>(null);
@@ -948,7 +948,7 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
         {
           id: messageId + 1,
           role: 'ai',
-          text: 'Это demo-ответ AI. В текущем MVP чат остается визуальным блоком из 03-block без реальной интеграции модели.',
+          text: 'Раздел вопросов пока работает в ознакомительном режиме. Зафиксируйте ключевой вопрос или мысль и вернитесь к материалу урока.',
         },
       ]);
     }, 550);
@@ -975,7 +975,7 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
         <div className="section-header">
           <span className="title-main">Обучение</span>
           <span className="title-divider">/</span>
-          <span className="title-course">Платформа</span>
+          <span className="title-course">Онлайн-курс</span>
         </div>
 
         <div className="course-stage__head">
@@ -1209,7 +1209,7 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
                   <div className="lms-tag">Курс</div>
                   <h2 className="lms-title">Материалы курса пока не опубликованы.</h2>
                   <p className="lms-desc">
-                    Как только уроки будут добавлены, они появятся в LMS-области справа.
+                    Как только уроки будут добавлены, они появятся в списке справа.
                   </p>
                 </div>
               )}
@@ -1234,8 +1234,9 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
                   {previewCompletedCount}/{courseState.access.previewLessonsCount} урока открыто
                 </span>
                 <p className="muted-text">
-                  Сначала можно пройти первые уроки и оценить формат курса. После подтверждения
-                  оплаты менеджером откроются остальные модули, практика и полный доступ в кабинете.
+                  Сначала можно пройти первые уроки и оценить формат курса. После оплаты по QR СБП
+                  и ручной проверки откроются остальные модули, практика и полный доступ в
+                  кабинете. Проверка может занять немного времени.
                 </p>
                 {courseState.access.tariff ? (
                   <div className="badge-row">
@@ -1243,7 +1244,7 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
                       {formatMoney(courseState.access.tariff.price)}
                     </span>
                     <span className="badge badge-pending">
-                      Полный доступ после подтверждения оплаты
+                      Полный доступ после ручной проверки оплаты
                     </span>
                   </div>
                 ) : null}
@@ -1287,7 +1288,7 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
                     </span>
                     <span className="lesson-btn__meta">
                       {lesson.isLocked
-                        ? 'Откроется после подтверждения оплаты'
+                        ? 'Откроется после ручной проверки оплаты'
                         : lesson.isPreview && courseState.access.accessMode === 'PREVIEW'
                         ? 'Открыто до покупки'
                         : lesson.description ||
@@ -1355,7 +1356,7 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
               <article key={program.title} className="gallery-course-card glow-target">
                 <div className="gallery-course-meta">
                   <span>{8 + index * 2} уроков</span>
-                  <span>DNK</span>
+                  <span>ДНК</span>
                 </div>
                 <div className="gallery-course-title">{program.title}</div>
                 <div className="gallery-course-footer">

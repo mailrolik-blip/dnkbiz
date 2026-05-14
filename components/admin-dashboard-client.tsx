@@ -13,6 +13,7 @@ import type {
   AdminTariffRow,
   AdminUserRow,
 } from '@/lib/admin-dashboard';
+import { adminManualQueueHints, adminSafetyHints } from '@/lib/admin-help';
 import AdminManualReviewActions from '@/components/admin-manual-review-actions';
 
 const dateTimeFormatter = new Intl.DateTimeFormat('ru-RU', {
@@ -647,10 +648,14 @@ export default function AdminDashboardClient({
           <span className="eyebrow">Админ-панель</span>
           <h1>Управление курсами, уроками, тарифами и ручной оплатой</h1>
           <p className="panel-copy">
-            Эта админка управляет тем, что реально живет в базе: курсами, уроками, тарифами,
-            публикацией и preview. Часть витринной мета-логики по старым slug пока остается
-            derived из кодового каталога и показана отдельно.
+            Здесь собраны все ежедневные действия администратора: ручная проверка оплаты,
+            управление курсами, уроками, ознакомительным доступом и тарифами для новых покупок.
           </p>
+          <div className="row-actions">
+            <Link href="/admin/help" className="secondary-button">
+              Открыть инструкцию администратора
+            </Link>
+          </div>
         </div>
 
         <div className="admin-overview">
@@ -667,7 +672,7 @@ export default function AdminDashboardClient({
             <strong>{initialData.totals.enrollments}</strong>
           </div>
           <div className="admin-stat">
-            <span>Live-курсы</span>
+            <span>Доступные курсы</span>
             <strong>{initialData.totals.liveCourses}</strong>
           </div>
           <div className="admin-stat">
@@ -679,11 +684,43 @@ export default function AdminDashboardClient({
 
       <article className="panel admin-section">
         <div className="admin-section__head">
+          <span className="eyebrow">Памятка</span>
+          <h2>Что важно перед подтверждением оплаты и изменением контента</h2>
+          <p className="panel-copy">
+            Короткая версия основных правил. Полная пошаговая инструкция доступна на странице
+            `/admin/help`.
+          </p>
+        </div>
+
+        <div className="grid-two">
+          <article className="status-card">
+            <strong>Ручная проверка оплаты</strong>
+            <ul className="utility-list utility-list--bullets">
+              {adminManualQueueHints.map((hint) => (
+                <li key={hint}>{hint}</li>
+              ))}
+            </ul>
+          </article>
+
+          <article className="status-card">
+            <strong>Предупреждения</strong>
+            <ul className="utility-list utility-list--bullets">
+              {adminSafetyHints.slice(0, 4).map((hint) => (
+                <li key={hint}>{hint}</li>
+              ))}
+            </ul>
+          </article>
+        </div>
+      </article>
+
+      <article className="panel admin-section" id="manual-review">
+        <div className="admin-section__head">
           <span className="eyebrow">Ручная проверка</span>
           <h2>Заказы в статусе PROCESSING</h2>
           <p className="panel-copy">
-            Подтверждение и отклонение ручной СБП-оплаты осталось в текущем сценарии, но теперь у
-            заказа есть быстрый переход к пользователю и редактору курса.
+            PROCESSING означает, что пользователь уже оплатил по QR СБП и нажал «Я оплатил», но
+            поступление денег еще не подтверждено. Подтверждайте заказ только после проверки
+            оплаты.
           </p>
         </div>
 
@@ -748,11 +785,11 @@ export default function AdminDashboardClient({
       <article className="panel admin-section">
         <div className="admin-section__head">
           <span className="eyebrow">Контент и доступ</span>
-          <h2>Курсы, уроки, preview и тарифы</h2>
+          <h2>Курсы, уроки, ознакомительные уроки и тарифы</h2>
           <p className="panel-copy">
-            Базовая модель такая: `published=false` скрывает курс, `published=true` + нет активного
-            тарифа делает его бесплатным, а `published=true` + активный тариф делает его платным.
-            Preview управляется флагами `isPreview` у опубликованных уроков.
+            Неопубликованный курс скрыт. Опубликованный курс без активного тарифа считается
+            бесплатным. Если у опубликованного курса есть активный тариф, он продается как платный.
+            Ознакомительные уроки управляются переключателем у самих уроков.
           </p>
         </div>
 
@@ -781,7 +818,7 @@ export default function AdminDashboardClient({
                   </div>
                   <div className="admin-course-list__meta mono">{course.slug}</div>
                   <div className="admin-course-list__meta">
-                    {course.lessonsCount} уроков, {course.previewLessonsCount} preview
+                    {course.lessonsCount} уроков, {course.previewLessonsCount} ознакомительных
                   </div>
                 </button>
               ))}
@@ -804,7 +841,7 @@ export default function AdminDashboardClient({
                 />
               </div>
               <div className="field">
-                <label htmlFor="admin-new-course-slug">Slug</label>
+                <label htmlFor="admin-new-course-slug">Slug адреса</label>
                 <input
                   id="admin-new-course-slug"
                   onChange={(event) =>
@@ -895,7 +932,7 @@ export default function AdminDashboardClient({
                       </strong>
                     </div>
                     <div className="admin-inline-stat">
-                      <span>Preview</span>
+                      <span>Ознакомительные уроки</span>
                       <strong>{selectedCourse.previewLessonsCount} уроков</strong>
                     </div>
                     <div className="admin-inline-stat">
@@ -926,7 +963,7 @@ export default function AdminDashboardClient({
 
                   <div className="admin-readonly-grid">
                     <div className="field">
-                      <label htmlFor="admin-course-slug">Slug</label>
+                      <label htmlFor="admin-course-slug">Slug адреса</label>
                       <input disabled id="admin-course-slug" value={selectedCourse.slug} />
                     </div>
                     <div className="field">
@@ -989,7 +1026,7 @@ export default function AdminDashboardClient({
                       {pendingKey === 'save-course' ? 'Сохраняем...' : 'Сохранить курс'}
                     </button>
                     <Link className="ghost-button" href={`/catalog/${selectedCourse.slug}`} target="_blank">
-                      Открыть public page
+                      Открыть страницу курса
                     </Link>
                   </div>
                 </article>
@@ -998,7 +1035,7 @@ export default function AdminDashboardClient({
                   <div className="admin-editor-card__head">
                     <div>
                       <span className="eyebrow">Уроки</span>
-                      <h3>Порядок, preview и публикация</h3>
+                      <h3>Порядок, ознакомительные уроки и публикация</h3>
                     </div>
                     <span className="muted-text">{selectedCourse.lessonsCount} всего</span>
                   </div>
@@ -1015,7 +1052,7 @@ export default function AdminDashboardClient({
                               {lesson.isPublished ? 'Опубликован' : 'Скрыт'}
                             </span>
                             {lesson.isPreview ? (
-                              <span className="badge badge-pending">Preview</span>
+                              <span className="badge badge-pending">Ознакомительный</span>
                             ) : null}
                           </div>
                         </div>
@@ -1159,7 +1196,7 @@ export default function AdminDashboardClient({
                             }
                             type="checkbox"
                           />
-                          <span>Открыт как preview</span>
+                          <span>Открыт как ознакомительный урок</span>
                         </label>
                       </div>
                       <div className="row-actions">
@@ -1243,8 +1280,8 @@ export default function AdminDashboardClient({
                             }))
                           }
                           type="checkbox"
-                        />
-                        <span>Сделать preview</span>
+                          />
+                        <span>Сделать ознакомительным уроком</span>
                       </label>
                     </div>
                     <button
@@ -1272,7 +1309,7 @@ export default function AdminDashboardClient({
                   <div className="admin-editor-card__head">
                     <div>
                       <span className="eyebrow">Тарифы</span>
-                      <h3>Цена и self-serve покупка</h3>
+                      <h3>Цена и доступ для новых покупок</h3>
                     </div>
                     <span className="muted-text">
                       {selectedCourse.hasActiveTariff
@@ -1359,7 +1396,7 @@ export default function AdminDashboardClient({
                           />
                         </div>
                         <div className="field">
-                          <label htmlFor="admin-tariff-interval">Тип доступа / interval</label>
+                          <label htmlFor="admin-tariff-interval">Тип доступа (служебное поле)</label>
                           <input
                             id="admin-tariff-interval"
                             onChange={(event) =>
@@ -1424,7 +1461,7 @@ export default function AdminDashboardClient({
                     </div>
                     <div className="admin-readonly-grid">
                       <div className="field">
-                        <label htmlFor="admin-new-tariff-slug">Slug</label>
+                        <label htmlFor="admin-new-tariff-slug">Slug адреса</label>
                         <input
                           id="admin-new-tariff-slug"
                           onChange={(event) =>
@@ -1452,7 +1489,7 @@ export default function AdminDashboardClient({
                       </div>
                     </div>
                     <div className="field">
-                      <label htmlFor="admin-new-tariff-interval">Тип доступа / interval</label>
+                      <label htmlFor="admin-new-tariff-interval">Тип доступа (служебное поле)</label>
                       <input
                         id="admin-new-tariff-interval"
                         onChange={(event) =>

@@ -52,7 +52,7 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
               </div>
               <div>
                 <dt>Шаг 3</dt>
-                <dd>После подтверждения оплаты менеджером полный доступ откроется в личном кабинете</dd>
+                <dd>После оплаты по QR СБП и ручной проверки полный доступ откроется в личном кабинете</dd>
               </div>
             </div>
           </article>

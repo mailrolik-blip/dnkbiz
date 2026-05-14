@@ -80,7 +80,7 @@ export function PublicFooter() {
     <footer className="site-footer public-footer">
       <div className="public-footer__lead-block">
         <div className="public-footer__brand">
-          <span className="eyebrow">Бизнес-школа ДНК</span>
+          <span className="eyebrow">Бизнес школа ДНК</span>
           <h2>{publicBrandName}</h2>
           <p className="site-footer__lead">{publicBrandLead}</p>
         </div>

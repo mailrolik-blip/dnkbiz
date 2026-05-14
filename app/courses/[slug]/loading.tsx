@@ -14,7 +14,7 @@ export default function LoadingCoursePage() {
               <div className="lms-tag">Загрузка</div>
               <h2 className="lms-title">Открываем курс...</h2>
               <p className="lms-desc">
-                Получаем уроки, текущий прогресс и структуру LMS.
+                Получаем уроки, текущий прогресс и структуру курса.
               </p>
             </div>
           </article>

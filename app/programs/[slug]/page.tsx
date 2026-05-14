@@ -95,18 +95,18 @@ export default async function ProgramPage({
 
       <section className="dnk-section program-page program-page__hero">
         <article className="panel program-page__main">
-          <span className="eyebrow">Архивный маршрут</span>
+          <span className="eyebrow">Архивная страница</span>
           <h1>{program.title}</h1>
           <p className="program-page__lead">{program.description}</p>
 
           <div className="badge-row">
             <span className="badge badge-complete">{program.category}</span>
             <span className={getStatusClass(program.status)}>{getStatusLabel(program.status)}</span>
-            <span className="badge badge-pending">Архивный маршрут</span>
+            <span className="badge badge-pending">Архивная страница</span>
           </div>
 
           <p className="panel-copy">
-            Эта страница сохранена только как архивный маршрут. Актуальный путь к программе
+            Эта страница сохранена как архивная. Актуальный путь к программе
             проходит через каталог курсов: страница курса, первые уроки, оплата и обучение в
             личном кабинете.
           </p>
@@ -122,7 +122,7 @@ export default async function ProgramPage({
         </article>
 
         <aside className="panel program-page__aside">
-          <span className="eyebrow">Статус маршрута</span>
+          <span className="eyebrow">Статус страницы</span>
           <div className="program-page__price-card">
             <span className="program-page__price-label">Стоимость</span>
             <strong>{formatMoney(program.price)}</strong>
@@ -132,15 +132,15 @@ export default async function ProgramPage({
           </div>
           <div className="program-page__facts">
             <div>
-              <span>Маршрут</span>
-              <strong>Архивный</strong>
+              <span>Страница</span>
+              <strong>Архивная</strong>
             </div>
             <div>
-              <span>Основной путь</span>
+              <span>Актуальная страница</span>
               <strong>Страница курса в каталоге</strong>
             </div>
             <div>
-              <span>Что дальше</span>
+              <span>Дальше</span>
               <strong>Первые уроки, оплата и обучение в кабинете</strong>
             </div>
           </div>
@@ -173,8 +173,8 @@ export default async function ProgramPage({
           <h2>Актуальный путь к программе</h2>
           <ul className="funnel-list">
             <li>Откройте страницу курса в каталоге, чтобы увидеть актуальный статус и формат доступа.</li>
-            <li>Для платных курсов сначала доступны первые уроки, затем полное открытие доступа после оплаты.</li>
-            <li>После подтверждения оплаты курс открывается в личном кабинете и готов к прохождению.</li>
+            <li>Для платных курсов сначала доступны первые уроки, затем полный доступ после оплаты по QR СБП и ручной проверки.</li>
+            <li>После ручной проверки оплаты курс открывается в личном кабинете и готов к прохождению.</li>
           </ul>
         </article>
       </section>

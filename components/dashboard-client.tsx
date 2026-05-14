@@ -66,8 +66,8 @@ type DashboardFocusProps = {
 function getDashboardCourseHint(course: CatalogCourseCard) {
   if (course.pendingOrder) {
     return course.pendingOrder.status === 'PROCESSING'
-      ? 'Платеж отправлен на проверку.'
-      : 'Оплатите по QR и нажмите «Я оплатил».';
+      ? 'Платеж на ручной проверке. Это может занять некоторое время.'
+      : 'Оплатите по QR СБП и нажмите «Я оплатил».';
   }
 
   if (course.isOwned) {
@@ -88,7 +88,7 @@ function getDashboardCourseHint(course: CatalogCourseCard) {
     return `Можно посмотреть ${formatPreviewLessons(course.previewLessonsCount)} до покупки.`;
   }
 
-  return 'Полный доступ откроется после покупки.';
+  return 'Полный доступ откроется после оплаты по QR СБП и ручной проверки.';
 }
 
 function getDashboardCoursePrimaryLabel(course: CatalogCourseCard, mode: DashboardCardMode) {
@@ -279,8 +279,8 @@ function DashboardCourseCard({
           <strong>Заказ #{course.pendingOrder.id}</strong>
           <p>
             {course.pendingOrder.status === 'PROCESSING'
-              ? 'Платеж отправлен на ручную проверку. Дождитесь подтверждения менеджера и затем проверьте статус заказа.'
-              : 'Оплатите курс по QR и нажмите «Я оплатил», чтобы отправить платеж на ручную проверку.'}
+              ? 'Платеж отправлен на ручную проверку. Это может занять некоторое время. Если статус долго не меняется, напишите нам через контакты.'
+              : 'Оплатите курс по QR СБП и нажмите «Я оплатил», чтобы отправить платеж на ручную проверку.'}
           </p>
         </div>
       ) : null}
@@ -452,8 +452,8 @@ export default function DashboardClient({
       title: `Продолжите оплату курса «${pendingPriorityCourse.title}».`,
       description:
         pendingPriorityCourse.pendingOrder.status === 'PROCESSING'
-          ? 'Платеж уже отправлен на ручную проверку. Повторно оплачивать заказ не нужно: дождитесь подтверждения менеджера и затем обновите статус.'
-          : 'Откройте экран оплаты, оплатите курс по QR и нажмите «Я оплатил». После этого заказ уйдет на ручную проверку.',
+          ? 'Платеж уже отправлен на ручную проверку. Повторно оплачивать заказ не нужно. Проверка может занять некоторое время; если статус долго не меняется, напишите нам через контакты.'
+          : 'Откройте экран оплаты, оплатите курс по QR СБП и нажмите «Я оплатил». После этого заказ уйдет на ручную проверку.',
       tone: 'pending',
       primaryAction: (
         <Link className="primary-button" href={pendingPriorityCourse.pendingOrder.checkoutUrl}>
@@ -477,7 +477,7 @@ export default function DashboardClient({
     };
   } else if (isNewUser && freeStarterCourse) {
     dashboardFocus = {
-      eyebrow: 'Старт в LMS',
+      eyebrow: 'Старт в обучении',
       title: 'Начните с бесплатного курса, а затем откройте ознакомительные уроки платного.',
       description:
         'Самый быстрый вход в платформу — начать бесплатный курс без оплаты. Вторым шагом можно посмотреть первые уроки платного курса и решить, нужен ли полный доступ.',
@@ -581,7 +581,7 @@ export default function DashboardClient({
             <h1>{user.name || user.email}</h1>
             <p className="panel-copy">
               Здесь собраны ваши доступные курсы, бесплатные старты, покупки в процессе и
-              следующий шаг по каждому маршруту внутри LMS.
+              следующий шаг по каждому курсу.
             </p>
             <div className="row-actions">
               <Link href="/catalog" className="secondary-button">
@@ -639,7 +639,7 @@ export default function DashboardClient({
             <SectionIntro
               eyebrow="Продолжить оплату"
               title="Покупки, которые ждут завершения"
-              description="Здесь лежат заказы, которые еще не оплачены по QR или уже отправлены на ручную проверку менеджеру."
+              description="Здесь лежат заказы, которые еще не оплачены по QR СБП или уже отправлены на ручную проверку. Если проверка затянулась, подготовьте номер заказа и напишите нам через контакты."
             />
 
             <div className="course-grid dashboard-grid">
@@ -714,7 +714,7 @@ export default function DashboardClient({
           <SectionIntro
             eyebrow="Платные курсы"
             title="Можно начать с первых уроков"
-            description="У платных курсов доступны ознакомительные уроки. Полный доступ открывается после покупки и сразу появляется в кабинете."
+            description="У платных курсов доступны ознакомительные уроки. Полный доступ открывается после оплаты по QR СБП и ручной проверки."
           />
 
           <div className="course-grid dashboard-grid">

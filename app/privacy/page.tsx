@@ -23,7 +23,7 @@ export default async function PrivacyPage() {
       <section className="dnk-section public-copy-page">
         <article className="panel public-copy-page__hero">
           <span className="eyebrow">Конфиденциальность</span>
-          <h1>Какие данные использует платформа и зачем это нужно пользователю.</h1>
+          <h1>Какие данные нужны для работы сайта и личного кабинета.</h1>
           <p className="panel-copy">
             Ниже описано, какие данные нужны для регистрации, покупки курсов, доступа к обучению
             и обращения в поддержку.

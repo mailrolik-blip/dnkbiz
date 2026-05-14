@@ -61,7 +61,7 @@ function getDefaultStatusText(status: ManagedOrder['status']) {
   }
 
   if (status === 'PROCESSING') {
-    return 'Платеж отправлен на ручную проверку. Менеджер подтвердит оплату и откроет полный доступ к курсу.';
+    return 'Платеж отправлен на ручную проверку. После ручной проверки оплаты полный доступ к курсу откроется.';
   }
 
   if (status === 'FAILED') {
@@ -76,7 +76,7 @@ function getDefaultStatusText(status: ManagedOrder['status']) {
     return 'Время на оплату истекло.';
   }
 
-  return 'Заказ создан. Оплатите по QR и нажмите «Я оплатил», чтобы отправить платеж на ручную проверку.';
+  return 'Заказ создан. Оплатите по QR СБП и нажмите «Я оплатил», чтобы отправить платеж на ручную проверку.';
 }
 
 function getProviderWebhookResult(

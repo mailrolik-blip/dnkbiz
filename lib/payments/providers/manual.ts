@@ -7,7 +7,7 @@ export function createManualCheckoutSession(orderId: number): ProviderCheckoutSe
     provider: 'manual',
     paymentReference: `sbp-manual-${orderId}`,
     statusText:
-      'Платеж отправлен на ручную проверку. Менеджер подтвердит оплату и откроет полный доступ к курсу.',
+      'Платеж отправлен на ручную проверку. После ручной проверки оплаты полный доступ к курсу откроется.',
   };
 }
 
@@ -16,7 +16,7 @@ export function mapManualProviderStatus(status: string): ProviderWebhookResult |
     return {
       status: 'PENDING',
       statusText:
-        'Заказ создан. Оплатите по QR и нажмите «Я оплатил», чтобы отправить платеж на проверку.',
+        'Заказ создан. Оплатите по QR СБП и нажмите «Я оплатил», чтобы отправить платеж на проверку.',
     };
   }
 
@@ -24,7 +24,7 @@ export function mapManualProviderStatus(status: string): ProviderWebhookResult |
     return {
       status: 'PROCESSING',
       statusText:
-        'Платеж отправлен на ручную проверку. Менеджер подтвердит оплату и откроет полный доступ к курсу.',
+        'Платеж отправлен на ручную проверку. После ручной проверки оплаты полный доступ к курсу откроется.',
     };
   }
 
@@ -39,7 +39,7 @@ export function mapManualProviderStatus(status: string): ProviderWebhookResult |
     return {
       status: 'FAILED',
       paymentFailureCode: 'manual_review_failed',
-      paymentFailureText: 'Менеджер не смог подтвердить поступление оплаты по этому заказу.',
+      paymentFailureText: 'Поступление оплаты по этому заказу не удалось подтвердить.',
       statusText:
         'Оплата не подтверждена. Проверьте перевод и создайте новый заказ при необходимости.',
     };
@@ -58,7 +58,7 @@ export function mapManualProviderStatus(status: string): ProviderWebhookResult |
     return {
       status: 'EXPIRED',
       paymentFailureCode: 'manual_review_expired',
-      paymentFailureText: 'Истек срок ожидания оплаты по QR.',
+      paymentFailureText: 'Истек срок ожидания оплаты по QR СБП.',
       statusText: 'Время на оплату истекло.',
     };
   }

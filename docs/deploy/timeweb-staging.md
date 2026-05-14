@@ -1,30 +1,32 @@
-# DNK Biz: staging deploy на Timeweb VPS
+# Staging Deploy On Timeweb VPS
 
-Этот документ описывает базовый staging deploy DNK Biz как обычного Node.js приложения на VPS без Docker и без боевой платежки.
+Документ описывает повторяемый deploy staging-окружения на VPS без Docker и без автоматического эквайринга.
 
-## Что подготовлено в репозитории
+## Что уже есть в репозитории
 
 - health endpoint: `GET /api/health`
-- staging env example: `deploy/env/timeweb-staging.env.example`
-- systemd template: `deploy/systemd/dnkbiz-staging.service`
+- env-шаблон: `deploy/env/timeweb-staging.env.example`
+- systemd unit: `deploy/systemd/dnkbiz-staging.service`
 - nginx template: `deploy/nginx/dnkbiz-staging.conf`
-- staging start script: `npm run start:staging`
+- staging start command: `npm run start:staging`
+- deploy script: `scripts/deploy-staging.sh`
 
-`GET /api/health` возвращает:
+Ожидаемый ответ health endpoint:
 
 ```json
 { "status": "ok" }
 ```
 
-## Минимальные требования к серверу
+## Требования к серверу
 
-- Linux VPS с `systemd` и `nginx`
+- Linux VPS с `systemd`
+- `nginx`
 - Node.js `>=20.9.0`
 - `npm`
 - доступ к PostgreSQL
-- домен или поддомен для staging
+- staging-домен или поддомен
 
-## Обязательные env для staging
+## Обязательные переменные окружения
 
 Используйте `deploy/env/timeweb-staging.env.example` как шаблон.
 
@@ -32,21 +34,21 @@
 - `AUTH_SECRET`
 - `SESSION_COOKIE_NAME`
 - `PAYMENT_WEBHOOK_SECRET`
-- `ENABLE_TEST_PAYMENTS=false`
+- `ENABLE_TEST_PAYMENTS="false"`
 
-Замечания:
+Важно:
 
-- `ENABLE_TEST_PAYMENTS` должен оставаться `false` в публичном staging.
-- `PAYMENT_WEBHOOK_SECRET` все равно должен быть задан длинной случайной строкой, даже если боевая платежка еще не подключена.
-- `NODE_ENV=production` задается через `systemd`, а не через env-файл приложения.
+- `ENABLE_TEST_PAYMENTS` должен оставаться выключенным на staging, который используется для закрытого запуска.
+- `PAYMENT_WEBHOOK_SECRET` должен быть заполнен даже до подключения боевой платежки.
+- `NODE_ENV=production` задается через systemd unit.
 
 ## Рекомендуемая структура на сервере
 
 ```text
 /var/www/dnkbiz/
-  current/                 # код приложения
+  current/
   shared/
-    dnkbiz-staging.env     # env-файл для systemd
+    dnkbiz-staging.env
 ```
 
 ## Подготовка сервера
@@ -54,7 +56,7 @@
 1. Установите Node.js `>=20.9.0` и `nginx`.
 2. Создайте системного пользователя и рабочие директории.
 3. Разместите код проекта в `/var/www/dnkbiz/current`.
-4. Создайте env-файл `/var/www/dnkbiz/shared/dnkbiz-staging.env` на основе `deploy/env/timeweb-staging.env.example`.
+4. Создайте env-файл `/var/www/dnkbiz/shared/dnkbiz-staging.env` по шаблону `deploy/env/timeweb-staging.env.example`.
 
 Пример базовой подготовки:
 
@@ -64,67 +66,88 @@ sudo mkdir -p /var/www/dnkbiz/current /var/www/dnkbiz/shared
 sudo chown -R dnkbiz:dnkbiz /var/www/dnkbiz
 ```
 
-## Первый deploy
-
-Выполняйте команды из директории приложения:
+## Первый deploy вручную
 
 ```bash
 cd /var/www/dnkbiz/current
-npm ci
+npm install
 npm run db:generate
 npm run db:migrate:deploy
 npm run build
+sudo systemctl daemon-reload
+sudo systemctl enable dnkbiz-staging
+sudo systemctl restart dnkbiz-staging
+curl -fsS http://127.0.0.1:3000/api/health
 ```
 
-## Запуск через systemd
+Если `npm run build` падает, не перезапускайте сервис. Сначала исправьте причину ошибки и только потом повторите deploy.
 
-Основной путь для VPS: `systemd`.
+## Повторяемый deploy script
 
-1. Скопируйте шаблон сервиса:
+Скрипт `scripts/deploy-staging.sh` выполняет:
+
+1. `git fetch origin`
+2. `git reset --hard origin/main`
+3. `npm install`
+4. `npm run db:generate`
+5. `npm run db:migrate:deploy`
+6. `npm run build`
+7. `systemctl restart dnkbiz-staging`
+8. ожидание `GET /api/health`
+9. вывод `staging ok`
+
+Скрипт намеренно не запускает `db:seed`.
+
+Пример запуска:
+
+```bash
+cd /var/www/dnkbiz/current
+sudo bash scripts/deploy-staging.sh
+```
+
+Если сервис можно перезапускать без `sudo`, запускайте обычным пользователем.
+
+## Systemd
+
+Скопируйте unit-файл:
 
 ```bash
 sudo cp deploy/systemd/dnkbiz-staging.service /etc/systemd/system/dnkbiz-staging.service
+sudo systemctl daemon-reload
+sudo systemctl enable dnkbiz-staging
 ```
 
-2. При необходимости поправьте в unit-файле:
+Проверьте значения в unit-файле:
 
 - `User`
 - `Group`
 - `WorkingDirectory`
 - `EnvironmentFile`
-- `ExecStart`, если `npm` расположен не в `/usr/bin/npm`
+- `ExecStart`
 
-3. Активируйте сервис:
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable dnkbiz-staging
-sudo systemctl start dnkbiz-staging
-sudo systemctl status dnkbiz-staging
-```
-
-4. Полезные команды:
+Полезные команды:
 
 ```bash
 sudo systemctl restart dnkbiz-staging
 sudo systemctl stop dnkbiz-staging
+sudo systemctl status dnkbiz-staging --no-pager
 journalctl -u dnkbiz-staging -n 100 --no-pager
 ```
 
-## Reverse proxy через nginx
+## Nginx
 
-1. Скопируйте шаблон:
+Скопируйте конфиг:
 
 ```bash
 sudo cp deploy/nginx/dnkbiz-staging.conf /etc/nginx/sites-available/dnkbiz-staging.conf
 ```
 
-2. Замените:
+Замените:
 
-- `staging.example.com` на ваш staging-домен
-- пути `ssl_certificate` и `ssl_certificate_key` на реальные сертификаты
+- `staging.example.com` на реальный staging-домен
+- пути к `ssl_certificate` и `ssl_certificate_key`
 
-3. Активируйте конфиг:
+Активируйте конфиг:
 
 ```bash
 sudo ln -s /etc/nginx/sites-available/dnkbiz-staging.conf /etc/nginx/sites-enabled/dnkbiz-staging.conf
@@ -132,9 +155,7 @@ sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-Шаблон уже проксирует приложение на `127.0.0.1:3000`, что соответствует `npm run start:staging`.
-
-## Проверка живости
+## Проверка после deploy
 
 Локально на сервере:
 
@@ -145,44 +166,38 @@ curl -fsS http://127.0.0.1:3000/api/health
 Через домен:
 
 ```bash
-curl -fsS https://staging.example.com/api/health
+curl -fsS https://stage.dnkbiz.ru/api/health
 ```
 
-Ожидаемый ответ:
+Если оба запроса отвечают корректно, приложение поднято и проксирование работает.
 
-```json
-{ "status": "ok" }
-```
+## Seed On Staging
 
-Если health endpoint отвечает, это означает, что `next start` поднят и reverse proxy отдает запрос до приложения.
+`db:seed` не является частью staging deploy.
 
-## Повторный deploy после обновления кода
+Текущий `prisma/seed.mjs` специально защищен:
 
-```bash
-cd /var/www/dnkbiz/current
-npm ci
-npm run db:generate
-npm run db:migrate:deploy
-npm run build
-sudo systemctl restart dnkbiz-staging
-```
+- запрещен при `NODE_ENV=production`;
+- разрешен только для dev-хостов;
+- разрешен только для dev-базы с ожидаемым именем.
+
+В проекте сейчас нет флага вида `ALLOW_STAGING_SEED=true`. Добавлять обход этой защиты для закрытого запуска не нужно.
+
+Практическое правило:
+
+- не запускайте `npm run db:seed` на staging без отдельного осознанного решения;
+- не пытайтесь "временно" обойти защиту seed прямо на сервере;
+- если staging нужно наполнить данными, сначала сделайте backup и используйте отдельный понятный план переноса, а не обычный seed-скрипт.
 
 ## Короткий staging checklist
 
 - env-файл создан и заполнен
-- `ENABLE_TEST_PAYMENTS=false`
-- `npm ci` завершился без ошибок
+- `ENABLE_TEST_PAYMENTS="false"`
+- `npm install` завершился без ошибок
 - `npm run db:generate` завершился без ошибок
 - `npm run db:migrate:deploy` завершился без ошибок
 - `npm run build` завершился без ошибок
-- `dnkbiz-staging.service` запущен
-- `nginx -t` проходит
+- `dnkbiz-staging` перезапущен
 - `/api/health` отвечает локально и через домен
-- `/admin` доступен только `ADMIN` и не индексируется
-
-## Что пока не входит в staging deploy
-
-- подключение боевой платежки
-- Docker
-- multi-instance deployment
-- shared cache для нескольких инстансов
+- `/admin` доступен только пользователю с ролью `ADMIN`
+- ручная оплата по СБП и подтверждение в `/admin` проверены по `docs/launch-checklist.md`

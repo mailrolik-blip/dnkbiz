@@ -47,7 +47,7 @@ function buildFallbackCourseMeta(course: CatalogCourseCard) {
     ],
     includes: [
       'Уроки, которые публикуются и обновляются в учебной программе.',
-      'Первые уроки до оплаты и полный доступ после подтверждения оплаты.',
+      'Первые уроки до оплаты и полный доступ после оплаты по QR СБП и ручной проверки.',
     ],
   };
 }
@@ -113,7 +113,7 @@ export async function getCourseProductPageData(
         course.previewEnabled && course.previewLessonsCount > 0
           ? `${formatPreviewLessons(course.previewLessonsCount)} до покупки`
           : course.status === 'paid'
-          ? 'Откроется после подтверждения оплаты'
+          ? 'Откроется после оплаты по QR СБП и ручной проверки'
           : 'Не нужен',
     },
   ];

@@ -18,6 +18,7 @@ import {
   formatLessonCount,
   formatPreviewLessons,
 } from '@/lib/purchase-ux';
+import { publicContact } from '@/lib/public-site';
 
 type CheckoutOrder = {
   id: number;
@@ -78,20 +79,20 @@ function getOrderTitle(order: CheckoutOrder) {
     return 'Срок действия заказа истек';
   }
 
-  return 'Оплатите курс по СБП QR';
+  return 'Оплатите курс по QR СБП';
 }
 
 function getOrderSummary(order: CheckoutOrder) {
   if (order.status === 'PAID') {
-    return 'Оплата подтверждена менеджером. Полный доступ к курсу уже открыт.';
+    return 'Оплата подтверждена. Полный доступ к курсу уже открыт.';
   }
 
   if (order.status === 'PROCESSING') {
-    return 'Платеж уже отправлен на ручную проверку. Повторно оплачивать заказ не нужно: дождитесь подтверждения и затем обновите статус.';
+    return 'Платеж уже отправлен на ручную проверку. Повторно оплачивать заказ не нужно. Проверка может занять некоторое время: дождитесь подтверждения и затем обновите статус.';
   }
 
   if (order.status === 'FAILED') {
-    return 'Менеджер не смог подтвердить поступление оплаты по этому заказу. Проверьте перевод и при необходимости создайте новый заказ.';
+    return 'Поступление оплаты по этому заказу не удалось подтвердить. Проверьте перевод и при необходимости создайте новый заказ.';
   }
 
   if (order.status === 'CANCELED') {
@@ -102,7 +103,7 @@ function getOrderSummary(order: CheckoutOrder) {
     return 'У этого заказа истек срок действия. Создайте новый заказ, чтобы снова открыть QR для оплаты.';
   }
 
-  return 'Отсканируйте QR в банковском приложении, оплатите курс и нажмите «Я оплатил». После этого платеж уйдет на ручную проверку менеджеру.';
+  return 'Отсканируйте QR СБП в банковском приложении, оплатите курс и нажмите «Я оплатил». После этого платеж уйдет на ручную проверку.';
 }
 
 export default function TestCheckoutClient({ order }: CheckoutClientProps) {
@@ -155,7 +156,7 @@ export default function TestCheckoutClient({ order }: CheckoutClientProps) {
         tone: 'success',
         message:
           payload?.order?.status === 'PROCESSING'
-            ? 'Платеж отправлен на ручную проверку. Как только менеджер подтвердит оплату, курс откроется полностью.'
+            ? 'Платеж отправлен на ручную проверку. Проверка может занять некоторое время. Как только оплата будет подтверждена, курс откроется полностью.'
             : 'Статус заказа обновлен.',
       });
       router.refresh();
@@ -346,7 +347,7 @@ export default function TestCheckoutClient({ order }: CheckoutClientProps) {
               <div className="status-card">
                 <strong>Как открывается курс</strong>
                 <p>
-                  После подтверждения оплаты менеджером курс открывается в режиме FULL и
+                  После ручной проверки оплаты курс полностью открывается и
                   появляется в личном кабинете без дополнительных шагов.
                 </p>
               </div>
@@ -394,7 +395,7 @@ export default function TestCheckoutClient({ order }: CheckoutClientProps) {
                   <div className="status-card">
                     <strong>Как оплатить</strong>
                     <p>
-                      Отсканируйте QR в банковском приложении, переведите{' '}
+                      Отсканируйте QR СБП в банковском приложении, переведите{' '}
                       {formatCoursePrice(order.amount)} и затем нажмите «Я оплатил».
                     </p>
                   </div>
@@ -408,8 +409,9 @@ export default function TestCheckoutClient({ order }: CheckoutClientProps) {
                   <div className="status-card">
                     <strong>После кнопки «Я оплатил»</strong>
                     <p>
-                      Заказ перейдет в ожидание ручной проверки. Если статус уже
-                      «Проверка оплаты», повторно оплачивать и отправлять заказ не нужно.
+                      Заказ перейдет в ожидание ручной проверки. Проверка может занять
+                      некоторое время. Если статус уже «Проверка оплаты», повторно оплачивать
+                      и отправлять заказ не нужно.
                     </p>
                   </div>
                 </div>
@@ -447,10 +449,21 @@ export default function TestCheckoutClient({ order }: CheckoutClientProps) {
                   {order.status === 'PAID'
                     ? 'Перейдите в курс или вернитесь в кабинет, чтобы продолжить обучение.'
                     : order.status === 'PROCESSING'
-                    ? 'Платеж уже на ручной проверке. Дождитесь подтверждения менеджера и затем обновите статус заказа.'
+                    ? 'Платеж уже на ручной проверке. Дождитесь завершения проверки оплаты и затем обновите статус заказа. Если проверка затянулась, свяжитесь с нами.'
                     : canRetry
-                    ? 'Создайте новый заказ и снова оплатите курс по QR.'
-                    : 'Оплатите заказ по QR и нажмите «Я оплатил», чтобы передать платеж на ручную проверку.'}
+                    ? 'Создайте новый заказ и снова оплатите курс по QR СБП.'
+                    : 'Оплатите заказ по QR СБП и нажмите «Я оплатил», чтобы передать платеж на ручную проверку.'}
+                </p>
+              </div>
+              <div className="status-card">
+                <strong>Если возник вопрос</strong>
+                <p>
+                  Подготовьте номер заказа #{order.id} и название курса. Напишите в{' '}
+                  <a href={publicContact.telegramHref} rel="noreferrer" target="_blank">
+                    Telegram {publicContact.telegramLabel}
+                  </a>{' '}
+                  или позвоните по номеру{' '}
+                  <a href={publicContact.phoneHref}>{publicContact.phoneLabel}</a>.
                 </p>
               </div>
               {order.paymentFailureText ? (

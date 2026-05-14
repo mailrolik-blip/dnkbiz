@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Local Codex build snapshots are generated artifacts, not source files.
+    ".codex-build-check/**",
   ]),
 ]);
 

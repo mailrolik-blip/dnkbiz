@@ -18,6 +18,16 @@ export default function AdminManualReviewActions({
   } | null>(null);
 
   async function handleAction(action: 'approve' | 'reject') {
+    const confirmed = window.confirm(
+      action === 'approve'
+        ? `Подтвердить оплату по заказу #${orderId}? Перед этим проверьте поступление денег.`
+        : `Отклонить оплату по заказу #${orderId}? Доступ к курсу не откроется.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
     setPendingAction(action);
     setFeedback(null);
 
@@ -31,14 +41,14 @@ export default function AdminManualReviewActions({
           action === 'approve'
             ? {
                 status: 'PAID',
-                statusText: 'Оплата подтверждена менеджером. Полный доступ к курсу открыт.',
+                statusText: 'Оплата подтверждена. Полный доступ к курсу открыт.',
               }
             : {
                 status: 'FAILED',
                 statusText: 'Оплата не подтверждена после ручной проверки.',
                 paymentFailureCode: 'manual_review_rejected',
                 paymentFailureText:
-                  'Менеджер не смог подтвердить поступление оплаты по этому заказу.',
+                  'Поступление оплаты по этому заказу не удалось подтвердить.',
               }
         ),
       });

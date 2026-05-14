@@ -103,7 +103,7 @@ function getHomeCourseSupport(course: HomeCourse, hasUser: boolean) {
   }
 
   if (course.pendingOrder) {
-    return 'Заказ уже создан. Можно вернуться к оплате и проверить, когда откроется доступ.';
+    return 'Заказ уже создан. Можно вернуться к оплате по QR СБП и проверить статус ручной проверки.';
   }
 
   if (course.isOwned) {
@@ -120,7 +120,7 @@ function getHomeCourseSupport(course: HomeCourse, hasUser: boolean) {
     return `${formatPreviewLessons(course.previewLessonsCount)} доступны до покупки полного доступа.`;
   }
 
-  return 'Полный доступ к урокам открывается после оплаты курса.';
+  return 'Полный доступ к урокам открывается после оплаты по QR СБП и ручной проверки.';
 }
 
 function formatCourseCount(count: number) {
@@ -157,7 +157,8 @@ export default function PublicHome({ user, catalogCourses }: PublicHomeProps) {
     {
       id: 'paid',
       title: 'Платные программы',
-      description: 'Полный доступ после оплаты, а у части программ сначала открываются первые уроки.',
+      description:
+        'Полный доступ открывается после оплаты по QR СБП и ручной проверки, а у части программ сначала доступны первые уроки.',
       courses: paidCourses,
     },
     {
@@ -403,10 +404,10 @@ export default function PublicHome({ user, catalogCourses }: PublicHomeProps) {
       <section className="dnk-section">
         <div className="public-section-head">
           <span className="eyebrow">Команда</span>
-          <h2>Команда, которая собирает платформу и учебный контур.</h2>
+          <h2>Команда, которая отвечает за программы и обучение.</h2>
           <p className="panel-copy">
-            На главной используются только подтвержденные данные из локальных материалов проекта:
-            реальные имена, роли и фотографии без случайных заглушек.
+            Здесь собраны руководитель школы, эксперты и преподаватели, которые развивают
+            программы и поддерживают прикладной формат обучения.
           </p>
         </div>
 
