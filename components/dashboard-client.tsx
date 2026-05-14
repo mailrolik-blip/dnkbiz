@@ -4,17 +4,16 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { type ReactNode, useState } from 'react';
 
-import {
-  getCourseCatalogHref,
-  type CatalogCourseCard,
-} from '@/lib/lms-catalog';
+import InlineInfo from '@/components/inline-info';
+import LearnerActivity from '@/components/learner-activity';
+import type { LearnerActivitySnapshot } from '@/lib/learner-activity';
+import { getCourseCatalogHref, type CatalogCourseCard } from '@/lib/lms-catalog';
 import { getActiveOrderActionLabel } from '@/lib/payments/constants';
 import {
   canOpenCourseRoute,
   formatCoursePrice,
   formatLessonCount,
   formatPreviewLessons,
-  getCatalogCourseNextStep,
   getCatalogCourseStatusClass,
   getCatalogCourseStatusLabel,
   getCatalogCourseToneClass,
@@ -28,20 +27,20 @@ type DashboardUser = {
 };
 
 type DashboardClientProps = {
-  user: DashboardUser;
-  myCourses: CatalogCourseCard[];
+  activity: LearnerActivitySnapshot;
   freeCourses: CatalogCourseCard[];
+  myCourses: CatalogCourseCard[];
   paidCourses: CatalogCourseCard[];
   pendingCourses: CatalogCourseCard[];
+  user: DashboardUser;
 };
 
-type DashboardCardMode = 'my' | 'free' | 'paid' | 'pending';
-type DashboardFocusTone = 'start' | 'pending' | 'progress' | 'owned';
+type DashboardCardMode = 'free' | 'my' | 'paid' | 'pending';
 
 type SectionIntroProps = {
+  description: string;
   eyebrow: string;
   title: string;
-  description: string;
 };
 
 type EmptyCardProps = {
@@ -54,19 +53,28 @@ type DashboardCourseCardProps = {
   renderBuyAction: (course: CatalogCourseCard, className?: string) => ReactNode;
 };
 
-type DashboardFocusProps = {
-  eyebrow: string;
-  title: string;
-  description: string;
-  tone: DashboardFocusTone;
+type DashboardFeedback = {
+  message: string;
+  tone: 'error' | 'success';
+} | null;
+
+type DashboardProfileCardProps = {
+  feedback: DashboardFeedback;
+  user: DashboardUser;
+};
+
+type DashboardQuickActionsProps = {
+  note: string;
   primaryAction: ReactNode;
   secondaryAction?: ReactNode;
+  tertiaryAction?: ReactNode;
+  title: string;
 };
 
 function getDashboardCourseHint(course: CatalogCourseCard) {
   if (course.pendingOrder) {
     return course.pendingOrder.status === 'PROCESSING'
-      ? 'Платеж на ручной проверке. Это может занять некоторое время.'
+      ? 'Платеж на ручной проверке. Это может занять немного времени.'
       : 'Оплатите по QR СБП и нажмите «Я оплатил».';
   }
 
@@ -107,33 +115,102 @@ function getDashboardCoursePrimaryLabel(course: CatalogCourseCard, mode: Dashboa
   return 'Открыть курс';
 }
 
-function CourseMeta({ course }: { course: CatalogCourseCard }) {
+function getDashboardCourseMetaBadges(course: CatalogCourseCard, mode: DashboardCardMode) {
+  const badges: ReactNode[] = [
+    <span className="badge badge-complete" key="category">
+      {course.category}
+    </span>,
+    <span className={getCatalogCourseStatusClass(course)} key="status">
+      {getCatalogCourseStatusLabel(course)}
+    </span>,
+  ];
+
+  if (mode !== 'my' && course.lessonsCount) {
+    badges.push(
+      <span className="badge badge-pending" key="lessons">
+        {formatLessonCount(course.lessonsCount)}
+      </span>
+    );
+  }
+
+  if (mode === 'paid' && course.previewEnabled) {
+    badges.push(
+      <span className="badge badge-pending" key="preview">
+        {formatPreviewLessons(course.previewLessonsCount)}
+      </span>
+    );
+  }
+
+  return badges;
+}
+
+function getDashboardCourseSupportCopy(course: CatalogCourseCard, mode: DashboardCardMode) {
+  if (mode === 'pending') {
+    return null;
+  }
+
+  if (mode === 'free') {
+    return course.isStarted
+      ? 'Курс уже открыт в кабинете.'
+      : 'Можно начать сразу без оплаты.';
+  }
+
+  if (mode === 'paid') {
+    return course.previewEnabled && course.previewLessonsCount > 0
+      ? `Открыто ${formatPreviewLessons(course.previewLessonsCount)} до покупки.`
+      : 'Полный доступ откроется после оплаты.';
+  }
+
+  if (course.isOwned) {
+    return 'Полный доступ открыт.';
+  }
+
+  if (isStartedPreviewCourse(course)) {
+    return 'Открыты первые уроки.';
+  }
+
+  return 'Прогресс сохраняется в кабинете.';
+}
+
+function getDashboardCourseNextCopy(course: CatalogCourseCard) {
+  if (course.lessonsCount && course.completedLessonsCount >= course.lessonsCount) {
+    return 'Курс завершен. Можно вернуться к пройденным урокам.';
+  }
+
+  if (course.nextLessonTitle) {
+    return `Следующий урок: ${course.nextLessonTitle}.`;
+  }
+
+  return null;
+}
+
+function CourseMeta({
+  course,
+  mode,
+}: {
+  course: CatalogCourseCard;
+  mode: DashboardCardMode;
+}) {
   return (
     <div className="badge-row">
-      <span className="badge badge-complete">{course.category}</span>
-      <span className={getCatalogCourseStatusClass(course)}>
-        {getCatalogCourseStatusLabel(course)}
-      </span>
-      {course.lessonsCount ? (
-        <span className="badge badge-pending">{formatLessonCount(course.lessonsCount)}</span>
-      ) : null}
-      {course.previewEnabled ? (
-        <span className="badge badge-pending">
-          {formatPreviewLessons(course.previewLessonsCount)}
-        </span>
-      ) : null}
+      {getDashboardCourseMetaBadges(course, mode)}
     </div>
   );
 }
 
-function SectionIntro({ eyebrow, title, description }: SectionIntroProps) {
+function SectionIntro({ description, eyebrow, title }: SectionIntroProps) {
   return (
     <div className="dashboard-section__head">
-      <div>
-        <span className="eyebrow">{eyebrow}</span>
-        <h2>{title}</h2>
+      <div className="dashboard-section__title-row">
+        <div>
+          <span className="eyebrow">{eyebrow}</span>
+          <h2>{title}</h2>
+        </div>
+
+        <InlineInfo align="end" label={`Пояснение: ${title}`}>
+          {description}
+        </InlineInfo>
       </div>
-      <p className="panel-copy">{description}</p>
     </div>
   );
 }
@@ -146,25 +223,80 @@ function EmptyCard({ children }: EmptyCardProps) {
   );
 }
 
-function DashboardFocus({
-  eyebrow,
-  title,
-  description,
-  tone,
-  primaryAction,
-  secondaryAction,
-}: DashboardFocusProps) {
+function getDashboardRoleLabel(role: DashboardUser['role']) {
+  return role === 'ADMIN' ? 'Доступ администратора' : 'Ученик';
+}
+
+function getUserInitials(user: DashboardUser) {
+  const source = user.name?.trim() || user.email.trim();
+  const words = source
+    .split(/[\s@._-]+/)
+    .map((word) => word.trim())
+    .filter(Boolean);
+
+  if (words.length === 0) {
+    return 'ДН';
+  }
+
+  if (words.length === 1) {
+    return words[0].slice(0, 2).toUpperCase();
+  }
+
+  return `${words[0][0] ?? ''}${words[1][0] ?? ''}`.toUpperCase();
+}
+
+function DashboardProfileCard({ feedback, user }: DashboardProfileCardProps) {
+  const displayName = user.name?.trim() || user.email;
+  const showEmail = Boolean(user.name?.trim()) && user.email !== displayName;
+
   return (
-    <article className={`panel dashboard-focus dashboard-focus--${tone}`}>
-      <div className="dashboard-focus__copy">
-        <span className="eyebrow">{eyebrow}</span>
-        <h2>{title}</h2>
-        <p className="panel-copy">{description}</p>
+    <article className="panel dashboard-profile">
+      <div className="dashboard-profile__head">
+        <div aria-hidden="true" className="dashboard-profile__avatar">
+          {getUserInitials(user)}
+        </div>
+
+        <div className="dashboard-profile__identity">
+          <div className="dashboard-profile__identity-top">
+            <span className="badge dashboard-role-badge">{getDashboardRoleLabel(user.role)}</span>
+          </div>
+          <h2>{displayName}</h2>
+          {showEmail ? <p className="dashboard-profile__email">{user.email}</p> : null}
+        </div>
       </div>
 
-      <div className="dashboard-focus__actions">
+      {feedback ? (
+        <p
+          className={`feedback ${
+            feedback.tone === 'success' ? 'feedback-success' : 'feedback-error'
+          }`}
+        >
+          {feedback.message}
+        </p>
+      ) : null}
+    </article>
+  );
+}
+
+function DashboardQuickActions({
+  note,
+  primaryAction,
+  secondaryAction,
+  tertiaryAction,
+  title,
+}: DashboardQuickActionsProps) {
+  return (
+    <article className="panel dashboard-quick-actions">
+      <div className="dashboard-quick-actions__copy">
+        <span className="eyebrow">Быстрые действия</span>
+        <h2>{title}</h2>
+        <p className="dashboard-quick-actions__note">{note}</p>
+      </div>
+
+      <div className="dashboard-quick-actions__actions">
         {primaryAction}
         {secondaryAction ?? null}
+        {tertiaryAction ?? null}
       </div>
     </article>
   );
@@ -175,11 +307,8 @@ function DashboardCourseCard({
   mode,
   renderBuyAction,
 }: DashboardCourseCardProps) {
-  const hintCopy = getDashboardCourseHint(course);
-  const nextStepCopy =
-    mode === 'my' && course.nextLessonTitle
-      ? `Следующий урок: ${course.nextLessonTitle}.`
-      : getCatalogCourseNextStep(course, true);
+  const hintCopy = getDashboardCourseSupportCopy(course, mode) ?? getDashboardCourseHint(course);
+  const nextStepCopy = mode === 'my' ? getDashboardCourseNextCopy(course) : null;
   const courseHref = canOpenCourseRoute(course)
     ? `/courses/${course.slug}`
     : getCourseCatalogHref(course.slug);
@@ -243,15 +372,14 @@ function DashboardCourseCard({
   return (
     <article className={`course-card dashboard-card ${getCatalogCourseToneClass(course)}`}>
       <div className="dashboard-card__head">
-        <CourseMeta course={course} />
-        <span className="dashboard-card__hint">{hintCopy}</span>
+        <CourseMeta course={course} mode={mode} />
+        {mode !== 'my' ? <span className="dashboard-card__hint">{hintCopy}</span> : null}
       </div>
 
       <div className="dashboard-card__body">
         <h3>
           <Link href={courseHref}>{course.title}</Link>
         </h3>
-        <p className="dashboard-card__description">{course.description}</p>
       </div>
 
       {mode === 'my' ? (
@@ -279,21 +407,24 @@ function DashboardCourseCard({
           <strong>Заказ #{course.pendingOrder.id}</strong>
           <p>
             {course.pendingOrder.status === 'PROCESSING'
-              ? 'Платеж отправлен на ручную проверку. Это может занять некоторое время. Если статус долго не меняется, напишите нам через контакты.'
+              ? 'Платеж отправлен на ручную проверку. Если статус долго не меняется, напишите нам через контакты.'
               : 'Оплатите курс по QR СБП и нажмите «Я оплатил», чтобы отправить платеж на ручную проверку.'}
           </p>
         </div>
       ) : null}
 
-      <p className="dashboard-card__next">{nextStepCopy}</p>
+      {nextStepCopy ? <p className="dashboard-card__next">{nextStepCopy}</p> : null}
 
       <div className="dashboard-card__footer">
-        <div className="badge-row">
-          {course.price !== null ? (
-            <span className="badge badge-paid">{formatCoursePrice(course.price)}</span>
-          ) : null}
-          {mode === 'free' ? <span className="badge badge-complete">Без оплаты</span> : null}
-        </div>
+        {mode !== 'my' ? (
+          <div className="badge-row">
+            {course.price !== null ? (
+              <span className="badge badge-paid">{formatCoursePrice(course.price)}</span>
+            ) : null}
+            {mode === 'free' ? <span className="badge badge-complete">Без оплаты</span> : null}
+          </div>
+        ) : null}
+
         <div className="row-actions dashboard-card__actions">
           {renderPrimaryAction()}
           {renderSecondaryAction()}
@@ -304,45 +435,76 @@ function DashboardCourseCard({
 }
 
 export default function DashboardClient({
-  user,
-  myCourses,
+  activity,
   freeCourses,
+  myCourses,
   paidCourses,
   pendingCourses,
+  user,
 }: DashboardClientProps) {
   const router = useRouter();
   const [buyingTariffId, setBuyingTariffId] = useState<number | null>(null);
   const [logoutPending, setLogoutPending] = useState(false);
-  const [feedback, setFeedback] = useState<{
-    tone: 'error' | 'success';
-    message: string;
-  } | null>(null);
-
-  const stats = {
-    my: myCourses.length,
-    free: freeCourses.length + myCourses.filter((course) => course.status === 'free').length,
-    paid:
-      paidCourses.length +
-      pendingCourses.length +
-      myCourses.filter((course) => course.status === 'paid').length,
-    pending: pendingCourses.length,
-  };
+  const [feedback, setFeedback] = useState<DashboardFeedback>(null);
   const pendingPriorityCourse = pendingCourses[0] ?? null;
-  const activeFreeCourse =
-    myCourses.find((course) => course.status === 'free') ?? null;
+  const activeFreeCourse = myCourses.find((course) => course.status === 'free') ?? null;
   const activePreviewCourse =
     myCourses.find((course) => isStartedPreviewCourse(course)) ?? null;
-  const activeOwnedCourse =
-    myCourses.find((course) => course.isOwned) ?? null;
+  const activeOwnedCourse = myCourses.find((course) => course.isOwned) ?? null;
   const freeStarterCourse =
-    freeCourses[0] ??
-    myCourses.find((course) => course.status === 'free') ??
-    null;
+    freeCourses[0] ?? myCourses.find((course) => course.status === 'free') ?? null;
   const previewStarterCourse =
     paidCourses.find((course) => course.previewEnabled && course.previewLessonsCount > 0) ??
     myCourses.find((course) => isStartedPreviewCourse(course)) ??
     null;
   const isNewUser = myCourses.length === 0 && pendingCourses.length === 0;
+  const recentActivityCourse = activity.lastActiveLesson
+    ? myCourses.find((course) => course.slug === activity.lastActiveLesson?.courseSlug) ?? null
+    : activity.lastActiveCourse
+      ? myCourses.find((course) => course.slug === activity.lastActiveCourse?.slug) ?? null
+      : null;
+  const activityFallbackCourse =
+    recentActivityCourse ??
+    activePreviewCourse ??
+    activeFreeCourse ??
+    activeOwnedCourse ??
+    myCourses[0] ??
+    null;
+  const activityPrimaryAction = activity.lastActiveLesson
+    ? {
+        href: `/courses/${activity.lastActiveLesson.courseSlug}?lesson=${encodeURIComponent(
+          activity.lastActiveLesson.lessonSlug
+        )}`,
+        label: activity.lastActiveLesson.completed ? 'Открыть урок' : 'Продолжить обучение',
+      }
+    : activityFallbackCourse
+      ? {
+          href: `/courses/${activityFallbackCourse.slug}`,
+          label:
+            activityFallbackCourse.isStarted ||
+            activityFallbackCourse.progressPercent > 0 ||
+            activityFallbackCourse.completedLessonsCount > 0
+              ? 'Продолжить обучение'
+              : 'Открыть курс',
+        }
+      : freeStarterCourse
+        ? {
+            href: `/courses/${freeStarterCourse.slug}`,
+            label: 'Начать бесплатный курс',
+          }
+        : {
+            href: '/catalog',
+            label: 'Открыть каталог',
+          };
+  const emptyStateAction = freeStarterCourse
+    ? {
+        href: `/courses/${freeStarterCourse.slug}`,
+        label: 'Начать бесплатный курс',
+      }
+    : {
+        href: '/catalog',
+        label: 'Открыть каталог',
+      };
 
   async function handleLogout() {
     setFeedback(null);
@@ -354,9 +516,7 @@ export default function DashboardClient({
       });
 
       if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as
-          | { error?: string }
-          | null;
+        const payload = (await response.json().catch(() => null)) as { error?: string } | null;
         throw new Error(payload?.error || 'Не удалось завершить сессию.');
       }
 
@@ -364,11 +524,11 @@ export default function DashboardClient({
       router.refresh();
     } catch (logoutError) {
       setFeedback({
-        tone: 'error',
         message:
           logoutError instanceof Error
             ? logoutError.message
             : 'Не удалось завершить сессию.',
+        tone: 'error',
       });
     } finally {
       setLogoutPending(false);
@@ -385,19 +545,19 @@ export default function DashboardClient({
 
     try {
       const response = await fetch('/api/orders', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           tariffId: course.tariffId,
         }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        method: 'POST',
       });
 
       const payload = (await response.json().catch(() => null)) as
         | {
-            error?: string;
             checkoutUrl?: string;
+            error?: string;
           }
         | null;
 
@@ -412,11 +572,9 @@ export default function DashboardClient({
       }
     } catch (orderError) {
       setFeedback({
-        tone: 'error',
         message:
-          orderError instanceof Error
-            ? orderError.message
-            : 'Не удалось открыть оплату.',
+          orderError instanceof Error ? orderError.message : 'Не удалось открыть оплату.',
+        tone: 'error',
       });
     } finally {
       setBuyingTariffId(null);
@@ -444,122 +602,124 @@ export default function DashboardClient({
     );
   }
 
-  let dashboardFocus: DashboardFocusProps | null = null;
+  let quickActionsTitle = activity.hasActivity
+    ? 'Продолжить обучение'
+    : 'Открыть стартовый курс';
+  let quickActionsNote = activity.lastActiveLesson
+    ? `Последний урок: «${activity.lastActiveLesson.lessonTitle}».`
+    : 'После первого сохранения прогресса activity block начнет заполняться автоматически.';
+  let quickActionsPrimaryAction: ReactNode = (
+    <Link className="primary-button" href={activityPrimaryAction.href}>
+      {activityPrimaryAction.label}
+    </Link>
+  );
+  let quickActionsSecondaryAction: ReactNode | undefined = (
+    <Link className="secondary-button" href="/catalog">
+      Каталог
+    </Link>
+  );
 
   if (pendingPriorityCourse?.pendingOrder) {
-    dashboardFocus = {
-      eyebrow: 'Следующий шаг',
-      title: `Продолжите оплату курса «${pendingPriorityCourse.title}».`,
-      description:
-        pendingPriorityCourse.pendingOrder.status === 'PROCESSING'
-          ? 'Платеж уже отправлен на ручную проверку. Повторно оплачивать заказ не нужно. Проверка может занять некоторое время; если статус долго не меняется, напишите нам через контакты.'
-          : 'Откройте экран оплаты, оплатите курс по QR СБП и нажмите «Я оплатил». После этого заказ уйдет на ручную проверку.',
-      tone: 'pending',
-      primaryAction: (
-        <Link className="primary-button" href={pendingPriorityCourse.pendingOrder.checkoutUrl}>
-          {getActiveOrderActionLabel(pendingPriorityCourse.pendingOrder.status)}
-        </Link>
-      ),
-      secondaryAction: (
-        <Link
-          className="secondary-button"
-          href={
-            canOpenCourseRoute(pendingPriorityCourse)
-              ? `/courses/${pendingPriorityCourse.slug}`
-              : getCourseCatalogHref(pendingPriorityCourse.slug)
-          }
-        >
-          {canOpenCourseRoute(pendingPriorityCourse)
-            ? 'Открыть курс'
-            : 'Открыть страницу курса'}
-        </Link>
-      ),
-    };
+    quickActionsTitle = `Завершить оплату «${pendingPriorityCourse.title}»`;
+    quickActionsNote =
+      pendingPriorityCourse.pendingOrder.status === 'PROCESSING'
+        ? 'Платеж уже отправлен на ручную проверку.'
+        : 'Оплатите курс по QR СБП и подтвердите перевод.';
+    quickActionsPrimaryAction = (
+      <Link className="primary-button" href={pendingPriorityCourse.pendingOrder.checkoutUrl}>
+        {getActiveOrderActionLabel(pendingPriorityCourse.pendingOrder.status)}
+      </Link>
+    );
+    quickActionsSecondaryAction = (
+      <Link
+        className="secondary-button"
+        href={
+          canOpenCourseRoute(pendingPriorityCourse)
+            ? `/courses/${pendingPriorityCourse.slug}`
+            : getCourseCatalogHref(pendingPriorityCourse.slug)
+        }
+      >
+        {canOpenCourseRoute(pendingPriorityCourse) ? 'Открыть курс' : 'Страница курса'}
+      </Link>
+    );
   } else if (isNewUser && freeStarterCourse) {
-    dashboardFocus = {
-      eyebrow: 'Старт в обучении',
-      title: 'Начните с бесплатного курса, а затем откройте ознакомительные уроки платного.',
-      description:
-        'Самый быстрый вход в платформу — начать бесплатный курс без оплаты. Вторым шагом можно посмотреть первые уроки платного курса и решить, нужен ли полный доступ.',
-      tone: 'start',
-      primaryAction: (
-        <Link className="primary-button" href={`/courses/${freeStarterCourse.slug}`}>
-          Начать бесплатный курс
-        </Link>
-      ),
-      secondaryAction: previewStarterCourse ? (
-        <Link className="secondary-button" href={`/courses/${previewStarterCourse.slug}`}>
-          Открыть ознакомительные уроки
-        </Link>
-      ) : undefined,
-    };
+    quickActionsTitle = 'Начать с бесплатного курса';
+    quickActionsNote = previewStarterCourse
+      ? 'Бесплатный старт и ознакомительные уроки уже доступны.'
+      : 'После первого урока прогресс сразу появится в годовой активности.';
+    quickActionsPrimaryAction = (
+      <Link className="primary-button" href={`/courses/${freeStarterCourse.slug}`}>
+        Начать бесплатный курс
+      </Link>
+    );
+    quickActionsSecondaryAction = previewStarterCourse ? (
+      <Link className="secondary-button" href={`/courses/${previewStarterCourse.slug}`}>
+        Ознакомительные уроки
+      </Link>
+    ) : (
+      <Link className="secondary-button" href="/catalog">
+        Каталог
+      </Link>
+    );
   } else if (activePreviewCourse) {
-    dashboardFocus = {
-      eyebrow: 'Ознакомительный доступ уже открыт',
-      title: `У вас уже открыты первые уроки курса «${activePreviewCourse.title}».`,
-      description:
-        'Продолжайте ознакомительный доступ с того места, где остановились, или завершите покупку, чтобы открыть курс полностью внутри кабинета.',
-      tone: 'progress',
-      primaryAction: (
-        <Link className="primary-button" href={`/courses/${activePreviewCourse.slug}`}>
-          Продолжить обучение
-        </Link>
-      ),
-      secondaryAction: renderBuyAction(activePreviewCourse, 'secondary-button'),
-    };
+    quickActionsTitle = `Продолжить «${activePreviewCourse.title}»`;
+    quickActionsNote = 'Можно вернуться к первым урокам или открыть полный доступ.';
+    quickActionsPrimaryAction = (
+      <Link className="primary-button" href={`/courses/${activePreviewCourse.slug}`}>
+        Продолжить обучение
+      </Link>
+    );
+    quickActionsSecondaryAction = renderBuyAction(activePreviewCourse, 'secondary-button');
   } else if (activeFreeCourse) {
-    dashboardFocus = {
-      eyebrow: 'Бесплатный курс уже начат',
-      title: `Продолжайте курс «${activeFreeCourse.title}».`,
-      description:
-        'Прогресс уже сохраняется в кабинете. Когда будете готовы к следующему шагу, откройте платный курс с ознакомительными уроками.',
-      tone: 'progress',
-      primaryAction: (
-        <Link className="primary-button" href={`/courses/${activeFreeCourse.slug}`}>
-          Продолжить обучение
+    quickActionsTitle = `Продолжить «${activeFreeCourse.title}»`;
+    quickActionsNote = 'Прогресс сохраняется автоматически и виден в activity block.';
+    quickActionsPrimaryAction = (
+      <Link className="primary-button" href={`/courses/${activeFreeCourse.slug}`}>
+        Продолжить обучение
+      </Link>
+    );
+    quickActionsSecondaryAction =
+      previewStarterCourse && previewStarterCourse.slug !== activeFreeCourse.slug ? (
+        <Link className="secondary-button" href={`/courses/${previewStarterCourse.slug}`}>
+          Ознакомительные уроки
         </Link>
-      ),
-      secondaryAction:
-        previewStarterCourse && previewStarterCourse.slug !== activeFreeCourse.slug ? (
-          <Link className="secondary-button" href={`/courses/${previewStarterCourse.slug}`}>
-            Открыть ознакомительные уроки
-          </Link>
-        ) : undefined,
-    };
+      ) : (
+        <Link className="secondary-button" href="/catalog">
+          Каталог
+        </Link>
+      );
   } else if (activeOwnedCourse) {
-    dashboardFocus = {
-      eyebrow: 'Полный доступ открыт',
-      title: `Курс «${activeOwnedCourse.title}» уже доступен полностью.`,
-      description:
-        'Возвращайтесь к обучению с сохраненного места. Купленный курс остается в кабинете и всегда доступен для продолжения.',
-      tone: 'owned',
-      primaryAction: (
-        <Link className="primary-button" href={`/courses/${activeOwnedCourse.slug}`}>
-          {getDashboardCoursePrimaryLabel(activeOwnedCourse, 'my')}
-        </Link>
-      ),
-    };
+    quickActionsTitle = `Вернуться в «${activeOwnedCourse.title}»`;
+    quickActionsNote = 'Полный доступ уже открыт.';
+    quickActionsPrimaryAction = (
+      <Link className="primary-button" href={`/courses/${activeOwnedCourse.slug}`}>
+        {getDashboardCoursePrimaryLabel(activeOwnedCourse, 'my')}
+      </Link>
+    );
+  } else if (!activity.hasActivity) {
+    quickActionsNote = 'Выберите стартовый курс и начните с первого урока.';
   }
 
   return (
-    <main className="page-shell">
+    <main className="page-shell dashboard-page">
       <div className="top-nav">
-        <Link href="/" className="brand">
+        <Link className="brand" href="/">
           <span className="brand-mark" />
           <span>Бизнес школа ДНК</span>
         </Link>
+
         <div className="row-actions" style={{ marginTop: 0 }}>
-          <Link href="/catalog" className="ghost-button">
+          <Link className="ghost-button" href="/catalog">
             Каталог
           </Link>
-          <Link href="/profile" className="ghost-button">
+          <Link className="ghost-button" href="/profile">
             Профиль
           </Link>
-          <Link href="/help" className="ghost-button">
+          <Link className="ghost-button" href="/help">
             Помощь
           </Link>
           {user.role === 'ADMIN' ? (
-            <Link href="/admin" className="ghost-button">
+            <Link className="ghost-button" href="/admin">
               Админ
             </Link>
           ) : null}
@@ -575,78 +735,46 @@ export default function DashboardClient({
       </div>
 
       <section className="stack-grid">
-        <article className="panel dashboard-hero">
-          <div className="dashboard-hero__copy">
-            <span className="eyebrow">Личный кабинет</span>
-            <h1>{user.name || user.email}</h1>
-            <p className="panel-copy">
-              Здесь собраны ваши доступные курсы, бесплатные старты, покупки в процессе и
-              следующий шаг по каждому курсу.
-            </p>
-            <div className="row-actions">
-              <Link href="/catalog" className="secondary-button">
-                Перейти в каталог
+        <header className="dashboard-page__heading">
+          <h1 className="dashboard-page__title">Личный кабинет</h1>
+        </header>
+
+        <section className="dashboard-overview">
+          <DashboardProfileCard feedback={feedback} user={user} />
+          <DashboardQuickActions
+            note={quickActionsNote}
+            primaryAction={quickActionsPrimaryAction}
+            secondaryAction={quickActionsSecondaryAction}
+            tertiaryAction={
+              <Link className="ghost-button" href="/help">
+                Помощь
               </Link>
-              <Link href="/help" className="ghost-button">
-                Как это работает
-              </Link>
-            </div>
-          </div>
-
-          <div className="dashboard-hero__stats">
-            <div className="dashboard-stat">
-              <span>Мои курсы</span>
-              <strong>{stats.my}</strong>
-            </div>
-            <div className="dashboard-stat">
-              <span>Бесплатные</span>
-              <strong>{stats.free}</strong>
-            </div>
-            <div className="dashboard-stat">
-              <span>Платные</span>
-              <strong>{stats.paid}</strong>
-            </div>
-            <div className="dashboard-stat">
-              <span>Оплата</span>
-              <strong>{stats.pending}</strong>
-            </div>
-          </div>
-
-          {feedback ? (
-            <p
-              className={`feedback ${
-                feedback.tone === 'success' ? 'feedback-success' : 'feedback-error'
-              }`}
-            >
-              {feedback.message}
-            </p>
-          ) : null}
-        </article>
-
-        {dashboardFocus ? (
-          <DashboardFocus
-            description={dashboardFocus.description}
-            eyebrow={dashboardFocus.eyebrow}
-            primaryAction={dashboardFocus.primaryAction}
-            secondaryAction={dashboardFocus.secondaryAction}
-            title={dashboardFocus.title}
-            tone={dashboardFocus.tone}
+            }
+            title={quickActionsTitle}
           />
-        ) : null}
+        </section>
+
+        <section className="dashboard-activity-shell">
+          <LearnerActivity
+            activity={activity}
+            emptyStateActionHref={emptyStateAction.href}
+            emptyStateActionLabel={emptyStateAction.label}
+          />
+        </section>
 
         {pendingCourses.length > 0 ? (
           <section className="panel dashboard-section">
             <SectionIntro
+              description="Здесь лежат заказы, которые еще не оплачены по QR СБП или уже отправлены на ручную проверку."
               eyebrow="Продолжить оплату"
-              title="Покупки, которые ждут завершения"
-              description="Здесь лежат заказы, которые еще не оплачены по QR СБП или уже отправлены на ручную проверку. Если проверка затянулась, подготовьте номер заказа и напишите нам через контакты."
+              title="Покупки на подтверждении"
             />
 
             <div className="course-grid dashboard-grid">
               {pendingCourses.map((course) => (
                 <DashboardCourseCard
-                  key={course.slug}
                   course={course}
+                  key={course.slug}
                   mode="pending"
                   renderBuyAction={renderBuyAction}
                 />
@@ -657,26 +785,26 @@ export default function DashboardClient({
 
         <section className="panel dashboard-section">
           <SectionIntro
-            eyebrow="Мои курсы"
-            title="Все, что уже начато или доступно полностью"
             description={
               isNewUser
-                ? 'После первого старта бесплатного курса или ознакомительных уроков платного он сразу появится здесь вместе с прогрессом.'
-                : 'Здесь лежат купленные курсы, бесплатные курсы с сохраненным прогрессом и платные программы, в которых уже открыты первые уроки.'
+                ? 'После первого бесплатного урока или ознакомительного доступа курс сразу появится здесь вместе с прогрессом.'
+                : 'Здесь собраны купленные курсы, бесплатные курсы с прогрессом и программы, где уже открыты первые уроки.'
             }
+            eyebrow="Мои курсы"
+            title="Мои курсы"
           />
 
           <div className="course-grid dashboard-grid">
             {myCourses.length === 0 ? (
               <EmptyCard>
-                Пока здесь нет начатых курсов. После первого бесплатного урока или
-                ознакомительного доступа этот блок превратится в ваш основной хаб обучения.
+                Пока здесь нет начатых курсов. После первого урока этот блок станет вашим
+                основным хабом обучения.
               </EmptyCard>
             ) : (
               myCourses.map((course) => (
                 <DashboardCourseCard
-                  key={course.slug}
                   course={course}
+                  key={course.slug}
                   mode="my"
                   renderBuyAction={renderBuyAction}
                 />
@@ -687,9 +815,9 @@ export default function DashboardClient({
 
         <section className="panel dashboard-section">
           <SectionIntro
+            description="Эти курсы доступны сразу после входа без оплаты и без ожидания подтверждения."
             eyebrow="Бесплатные курсы"
-            title="Можно начать сразу"
-            description="Доступ к этим курсам открывается после входа без оплаты и без ожидания подтверждения."
+            title="Бесплатные курсы"
           />
 
           <div className="course-grid dashboard-grid">
@@ -700,8 +828,8 @@ export default function DashboardClient({
             ) : (
               freeCourses.map((course) => (
                 <DashboardCourseCard
-                  key={course.slug}
                   course={course}
+                  key={course.slug}
                   mode="free"
                   renderBuyAction={renderBuyAction}
                 />
@@ -712,22 +840,22 @@ export default function DashboardClient({
 
         <section className="panel dashboard-section">
           <SectionIntro
+            description="У платных программ доступны ознакомительные уроки. Полный доступ открывается после оплаты по QR СБП и ручной проверки."
             eyebrow="Платные курсы"
-            title="Можно начать с первых уроков"
-            description="У платных курсов доступны ознакомительные уроки. Полный доступ открывается после оплаты по QR СБП и ручной проверки."
+            title="Ознакомительный доступ"
           />
 
           <div className="course-grid dashboard-grid">
             {paidCourses.length === 0 ? (
               <EmptyCard>
-                Все активные платные курсы уже куплены, начаты с ознакомительного доступа
-                или ждут завершения оплаты.
+                Активные платные курсы уже куплены, начаты с ознакомительного доступа или ждут
+                завершения оплаты.
               </EmptyCard>
             ) : (
               paidCourses.map((course) => (
                 <DashboardCourseCard
-                  key={course.slug}
                   course={course}
+                  key={course.slug}
                   mode="paid"
                   renderBuyAction={renderBuyAction}
                 />

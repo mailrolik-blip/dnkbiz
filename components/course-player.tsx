@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
 import type { CourseViewerData, CourseViewerLesson } from '@/lib/course-access';
@@ -11,6 +11,7 @@ import { formatPreviewLessons } from '@/lib/purchase-ux';
 
 type CoursePlayerProps = {
   course: CourseViewerData;
+  initialLessonSlug?: string | null;
 };
 
 type ChatMessage = {
@@ -81,6 +82,21 @@ function getNextLessonId(lessons: CourseViewerLesson[], currentLessonId?: number
     lessons[0]?.id ??
     0
   );
+}
+
+function getRequestedLessonId(
+  lessons: CourseViewerLesson[],
+  requestedLessonSlug: string | null
+) {
+  if (!requestedLessonSlug) {
+    return undefined;
+  }
+
+  const lesson = lessons.find(
+    (item) => item.slug === requestedLessonSlug && !item.isLocked
+  );
+
+  return lesson?.id;
 }
 
 function normalizeHomeworkType(value: string | null | undefined): HomeworkType {
@@ -595,13 +611,21 @@ function PaywallBlock({
   );
 }
 
-export default function CoursePlayer({ course }: CoursePlayerProps) {
+export default function CoursePlayer({
+  course,
+  initialLessonSlug = null,
+}: CoursePlayerProps) {
+  const pathname = usePathname();
   const router = useRouter();
+  const requestedLessonSlug = initialLessonSlug;
   const initialCourseComplete = isCourseCompleted(course.lessons);
   const [courseState, setCourseState] = useState(course);
   const [lessons, setLessons] = useState(course.lessons);
   const [currentLessonId, setCurrentLessonId] = useState(() =>
-    getNextLessonId(course.lessons)
+    getNextLessonId(
+      course.lessons,
+      getRequestedLessonId(course.lessons, requestedLessonSlug)
+    )
   );
   const [pendingLessonId, setPendingLessonId] = useState<number | null>(null);
   const [purchasePending, setPurchasePending] = useState(false);
@@ -626,12 +650,29 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
   useEffect(() => {
     setCourseState(course);
     setLessons(course.lessons);
-    setCurrentLessonId(getNextLessonId(course.lessons));
+    setCurrentLessonId(
+      getNextLessonId(
+        course.lessons,
+        getRequestedLessonId(course.lessons, requestedLessonSlug)
+      )
+    );
     setSyncError(null);
     setMessage(null);
     setSuccessOpen(isCourseCompleted(course.lessons));
     completionRef.current = isCourseCompleted(course.lessons);
-  }, [course]);
+  }, [course, requestedLessonSlug]);
+
+  useEffect(() => {
+    const requestedLessonId = getRequestedLessonId(lessons, requestedLessonSlug);
+
+    if (!requestedLessonId) {
+      return;
+    }
+
+    setCurrentLessonId((current) =>
+      current === requestedLessonId ? current : requestedLessonId
+    );
+  }, [lessons, requestedLessonSlug]);
 
   useEffect(() => {
     let cancelled = false;
@@ -686,6 +727,23 @@ export default function CoursePlayer({ course }: CoursePlayerProps) {
 
     completionRef.current = courseComplete;
   }, [lessons]);
+
+  useEffect(() => {
+    const currentLesson = lessons.find((lesson) => lesson.id === currentLessonId);
+
+    if (!pathname || !currentLesson || requestedLessonSlug === currentLesson.slug) {
+      return;
+    }
+
+    const params = new URLSearchParams(
+      typeof window === 'undefined' ? '' : window.location.search
+    );
+    params.set('lesson', currentLesson.slug);
+    const nextQuery = params.toString();
+    const nextHref = nextQuery ? `${pathname}?${nextQuery}` : pathname;
+
+    router.replace(nextHref, { scroll: false });
+  }, [currentLessonId, lessons, pathname, requestedLessonSlug, router]);
 
   useEffect(() => {
     if (!assistantOpen) {

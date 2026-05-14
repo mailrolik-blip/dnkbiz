@@ -1,3 +1,5 @@
+import { Prisma } from '@prisma/client';
+
 import { getOptionalCurrentUser } from '@/lib/auth';
 import { getLessonAccessForUser } from '@/lib/course-access';
 import prisma from '@/lib/prisma';
@@ -10,6 +12,14 @@ import {
 type RouteParams = {
   params: Promise<{ id: string }>;
 };
+
+function isMissingLessonActivityEventTableError(error: unknown) {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === 'P2010' &&
+    error.meta?.code === '42P01'
+  );
+}
 
 export async function POST(request: Request, { params }: RouteParams) {
   const user = await getOptionalCurrentUser();
@@ -67,6 +77,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     return Response.json({ error: 'Доступ к этому уроку не открыт.' }, { status: 403 });
   }
 
+  const activityAt = new Date();
   const progress = await prisma.lessonProgress.upsert({
     where: {
       userId_lessonId: {
@@ -77,14 +88,14 @@ export async function POST(request: Request, { params }: RouteParams) {
     update: {
       ...(completed !== undefined ? { completed } : {}),
       ...(answer !== undefined ? { answer } : {}),
-      lastViewedAt: new Date(),
+      lastViewedAt: activityAt,
     },
     create: {
       userId: user.id,
       lessonId,
       completed: completed ?? false,
       answer: answer ?? null,
-      lastViewedAt: new Date(),
+      lastViewedAt: activityAt,
     },
     select: {
       completed: true,
@@ -93,6 +104,17 @@ export async function POST(request: Request, { params }: RouteParams) {
       updatedAt: true,
     },
   });
+
+  try {
+    await prisma.$executeRaw`
+      INSERT INTO "LessonActivityEvent" ("userId", "lessonId", "completed", "createdAt")
+      VALUES (${user.id}, ${lessonId}, ${progress.completed}, ${activityAt})
+    `;
+  } catch (activityError) {
+    if (!isMissingLessonActivityEventTableError(activityError)) {
+      throw activityError;
+    }
+  }
 
   return Response.json({
     progress: {

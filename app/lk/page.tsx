@@ -1,9 +1,15 @@
+import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 
 import DashboardClient from '@/components/dashboard-client';
 import { getOptionalCurrentUser } from '@/lib/auth';
 import { buildAuthHref } from '@/lib/auth-intent';
 import { getCatalogCoursesForViewer } from '@/lib/course-access';
+import { getLearnerActivitySnapshot } from '@/lib/learner-activity';
+
+export const metadata: Metadata = {
+  title: 'Личный кабинет',
+};
 
 export default async function DashboardPage() {
   const user = await getOptionalCurrentUser();
@@ -13,6 +19,10 @@ export default async function DashboardPage() {
   }
 
   const catalogCourses = await getCatalogCoursesForViewer(user.id);
+  const activity = await getLearnerActivitySnapshot(
+    user.id,
+    catalogCourses.filter((course) => course.status !== 'showcase').length
+  );
 
   const myCourses = catalogCourses.filter(
     (course) => (course.isOwned || course.isStarted) && !course.pendingOrder
@@ -33,6 +43,7 @@ export default async function DashboardPage() {
 
   return (
     <DashboardClient
+      activity={activity}
       freeCourses={freeCourses}
       myCourses={myCourses}
       paidCourses={paidCourses}

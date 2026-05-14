@@ -7,14 +7,23 @@ import { getCourseForViewer } from '@/lib/course-access';
 
 export default async function CoursePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ lesson?: string | string[] | undefined }>;
 }) {
   const { slug } = await params;
+  const resolvedSearchParams = await searchParams;
+  const initialLessonSlug = Array.isArray(resolvedSearchParams.lesson)
+    ? resolvedSearchParams.lesson[0] ?? null
+    : resolvedSearchParams.lesson ?? null;
   const user = await getOptionalCurrentUser();
+  const courseHref = initialLessonSlug
+    ? `/courses/${slug}?lesson=${encodeURIComponent(initialLessonSlug)}`
+    : `/courses/${slug}`;
 
   if (!user) {
-    redirect(buildAuthHref('login', `/courses/${slug}`));
+    redirect(buildAuthHref('login', courseHref));
   }
 
   const course = await getCourseForViewer(slug, user.id);
@@ -23,5 +32,5 @@ export default async function CoursePage({
     redirect('/lk');
   }
 
-  return <CoursePlayer course={course} />;
+  return <CoursePlayer course={course} initialLessonSlug={initialLessonSlug} />;
 }
