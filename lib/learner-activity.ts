@@ -510,68 +510,80 @@ function buildActivityYear(
 
 export async function getLearnerActivitySnapshot(
   userId: number,
-  availableCourses: number
+  params: {
+    availableCourses: number;
+    visibleCourseSlugs: string[];
+  }
 ): Promise<LearnerActivitySnapshot> {
+  const availableCourses = params.availableCourses;
+  const visibleCourseSlugs = [...new Set(params.visibleCourseSlugs.filter(Boolean))];
   const today = startOfDay(new Date());
   const todayKey = getDayKey(today);
   const currentYear = today.getFullYear();
 
-  const progressRows = await prisma.lessonProgress.findMany({
-    where: {
-      userId,
-      lesson: {
-        course: {
-          isPublished: true,
-        },
-      },
-    },
-    select: {
-      completed: true,
-      lastViewedAt: true,
-      updatedAt: true,
-      lesson: {
-        select: {
-          content: true,
-          course: {
-            select: {
-              id: true,
-              slug: true,
-              title: true,
+  const progressRows =
+    visibleCourseSlugs.length > 0
+      ? await prisma.lessonProgress.findMany({
+          where: {
+            userId,
+            lesson: {
+              course: {
+                slug: {
+                  in: visibleCourseSlugs,
+                },
+              },
             },
           },
-          description: true,
-          id: true,
-          slug: true,
-          title: true,
-        },
-      },
-    },
-  });
+          select: {
+            completed: true,
+            lastViewedAt: true,
+            updatedAt: true,
+            lesson: {
+              select: {
+                content: true,
+                course: {
+                  select: {
+                    id: true,
+                    slug: true,
+                    title: true,
+                  },
+                },
+                description: true,
+                id: true,
+                slug: true,
+                title: true,
+              },
+            },
+          },
+        })
+      : [];
 
   let activityEvents: ActivityEventRow[] = [];
 
-  try {
-    activityEvents = await prisma.$queryRaw<ActivityEventRow[]>`
-      SELECT
-        event."createdAt" AS "createdAt",
-        event."completed" AS "completed",
-        course."slug" AS "courseSlug",
-        course."title" AS "courseTitle",
-        lesson."content" AS "lessonContent",
-        lesson."description" AS "lessonDescription",
-        lesson."id" AS "lessonId",
-        lesson."slug" AS "lessonSlug",
-        lesson."title" AS "lessonTitle"
-      FROM "LessonActivityEvent" AS event
-      INNER JOIN "Lesson" AS lesson ON lesson."id" = event."lessonId"
-      INNER JOIN "Course" AS course ON course."id" = lesson."courseId"
-      WHERE event."userId" = ${userId}
-        AND course."isPublished" = true
-      ORDER BY event."createdAt" ASC
-    `;
-  } catch (activityError) {
-    if (!isMissingLessonActivityEventTableError(activityError)) {
-      throw activityError;
+  if (visibleCourseSlugs.length > 0) {
+    try {
+      activityEvents = await prisma.$queryRaw<ActivityEventRow[]>(Prisma.sql`
+        SELECT
+          event."createdAt" AS "createdAt",
+          event."completed" AS "completed",
+          course."slug" AS "courseSlug",
+          course."title" AS "courseTitle",
+          lesson."content" AS "lessonContent",
+          lesson."description" AS "lessonDescription",
+          lesson."id" AS "lessonId",
+          lesson."slug" AS "lessonSlug",
+          lesson."title" AS "lessonTitle"
+        FROM "LessonActivityEvent" AS event
+        INNER JOIN "Lesson" AS lesson ON lesson."id" = event."lessonId"
+        INNER JOIN "Course" AS course ON course."id" = lesson."courseId"
+        WHERE event."userId" = ${userId}
+          AND course."slug" IN (${Prisma.join(visibleCourseSlugs)})
+        ORDER BY event."createdAt" ASC
+      `);
+    } catch (activityError) {
+      if (!isMissingLessonActivityEventTableError(activityError)) {
+        throw activityError;
+      }
     }
   }
 

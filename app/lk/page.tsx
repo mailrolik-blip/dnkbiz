@@ -18,10 +18,16 @@ export default async function DashboardPage() {
     redirect(buildAuthHref('login', '/lk'));
   }
 
-  const catalogCourses = await getCatalogCoursesForViewer(user.id);
+  const catalogCourses = await getCatalogCoursesForViewer(user.id, {
+    includeHiddenAccessibleCourses: true,
+  });
+  const dashboardCourses = catalogCourses.filter((course) => course.status !== 'showcase');
   const activity = await getLearnerActivitySnapshot(
     user.id,
-    catalogCourses.filter((course) => course.status !== 'showcase').length
+    {
+      availableCourses: dashboardCourses.length,
+      visibleCourseSlugs: dashboardCourses.map((course) => course.slug),
+    }
   );
 
   const myCourses = catalogCourses.filter(

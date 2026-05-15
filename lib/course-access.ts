@@ -13,6 +13,10 @@ import {
   type CatalogCourseCard,
 } from './lms-catalog';
 
+type CatalogCoursesForViewerOptions = {
+  includeHiddenAccessibleCourses?: boolean;
+};
+
 export type LessonViewerProgress = {
   completed: boolean;
   answer: string | null;
@@ -81,6 +85,54 @@ function toActiveOrderStatus(value: string): 'PENDING' | 'PROCESSING' {
   return value === 'PROCESSING' ? 'PROCESSING' : 'PENDING';
 }
 
+function getHiddenAccessibleCourseWhere(userId: number) {
+  return {
+    isPublished: false,
+    OR: [
+      {
+        enrollments: {
+          some: {
+            userId,
+          },
+        },
+      },
+      {
+        tariffs: {
+          none: {
+            isActive: true,
+          },
+        },
+        lessons: {
+          some: {
+            progress: {
+              some: {
+                userId,
+              },
+            },
+          },
+        },
+      },
+    ],
+  };
+}
+
+function canContinueHiddenCourse(params: {
+  hasActiveTariff: boolean;
+  hasStarted: boolean;
+  isOwned: boolean;
+  isPublished: boolean;
+}) {
+  if (params.isPublished) {
+    return false;
+  }
+
+  if (params.isOwned) {
+    return true;
+  }
+
+  return !params.hasActiveTariff && params.hasStarted;
+}
+
 function buildProgress(progress: {
   completed: boolean;
   answer: string | null;
@@ -100,7 +152,8 @@ function buildProgress(progress: {
 }
 
 export async function getCatalogCoursesForViewer(
-  userId: number | null
+  userId: number | null,
+  options: CatalogCoursesForViewerOptions = {}
 ): Promise<CatalogCourseCard[]> {
   if (userId) {
     await expireStaleOrdersForUser(userId);
@@ -108,10 +161,28 @@ export async function getCatalogCoursesForViewer(
 
   const viewerId = userId ?? -1;
   const profileSlugs = getCatalogProfileSlugs();
+  const includeHiddenAccessibleCourses =
+    options.includeHiddenAccessibleCourses === true && userId !== null;
+  const existingCourseSlugs = new Set(
+    (
+      await prisma.course.findMany({
+        where: {
+          slug: {
+            in: profileSlugs,
+          },
+        },
+        select: {
+          slug: true,
+        },
+      })
+    ).map((course) => course.slug)
+  );
 
   const publishedCourses = await prisma.course.findMany({
     where: {
-      isPublished: true,
+      OR: includeHiddenAccessibleCourses
+        ? [{ isPublished: true }, getHiddenAccessibleCourseWhere(viewerId)]
+        : [{ isPublished: true }],
     },
     select: {
       id: true,
@@ -234,7 +305,7 @@ export async function getCatalogCoursesForViewer(
 
   const knownPublishedSlugs = new Set(publishedCards.map((course) => course.slug));
   const showcaseCards = profileSlugs
-    .filter((slug) => !knownPublishedSlugs.has(slug))
+    .filter((slug) => !knownPublishedSlugs.has(slug) && !existingCourseSlugs.has(slug))
     .map((slug) => getShowcaseCatalogFallback(slug))
     .filter(
       (
@@ -255,9 +326,9 @@ export async function getCourseForViewer(
   const course = await prisma.course.findFirst({
     where: {
       slug,
-      isPublished: true,
     },
     select: {
+      isPublished: true,
       title: true,
       slug: true,
       description: true,
@@ -345,11 +416,23 @@ export async function getCourseForViewer(
 
   const tariff = course.tariffs[0] ?? null;
   const isOwned = course.enrollments.length > 0;
+  const hasStarted = course.lessons.some((lesson) => Boolean(lesson.progress[0]));
   const previewLessonsCount = tariff
     ? course.lessons.filter((lesson) => lesson.isPreview).length
     : 0;
-  const hasFullAccess = !tariff || isOwned;
-  const hasPreviewAccess = tariff ? previewLessonsCount > 0 : false;
+  const hasFullAccess = course.isPublished
+    ? !tariff || isOwned
+    : canContinueHiddenCourse({
+        hasActiveTariff: Boolean(tariff),
+        hasStarted,
+        isOwned,
+        isPublished: course.isPublished,
+      });
+  const hasPreviewAccess = course.isPublished && tariff ? previewLessonsCount > 0 : false;
+
+  if (!course.isPublished && !hasFullAccess) {
+    return null;
+  }
 
   if (!hasFullAccess && !hasPreviewAccess) {
     return null;
@@ -410,15 +493,13 @@ export async function getLessonAccessForUser(lessonId: number, userId: number) {
     where: {
       id: lessonId,
       isPublished: true,
-      course: {
-        isPublished: true,
-      },
     },
     select: {
       id: true,
       isPreview: true,
       course: {
         select: {
+          isPublished: true,
           slug: true,
           enrollments: {
             where: {
@@ -441,6 +522,19 @@ export async function getLessonAccessForUser(lessonId: number, userId: number) {
               id: true,
             },
           },
+          lessons: {
+            where: {
+              progress: {
+                some: {
+                  userId,
+                },
+              },
+            },
+            select: {
+              id: true,
+            },
+            take: 1,
+          },
         },
       },
     },
@@ -452,8 +546,16 @@ export async function getLessonAccessForUser(lessonId: number, userId: number) {
 
   const tariff = lesson.course.tariffs[0] ?? null;
   const isOwned = lesson.course.enrollments.length > 0;
+  const hasStarted = lesson.course.lessons.length > 0;
   const productType = tariff ? 'PAID' : 'FREE';
-  const canAccess = productType === 'FREE' || isOwned || lesson.isPreview;
+  const canAccess = lesson.course.isPublished
+    ? productType === 'FREE' || isOwned || lesson.isPreview
+    : canContinueHiddenCourse({
+        hasActiveTariff: Boolean(tariff),
+        hasStarted,
+        isOwned,
+        isPublished: lesson.course.isPublished,
+      });
 
   return {
     lessonId: lesson.id,
