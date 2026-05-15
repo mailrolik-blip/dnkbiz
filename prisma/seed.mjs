@@ -1310,8 +1310,80 @@ async function syncCourseLessons(courseId, lessons) {
   }
 }
 
+async function cleanupLaunchTestArtifacts() {
+  const launchTestCourseSlugs = ['test'];
+  const launchTestTariffSlugs = ['dla'];
+
+  const targetCourses = await prisma.course.findMany({
+    where: {
+      slug: {
+        in: launchTestCourseSlugs,
+      },
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  const targetCourseIds = targetCourses.map((course) => course.id);
+  const targetTariffs = await prisma.tariff.findMany({
+    where: {
+      OR: [
+        {
+          slug: {
+            in: launchTestTariffSlugs,
+          },
+        },
+        targetCourseIds.length > 0
+          ? {
+              courseId: {
+                in: targetCourseIds,
+              },
+            }
+          : {
+              id: -1,
+            },
+      ],
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  const targetTariffIds = targetTariffs.map((tariff) => tariff.id);
+
+  if (targetTariffIds.length > 0) {
+    await prisma.order.deleteMany({
+      where: {
+        tariffId: {
+          in: targetTariffIds,
+        },
+      },
+    });
+
+    await prisma.tariff.deleteMany({
+      where: {
+        id: {
+          in: targetTariffIds,
+        },
+      },
+    });
+  }
+
+  if (targetCourseIds.length > 0) {
+    await prisma.course.deleteMany({
+      where: {
+        id: {
+          in: targetCourseIds,
+        },
+      },
+    });
+  }
+}
+
 async function main() {
   assertDevSeedAllowed();
+  await cleanupLaunchTestArtifacts();
 
   const admin = await upsertUser({
     email: 'admin@example.com',
