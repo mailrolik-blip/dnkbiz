@@ -15,6 +15,7 @@ import {
 
 type CatalogCoursesForViewerOptions = {
   includeHiddenAccessibleCourses?: boolean;
+  restrictToCatalogProfile?: boolean;
 };
 
 export type LessonViewerProgress = {
@@ -163,6 +164,17 @@ export async function getCatalogCoursesForViewer(
   const profileSlugs = getCatalogProfileSlugs();
   const includeHiddenAccessibleCourses =
     options.includeHiddenAccessibleCourses === true && userId !== null;
+  const restrictToCatalogProfile = options.restrictToCatalogProfile === true;
+  const publishedCourseWhere = restrictToCatalogProfile
+    ? {
+        isPublished: true,
+        slug: {
+          in: profileSlugs,
+        },
+      }
+    : {
+        isPublished: true,
+      };
   const existingCourseSlugs = new Set(
     (
       await prisma.course.findMany({
@@ -179,11 +191,11 @@ export async function getCatalogCoursesForViewer(
   );
 
   const publishedCourses = await prisma.course.findMany({
-    where: {
-      OR: includeHiddenAccessibleCourses
-        ? [{ isPublished: true }, getHiddenAccessibleCourseWhere(viewerId)]
-        : [{ isPublished: true }],
-    },
+    where: includeHiddenAccessibleCourses
+      ? {
+          OR: [publishedCourseWhere, getHiddenAccessibleCourseWhere(viewerId)],
+        }
+      : publishedCourseWhere,
     select: {
       id: true,
       slug: true,

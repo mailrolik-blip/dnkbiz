@@ -11,11 +11,10 @@ import { getCourseCatalogHref } from '@/lib/lms-catalog';
 import type { LandingPageData } from '@/lib/landing';
 import { getActiveOrderActionLabel } from '@/lib/payments/constants';
 import {
-  publicCareerOrientations,
+  publicAudienceGroups,
   publicContact,
   publicHomeReviewPlaceholder,
   publicLearningFlow,
-  publicOutcomeAreas,
   publicTeamLead,
   publicTeamMembers,
   publicTrustReasons,
@@ -37,7 +36,7 @@ function getHomeCourseAction(course: HomeCourse, hasUser: boolean) {
   if (course.status === 'showcase') {
     return {
       href: getCourseCatalogHref(course.slug),
-      label: 'Скоро',
+      label: 'Посмотреть курс',
     };
   }
 
@@ -51,7 +50,7 @@ function getHomeCourseAction(course: HomeCourse, hasUser: boolean) {
   if (course.isOwned) {
     return {
       href: `/courses/${course.slug}`,
-      label: 'Перейти к курсу',
+      label: 'Продолжить обучение',
     };
   }
 
@@ -60,7 +59,11 @@ function getHomeCourseAction(course: HomeCourse, hasUser: boolean) {
       href: hasUser
         ? `/courses/${course.slug}`
         : buildAuthHref('register', getCourseIntentPath(course.slug)),
-      label: 'Начать бесплатно',
+      label: hasUser && (course.isStarted || course.progressPercent > 0)
+        ? 'Продолжить обучение'
+        : hasUser
+        ? 'Начать бесплатно'
+        : 'Зарегистрироваться',
     };
   }
 
@@ -78,14 +81,14 @@ function getHomeCourseAction(course: HomeCourse, hasUser: boolean) {
           ? `/courses/${course.slug}`
           : getCheckoutIntentPath(course.tariffId!)
         : buildAuthHref('register', getCourseIntentPath(course.slug)),
-      label: 'Открыть первые уроки',
+      label: hasUser ? 'Смотреть бесплатные уроки' : 'Зарегистрироваться',
     };
   }
 
   if (!hasUser) {
     return {
       href: buildAuthHref('register', getCheckoutIntentPath(course.tariffId!)),
-      label: 'Купить курс',
+      label: 'Получить доступ',
     };
   }
 
@@ -93,21 +96,21 @@ function getHomeCourseAction(course: HomeCourse, hasUser: boolean) {
     href: course.tariffId
       ? getCheckoutIntentPath(course.tariffId)
       : getCourseCatalogHref(course.slug),
-    label: 'Купить курс',
+    label: 'Получить доступ',
   };
 }
 
 function getHomeCourseSupport(course: HomeCourse, hasUser: boolean) {
   if (course.status === 'showcase') {
-    return 'Курс готовится к публикации. Пока можно посмотреть описание и структуру программы.';
+    return 'Страница курса уже доступна: можно посмотреть описание, понять формат и дождаться открытия полного доступа.';
   }
 
   if (course.pendingOrder) {
-    return 'Заказ уже создан. Можно вернуться к оплате по QR СБП и проверить статус ручной проверки.';
+    return 'Заказ уже создан. Можно вернуться к оплате по QR СБП и проверить, подтверждена ли оплата.';
   }
 
   if (course.isOwned) {
-    return 'Курс уже доступен в личном кабинете и открыт для продолжения обучения.';
+    return 'Курс уже открыт в личном кабинете. Можно продолжить обучение с сохраненного места.';
   }
 
   if (course.status === 'free') {
@@ -117,10 +120,10 @@ function getHomeCourseSupport(course: HomeCourse, hasUser: boolean) {
   }
 
   if (course.previewEnabled && course.previewLessonsCount > 0) {
-    return `${formatPreviewLessons(course.previewLessonsCount)} доступны до покупки полного доступа.`;
+    return `${formatPreviewLessons(course.previewLessonsCount)} можно посмотреть бесплатно до получения полного доступа.`;
   }
 
-  return 'Полный доступ к урокам открывается после оплаты по QR СБП и ручной проверки.';
+  return 'Полный доступ к урокам открывается после подтверждения оплаты.';
 }
 
 function formatCourseCount(count: number) {
@@ -140,6 +143,29 @@ function formatCourseCount(count: number) {
 
 export default function PublicHome({ user, catalogCourses }: PublicHomeProps) {
   const hasUser = Boolean(user);
+  const heroProofPoints = [
+    'Бесплатная регистрация',
+    'Preview-уроки до покупки',
+    'Прогресс сохраняется в личном кабинете',
+  ] as const;
+  const homeOverviewItems = [
+    {
+      title: 'DNK сейчас — это онлайн-курсы',
+      body: 'В каталоге собраны практические программы для работы, бизнеса и повышения квалификации без лишнего позиционирования вокруг будущих функций.',
+    },
+    {
+      title: 'Есть регистрация и бесплатные материалы',
+      body: 'После регистрации можно начать с бесплатных курсов, а у части платных программ сначала открыть preview-уроки и спокойно оценить формат.',
+    },
+    {
+      title: 'Обучение идет через личный кабинет',
+      body: 'Курсы, уроки и прогресс собраны в одном месте, поэтому пользователь возвращается к материалам без ручного поиска и потери контекста.',
+    },
+    {
+      title: 'Платный доступ открывается после подтверждения оплаты',
+      body: 'Если курс платный, оплата проходит по QR СБП, а полный доступ к материалам открывается после подтверждения оплаты.',
+    },
+  ] as const;
   const homepageCourses = catalogCourses.filter((course) => course.slug !== 'practical-course');
   const freeCourses = homepageCourses.filter((course) => course.status === 'free').slice(0, 2);
   const paidCourses = homepageCourses.filter((course) => course.status === 'paid').slice(0, 4);
@@ -158,13 +184,13 @@ export default function PublicHome({ user, catalogCourses }: PublicHomeProps) {
       id: 'paid',
       title: 'Платные программы',
       description:
-        'Полный доступ открывается после оплаты по QR СБП и ручной проверки, а у части программ сначала доступны первые уроки.',
+        'У части программ сначала доступны бесплатные уроки, а полный доступ открывается после подтверждения оплаты.',
       courses: paidCourses,
     },
     {
       id: 'showcase',
-      title: 'Скоро будут доступны',
-      description: 'Программы, которые уже оформлены на витрине и готовятся к следующему запуску.',
+      title: 'Готовятся к следующему запуску',
+      description: 'Страницы этих программ уже можно посмотреть, чтобы понять тему, формат и структуру курса.',
       courses: showcaseCourses,
     },
   ].filter((shelf) => shelf.courses.length > 0);
@@ -173,22 +199,20 @@ export default function PublicHome({ user, catalogCourses }: PublicHomeProps) {
     <PublicPageShell user={user}>
       <section className="dnk-section home-hero">
         <article className="home-hero__panel">
-          <span className="eyebrow">Бесплатный вход в ДНК</span>
+          <span className="eyebrow">Онлайн-обучение для работы и бизнеса</span>
 
           <div className="home-hero__copy">
-            <h1 className="home-hero__title">
-              Курсы 1С, Excel, маркетинга и охраны труда для работы и повышения квалификации.
-            </h1>
+            <h1 className="home-hero__title">Онлайн-курсы для работы, бизнеса и повышения квалификации</h1>
             <p className="panel-copy home-hero__lead">
-              Бесплатная регистрация открывает стартовые курсы и ознакомительные уроки платных
-              программ. Учитесь в личном кабинете в удобное время и возвращайтесь к обучению без
-              потери прогресса.
+              DNK Academy — это платформа с практическими курсами, личным кабинетом и доступом к
+              урокам после регистрации. Начните с бесплатных материалов, изучите preview-уроки
+              платных курсов и выберите программу под свою задачу.
             </p>
           </div>
 
           <div className="row-actions">
             <Link href={hasUser ? '/lk' : '/register'} className="primary-button">
-              {hasUser ? 'Открыть личный кабинет' : 'Зарегистрироваться бесплатно'}
+              Начать бесплатно
             </Link>
             <Link href="/catalog" className="secondary-button">
               Смотреть каталог курсов
@@ -196,32 +220,64 @@ export default function PublicHome({ user, catalogCourses }: PublicHomeProps) {
           </div>
 
           <ul className="home-hero__proof">
-            <li>
-              <strong>Бесплатный старт.</strong> Первые курсы открываются сразу после регистрации.
-            </li>
-            <li>
-              <strong>Первые уроки до покупки.</strong> У части программ можно заранее открыть
-              первые уроки.
-            </li>
-            <li>
-              <strong>Обучение в кабинете.</strong> Уроки, доступ и следующий шаг собраны в одном
-              месте.
-            </li>
-            <li>
-              <strong>Возврат к прогрессу.</strong> Можно продолжить с того места, где вы
-              остановились.
-            </li>
+            {heroProofPoints.map((item) => (
+              <li key={item}>
+                <strong>{item}</strong>
+              </li>
+            ))}
           </ul>
         </article>
       </section>
 
       <section className="dnk-section">
         <div className="public-section-head">
-          <span className="eyebrow">Как проходит обучение</span>
+          <span className="eyebrow">Что есть в DNK сейчас</span>
+          <h2>DNK сейчас — это онлайн-курсы с регистрацией, бесплатными материалами, preview-уроками и личным кабинетом.</h2>
+          <p className="panel-copy">
+            На главной странице пользователь сразу понимает, что можно начать бесплатно, что
+            доступно до покупки и когда полный доступ к платным курсам открывается после
+            подтверждения оплаты.
+          </p>
+        </div>
+
+        <div className="home-results-grid">
+          {homeOverviewItems.map((item) => (
+            <article key={item.title} className="home-outcome-card">
+              <h3>{item.title}</h3>
+              <p className="panel-copy">{item.body}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="dnk-section">
+        <div className="public-section-head">
+          <span className="eyebrow">Для кого</span>
+          <h2>Платформа подходит тем, кому важно быстро выбрать курс, посмотреть материалы и продолжать обучение в личном кабинете.</h2>
+          <p className="panel-copy">
+            Это онлайн-курсы для работы, бизнеса и повышения квалификации: с бесплатным входом,
+            preview-уроками у части платных программ и понятным доступом после подтверждения
+            оплаты.
+          </p>
+        </div>
+
+        <div className="home-role-grid">
+          {publicAudienceGroups.map((item) => (
+            <article key={item.title} className="home-role-card">
+              <h3>{item.title}</h3>
+              <p className="panel-copy">{item.body}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="dnk-section">
+        <div className="public-section-head">
+          <span className="eyebrow">Как это работает</span>
           <h2>Путь от выбора курса до обучения в кабинете состоит из нескольких понятных шагов.</h2>
           <p className="panel-copy">
-            Пользователь видит курс, регистрируется бесплатно, изучает стартовые уроки и продолжает
-            обучение в своем кабинете без перегруженного маршрута.
+            Пользователь выбирает курс, регистрируется, смотрит бесплатные уроки, а при покупке
+            получает полный доступ после подтверждения оплаты и продолжает обучение в кабинете.
           </p>
         </div>
 
@@ -238,45 +294,19 @@ export default function PublicHome({ user, catalogCourses }: PublicHomeProps) {
 
       <section className="dnk-section">
         <div className="public-section-head">
-          <span className="eyebrow">Результаты и применение</span>
-          <h2>Что можно применять в работе после обучения.</h2>
+          <span className="eyebrow">Почему можно начать спокойно</span>
+          <h2>Пользователь сразу понимает, что доступно бесплатно, когда нужен платеж и где искать поддержку.</h2>
           <p className="panel-copy">
-            Курсы дают прикладную базу для повседневных задач и подготовки к новым обязанностям.
-            Здесь нет обещаний гарантированного трудоустройства или вымышленных результатов.
+            У платформы есть понятный вход, живые контакты и честные правила доступа. Это важно
+            для первого запуска не меньше, чем сами курсы.
           </p>
         </div>
 
         <div className="home-results-grid">
-          {publicOutcomeAreas.map((item) => (
-            <article key={item.title} className="home-outcome-card">
-              <h3>{item.title}</h3>
-              <p className="panel-copy">{item.body}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="dnk-section">
-        <div className="public-section-head">
-          <span className="eyebrow">Карьерные ориентиры</span>
-          <h2>К каким ролям готовят программы.</h2>
-          <p className="panel-copy">
-            Это ориентиры по рабочим направлениям, а не обещание работы или гарантированной
-            зарплаты. Они помогают понять, к каким задачам и ролям можно подготовиться через
-            обучение.
-          </p>
-        </div>
-
-        <div className="home-role-grid">
-          {publicCareerOrientations.map((role) => (
-            <article key={role.title} className="home-role-card">
-              <h3>{role.title}</h3>
-              <p className="panel-copy">{role.body}</p>
-              <div className="home-role-card__tags">
-                {role.related.map((item) => (
-                  <span key={item}>{item}</span>
-                ))}
-              </div>
+          {publicTrustReasons.map((reason) => (
+            <article key={reason.title} className="home-outcome-card">
+              <h3>{reason.title}</h3>
+              <p className="panel-copy">{reason.body}</p>
             </article>
           ))}
         </div>
@@ -286,10 +316,10 @@ export default function PublicHome({ user, catalogCourses }: PublicHomeProps) {
         <div className="public-section-head home-catalog-head">
           <div>
             <span className="eyebrow">Каталог курсов</span>
-            <h2>Бесплатные, платные и готовящиеся программы без перегруженной витрины.</h2>
+            <h2>На старте здесь только launch-курсы: бесплатные, платные и готовящиеся к следующему запуску.</h2>
             <p className="panel-copy">
-              На главной только краткий обзор каталога. Полный список программ, структура и
-              детали каждой страницы доступны в полном каталоге.
+              В каталоге видно, какие программы можно открыть сразу, где доступны бесплатные
+              уроки и как получить полный доступ к платному курсу.
             </p>
           </div>
 
@@ -356,10 +386,13 @@ export default function PublicHome({ user, catalogCourses }: PublicHomeProps) {
                           <Link
                             href={action.href}
                             className={
-                              course.status === 'showcase' ? 'ghost-button' : 'primary-button'
+                              course.status === 'showcase' ? 'secondary-button' : 'primary-button'
                             }
                           >
                             {action.label}
+                          </Link>
+                          <Link href={getCourseCatalogHref(course.slug)} className="ghost-button">
+                            Посмотреть курс
                           </Link>
                         </div>
                       </article>
@@ -384,7 +417,7 @@ export default function PublicHome({ user, catalogCourses }: PublicHomeProps) {
 
       <section className="dnk-section">
         <article className="home-review-card home-review-card--accent">
-          <span className="eyebrow">Отзывы</span>
+          <span className="eyebrow">Первые отзывы</span>
           <h2>{publicHomeReviewPlaceholder.title}</h2>
           <p className="panel-copy">{publicHomeReviewPlaceholder.body}</p>
           <p className="panel-copy home-review-card__support">
@@ -404,7 +437,7 @@ export default function PublicHome({ user, catalogCourses }: PublicHomeProps) {
       <section className="dnk-section">
         <div className="public-section-head">
           <span className="eyebrow">Команда</span>
-          <h2>Команда, которая отвечает за программы и обучение.</h2>
+          <h2>Команда, которая отвечает за программы и поддержку обучения.</h2>
           <p className="panel-copy">
             Здесь собраны руководитель школы, эксперты и преподаватели, которые развивают
             программы и поддерживают прикладной формат обучения.

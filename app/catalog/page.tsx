@@ -4,7 +4,9 @@ import { getCatalogCoursesForViewer } from '@/lib/course-access';
 
 export default async function CatalogPage() {
   const user = await getOptionalCurrentUser();
-  const catalogCourses = await getCatalogCoursesForViewer(user?.id ?? null);
+  const catalogCourses = await getCatalogCoursesForViewer(user?.id ?? null, {
+    restrictToCatalogProfile: true,
+  });
 
   return (
     <CatalogPageClient

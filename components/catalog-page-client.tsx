@@ -56,11 +56,15 @@ function getCatalogCourseValueLabel(course: CatalogCourseCard) {
   }
 
   if (course.pendingOrder) {
-    return 'Заказ';
+    return 'Статус заказа';
   }
 
   if (course.isOwned || course.status === 'free') {
     return 'Доступ';
+  }
+
+  if (course.previewEnabled && course.previewLessonsCount > 0) {
+    return 'Бесплатно до доступа';
   }
 
   return 'Стоимость';
@@ -73,8 +77,8 @@ function getCatalogCourseValue(course: CatalogCourseCard) {
 
   if (course.pendingOrder) {
     return course.pendingOrder.status === 'PROCESSING'
-      ? 'Оплата в обработке'
-      : 'Продолжить оплату';
+      ? 'Оплата на подтверждении'
+      : 'Ожидает оплаты';
   }
 
   if (course.isOwned) {
@@ -82,7 +86,11 @@ function getCatalogCourseValue(course: CatalogCourseCard) {
   }
 
   if (course.status === 'free') {
-    return 'Открывается сразу';
+    return 'Открывается сразу после входа';
+  }
+
+  if (course.previewEnabled && course.previewLessonsCount > 0) {
+    return formatPreviewLessons(course.previewLessonsCount);
   }
 
   return formatCoursePrice(course.price);
@@ -108,7 +116,11 @@ function CatalogDirectoryCard({
 
   function renderPrimaryAction() {
     if (course.status === 'showcase') {
-      return <span className="ghost-button landing-card-disabled">Скоро</span>;
+      return (
+        <Link href={courseHref} className="secondary-button">
+          Посмотреть курс
+        </Link>
+      );
     }
 
     if (course.pendingOrder) {
@@ -141,7 +153,7 @@ function CatalogDirectoryCard({
             ? course.isStarted || course.progressPercent > 0
               ? 'Продолжить обучение'
               : 'Начать бесплатно'
-            : 'Начать бесплатно'}
+            : 'Зарегистрироваться'}
         </Link>
       );
     }
@@ -157,7 +169,7 @@ function CatalogDirectoryCard({
     if (hasUser && canOpenCourseRoute(course)) {
       return (
         <Link href={`/courses/${course.slug}`} className="primary-button">
-          Открыть ознакомительные уроки
+          Смотреть бесплатные уроки
         </Link>
       );
     }
@@ -173,8 +185,8 @@ function CatalogDirectoryCard({
           className="primary-button"
         >
           {course.previewEnabled && course.previewLessonsCount > 0
-            ? 'Открыть ознакомительные уроки'
-            : 'Купить курс'}
+            ? 'Зарегистрироваться'
+            : 'Получить доступ'}
         </Link>
       );
     }
@@ -186,7 +198,7 @@ function CatalogDirectoryCard({
         onClick={() => onCreateOrder(course)}
         type="button"
       >
-        {buyingTariffId === course.tariffId ? 'Открываем оплату...' : 'Купить курс'}
+        {buyingTariffId === course.tariffId ? 'Открываем оплату...' : 'Получить доступ'}
       </button>
     );
   }
@@ -200,7 +212,7 @@ function CatalogDirectoryCard({
           onClick={() => onCreateOrder(course)}
           type="button"
         >
-          {buyingTariffId === course.tariffId ? 'Открываем оплату...' : 'Купить курс'}
+          {buyingTariffId === course.tariffId ? 'Открываем оплату...' : 'Получить доступ'}
         </button>
       );
     }
@@ -208,7 +220,7 @@ function CatalogDirectoryCard({
     if (course.pendingOrder && course.isStarted) {
       return (
         <Link href={`/courses/${course.slug}`} className="secondary-button">
-          Открыть курс
+          Продолжить обучение
         </Link>
       );
     }
@@ -216,14 +228,14 @@ function CatalogDirectoryCard({
     if (course.pendingOrder && canOpenCourseRoute(course)) {
       return (
         <Link href={`/courses/${course.slug}`} className="secondary-button">
-          Открыть курс
+          Смотреть бесплатные уроки
         </Link>
       );
     }
 
     return (
       <Link href={courseHref} className="secondary-button">
-        Подробнее
+        Посмотреть курс
       </Link>
     );
   }
@@ -345,21 +357,22 @@ export default function CatalogPageClient({
       <section className="dnk-section catalog-directory">
         <article className="panel catalog-directory__hero">
           <div className="catalog-directory__copy">
-            <span className="eyebrow">Общий каталог</span>
-            <h1>Все курсы Бизнес школы ДНК в одном каталоге.</h1>
+            <span className="eyebrow">Каталог DNK Academy</span>
+            <h1>Курсы DNK Academy: что можно открыть сразу, что посмотреть бесплатно и как получить полный доступ.</h1>
             <p className="panel-copy">
-              Здесь собраны все опубликованные программы. Выберите направление, откройте страницу
-              курса и перейдите к ознакомительным урокам или покупке.
+              Здесь собраны launch-курсы Бизнес школы ДНК. На карточке сразу видно, где курс
+              открывается после входа, где доступны бесплатные уроки и где полный доступ
+              открывается после подтверждения оплаты.
             </p>
 
             <div className="row-actions">
               {user ? (
                 <Link href="/lk" className="primary-button">
-                  Открыть кабинет
+                  Личный кабинет
                 </Link>
               ) : (
                 <Link href={buildAuthHref('register', '/catalog')} className="primary-button">
-                  Зарегистрироваться бесплатно
+                  Зарегистрироваться
                 </Link>
               )}
               <Link href="/" className="secondary-button">

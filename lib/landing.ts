@@ -162,7 +162,9 @@ export async function getLandingPageData(): Promise<LandingPageData> {
               },
             })
           : Promise.resolve([]),
-        getCatalogCoursesForViewer(user?.id ?? null),
+        getCatalogCoursesForViewer(user?.id ?? null, {
+          restrictToCatalogProfile: true,
+        }),
       ]);
 
     const ownedCourseIds = new Set(enrollments.map((item) => item.courseId));

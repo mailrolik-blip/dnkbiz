@@ -96,7 +96,7 @@ function getDashboardCourseHint(course: CatalogCourseCard) {
     return `Можно посмотреть ${formatPreviewLessons(course.previewLessonsCount)} до покупки.`;
   }
 
-  return 'Полный доступ откроется после оплаты по QR СБП и ручной проверки.';
+  return 'Полный доступ откроется после подтверждения оплаты.';
 }
 
 function getDashboardCoursePrimaryLabel(course: CatalogCourseCard, mode: DashboardCardMode) {
@@ -158,7 +158,7 @@ function getDashboardCourseSupportCopy(course: CatalogCourseCard, mode: Dashboar
   if (mode === 'paid') {
     return course.previewEnabled && course.previewLessonsCount > 0
       ? `Открыто ${formatPreviewLessons(course.previewLessonsCount)} до покупки.`
-      : 'Полный доступ откроется после оплаты.';
+      : 'Полный доступ откроется после подтверждения оплаты.';
   }
 
   if (course.isOwned) {
@@ -349,7 +349,7 @@ function DashboardCourseCard({
     if (mode === 'paid' && course.previewEnabled) {
       return (
         <Link className="secondary-button" href={courseHref}>
-          Открыть ознакомительные уроки
+          Смотреть бесплатные уроки
         </Link>
       );
     }
@@ -597,7 +597,7 @@ export default function DashboardClient({
         onClick={() => handleCreateOrder(course)}
         type="button"
       >
-        {buyingTariffId === course.tariffId ? 'Открываем оплату...' : 'Купить курс'}
+        {buyingTariffId === course.tariffId ? 'Открываем оплату...' : 'Получить доступ'}
       </button>
     );
   }
@@ -840,7 +840,7 @@ export default function DashboardClient({
 
         <section className="panel dashboard-section">
           <SectionIntro
-            description="У платных программ доступны ознакомительные уроки. Полный доступ открывается после оплаты по QR СБП и ручной проверки."
+            description="У платных программ доступны бесплатные уроки. Полный доступ открывается после подтверждения оплаты."
             eyebrow="Платные курсы"
             title="Ознакомительный доступ"
           />

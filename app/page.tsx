@@ -4,9 +4,9 @@ import PublicHome from '@/components/public-home';
 import { getLandingPageData } from '@/lib/landing';
 
 export const metadata: Metadata = {
-  title: 'Курсы 1С, Excel, маркетинга и охраны труда | Бизнес школа ДНК',
+  title: 'DNK Academy MVP | Бизнес школа ДНК',
   description:
-    'Зарегистрируйтесь бесплатно и получите доступ к стартовым курсам и первым урокам платных программ Бизнес школы ДНК для работы и повышения квалификации.',
+    'Зарегистрируйтесь бесплатно, посмотрите доступные курсы DNK Academy, откройте бесплатные уроки и продолжайте обучение в личном кабинете.',
 };
 
 export default async function Home() {

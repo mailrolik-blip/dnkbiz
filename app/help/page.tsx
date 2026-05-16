@@ -53,8 +53,8 @@ export default async function HelpPage() {
           <span className="eyebrow">Поддержка</span>
           <h2>Если вопрос связан с оплатой, подготовьте номер заказа и название курса.</h2>
           <p className="panel-copy">
-            По вопросам до покупки и после оплаты удобнее всего использовать страницу контактов,
-            Telegram или телефон.
+            По вопросам до покупки и после подтверждения оплаты удобнее всего использовать
+            страницу контактов, Telegram или телефон.
           </p>
           <div className="public-contact-list">
             <a href={publicContact.phoneHref}>{publicContact.phoneLabel}</a>

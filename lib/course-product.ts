@@ -45,9 +45,13 @@ function buildFallbackCourseMeta(course: CatalogCourseCard) {
       'Тем, кому нужен отдельный курс для самостоятельного обучения и прикладных задач.',
       'Командам, которым важно поддерживать программу в актуальном состоянии и обновлять материалы.',
     ],
+    outcomes: [
+      'Получите понятную базу по теме курса без перегруженного маршрута обучения.',
+      'Сможете пройти программу в своем темпе и вернуться к урокам в личном кабинете.',
+    ],
     includes: [
       'Уроки, которые публикуются и обновляются в учебной программе.',
-      'Первые уроки до оплаты и полный доступ после оплаты по QR СБП и ручной проверки.',
+      'Бесплатные уроки до получения полного доступа и обучение в личном кабинете.',
     ],
   };
 }
@@ -56,7 +60,9 @@ export async function getCourseProductPageData(
   slug: string
 ): Promise<CourseProductPageData | null> {
   const user = await getOptionalCurrentUser();
-  const catalogCourses = await getCatalogCoursesForViewer(user?.id ?? null);
+  const catalogCourses = await getCatalogCoursesForViewer(user?.id ?? null, {
+    restrictToCatalogProfile: true,
+  });
   const course = catalogCourses.find((item) => item.slug === slug);
   const meta = course ? getCatalogCourseMeta(slug) ?? buildFallbackCourseMeta(course) : null;
 
@@ -111,10 +117,10 @@ export async function getCourseProductPageData(
       label: 'Ознакомительный доступ',
       value:
         course.previewEnabled && course.previewLessonsCount > 0
-          ? `${formatPreviewLessons(course.previewLessonsCount)} до покупки`
+          ? `${formatPreviewLessons(course.previewLessonsCount)} до получения полного доступа`
           : course.status === 'paid'
-          ? 'Откроется после оплаты по QR СБП и ручной проверки'
-          : 'Не нужен',
+          ? 'Полный доступ после подтверждения оплаты'
+          : 'Курс открывается сразу',
     },
   ];
 

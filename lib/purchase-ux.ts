@@ -117,20 +117,24 @@ export function getCatalogCourseStatusLabel(course: CatalogCourseCard) {
   }
 
   if (isStartedPreviewCourse(course)) {
-    return 'Открыты первые уроки';
+    return 'Открыты бесплатные уроки';
   }
 
-  return 'Можно купить';
+  if (course.previewEnabled && course.previewLessonsCount > 0) {
+    return 'Есть бесплатные уроки';
+  }
+
+  return 'Доступ по подтверждению оплаты';
 }
 
 export function getCatalogCourseActionHint(course: CatalogCourseCard, hasUser: boolean) {
   if (course.status === 'showcase') {
-    return 'В каталоге, без покупки';
+    return 'Страница курса уже доступна';
   }
 
   if (course.pendingOrder) {
     return course.pendingOrder.status === 'PROCESSING'
-      ? 'Платеж отправлен на ручную проверку'
+      ? 'Оплата отправлена на подтверждение'
       : 'Оплатите по QR СБП и нажмите «Я оплатил»';
   }
 
@@ -147,25 +151,25 @@ export function getCatalogCourseActionHint(course: CatalogCourseCard, hasUser: b
   }
 
   if (isStartedPreviewCourse(course)) {
-    return `Открыто: ${formatPreviewLessons(course.previewLessonsCount)}`;
+    return `Уже открыто: ${formatPreviewLessons(course.previewLessonsCount)}`;
   }
 
   if (!hasUser) {
     return course.previewEnabled && course.previewLessonsCount > 0
-      ? 'Регистрация откроет первые уроки'
-      : 'Регистрация откроет покупку';
+      ? 'Регистрация откроет бесплатные уроки'
+      : 'Регистрация откроет страницу оплаты';
   }
 
   if (course.previewEnabled && course.previewLessonsCount > 0) {
-    return `${formatPreviewLessons(course.previewLessonsCount)} до покупки`;
+    return `${formatPreviewLessons(course.previewLessonsCount)} доступны бесплатно`;
   }
 
-  return 'Оформить доступ';
+  return 'Получить полный доступ';
 }
 
 export function getCatalogCourseNextStep(course: CatalogCourseCard, hasUser: boolean) {
   if (course.status === 'showcase') {
-    return 'Курс остается в каталоге как витрина. Самостоятельное оформление доступа для него пока не открыто.';
+    return 'Страница курса уже доступна, но самостоятельное получение полного доступа для этой программы пока не открыто.';
   }
 
   if (course.status === 'free') {
@@ -184,10 +188,10 @@ export function getCatalogCourseNextStep(course: CatalogCourseCard, hasUser: boo
 
   if (course.pendingOrder) {
     return course.pendingOrder.status === 'PROCESSING'
-      ? 'Платеж уже отправлен на ручную проверку. Вернитесь на экран оплаты, чтобы проверить статус заказа. Полный доступ откроется после оплаты по QR СБП и ручной проверки.'
+      ? 'Оплата уже отправлена на подтверждение. Вернитесь на экран оплаты, чтобы проверить статус заказа. Полный доступ откроется после подтверждения оплаты.'
       : `Покупка уже начата. ${getActiveOrderActionLabel(
           course.pendingOrder.status
-        )}, чтобы увидеть QR СБП, оплатить курс и отправить платеж на ручную проверку.`;
+        )}, чтобы увидеть QR СБП, оплатить курс и отправить платеж на подтверждение.`;
   }
 
   if (isStartedPreviewCourse(course)) {
@@ -197,14 +201,16 @@ export function getCatalogCourseNextStep(course: CatalogCourseCard, hasUser: boo
   }
 
   if (!hasUser) {
-    return 'После регистрации можно открыть первые уроки и перейти к покупке полного курса.';
+    return course.previewEnabled && course.previewLessonsCount > 0
+      ? 'После регистрации можно открыть бесплатные уроки и затем получить полный доступ к курсу.'
+      : 'После регистрации можно перейти к оплате и затем открыть курс в личном кабинете.';
   }
 
   if (course.previewEnabled && course.previewLessonsCount > 0) {
     return `До покупки доступны ${formatPreviewLessons(
       course.previewLessonsCount
-    )}. Полный доступ откроется после оплаты по QR СБП и ручной проверки.`;
+    )}. Полный доступ откроется после подтверждения оплаты.`;
   }
 
-  return 'Курс можно купить и открыть в кабинете после оплаты по QR СБП и ручной проверки.';
+  return 'Курс можно оплатить по QR СБП и открыть в кабинете после подтверждения оплаты.';
 }

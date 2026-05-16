@@ -570,12 +570,12 @@ function PaywallBlock({
         <LockIcon />
       </div>
       <div className="course-paywall__copy">
-        <span className="eyebrow">Полный доступ после ручной проверки оплаты</span>
+        <span className="eyebrow">Полный доступ после подтверждения оплаты</span>
         <h3>{lesson.title}</h3>
         <p>
           Этот урок закрыт. До покупки доступны{' '}
-          {formatPreviewLessons(course.access.previewLessonsCount)}, а после оплаты по QR СБП и
-          ручной проверки откроются остальные модули, домашние задания и весь курс.
+          {formatPreviewLessons(course.access.previewLessonsCount)}, а после подтверждения оплаты
+          откроются остальные модули, домашние задания и весь курс.
         </p>
       </div>
       <div className="badge-row course-paywall__badges">
@@ -600,7 +600,7 @@ function PaywallBlock({
             onClick={onCreateOrder}
             type="button"
           >
-            {purchasePending ? 'Открываем оплату...' : 'Купить курс'}
+            {purchasePending ? 'Открываем оплату...' : 'Получить доступ'}
           </button>
         )}
         <Link href="/lk" className="secondary-button">
@@ -1293,7 +1293,7 @@ export default function CoursePlayer({
                 </span>
                 <p className="muted-text">
                   Сначала можно пройти первые уроки и оценить формат курса. После оплаты по QR СБП
-                  и ручной проверки откроются остальные модули, практика и полный доступ в
+                  и подтверждения оплаты откроются остальные модули, практика и полный доступ в
                   кабинете. Проверка может занять немного времени.
                 </p>
                 {courseState.access.tariff ? (
@@ -1302,7 +1302,7 @@ export default function CoursePlayer({
                       {formatMoney(courseState.access.tariff.price)}
                     </span>
                     <span className="badge badge-pending">
-                      Полный доступ после ручной проверки оплаты
+                      Полный доступ после подтверждения оплаты
                     </span>
                   </div>
                 ) : null}
@@ -1321,7 +1321,7 @@ export default function CoursePlayer({
                       onClick={handleCreateOrder}
                       type="button"
                     >
-                      {purchasePending ? 'Открываем оплату...' : 'Купить курс'}
+                      {purchasePending ? 'Открываем оплату...' : 'Получить доступ'}
                     </button>
                   )}
                 </div>
@@ -1346,7 +1346,7 @@ export default function CoursePlayer({
                     </span>
                     <span className="lesson-btn__meta">
                       {lesson.isLocked
-                        ? 'Откроется после ручной проверки оплаты'
+                        ? 'Откроется после подтверждения оплаты'
                         : lesson.isPreview && courseState.access.accessMode === 'PREVIEW'
                         ? 'Открыто до покупки'
                         : lesson.description ||
@@ -1401,7 +1401,7 @@ export default function CoursePlayer({
                 onClick={handleCreateOrder}
                 type="button"
               >
-                {purchasePending ? 'Открываем оплату...' : 'Купить курс'}
+                {purchasePending ? 'Открываем оплату...' : 'Получить доступ'}
               </button>
             )}
           </div>
@@ -1441,7 +1441,7 @@ export default function CoursePlayer({
         >
           <div className="ai-chat-window">
             <div className="chat-header">
-              <span>AI Ассистент</span>
+              <span>Помощник по курсу</span>
               <button className="close-chat" onClick={() => setAssistantOpen(false)} type="button">
                 <CloseIcon />
               </button>

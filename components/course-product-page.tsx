@@ -27,6 +27,12 @@ import {
 
 type CourseProductPageProps = CourseProductPageData;
 
+function getContinueLabel(course: CourseProductPageData['course']) {
+  return course.isStarted || course.progressPercent > 0 || course.completedLessonsCount > 0
+    ? 'Продолжить обучение'
+    : 'Открыть курс';
+}
+
 function ProductSection({
   eyebrow,
   title,
@@ -65,6 +71,7 @@ export default function CourseProductPage({
   const checkoutIntentHref = course.tariffId
     ? getCheckoutIntentPath(course.tariffId)
     : productPageHref;
+  const continueLabel = getContinueLabel(course);
 
   async function handleCreateOrder() {
     if (!course.tariffId) {
@@ -114,25 +121,17 @@ export default function CourseProductPage({
     }
 
     if (!user) {
-      if (course.status === 'free') {
-        return (
-          <Link href={buildAuthHref('register', courseIntentHref)} className="primary-button">
-            Начать бесплатно
-          </Link>
-        );
-      }
-
-      if (course.previewEnabled && course.previewLessonsCount > 0) {
-        return (
-          <Link href={buildAuthHref('register', courseIntentHref)} className="primary-button">
-            Открыть ознакомительные уроки
-          </Link>
-        );
-      }
-
       return (
-        <Link href={buildAuthHref('register', checkoutIntentHref)} className="primary-button">
-          Купить курс
+        <Link
+          href={buildAuthHref(
+            'register',
+            course.previewEnabled && course.previewLessonsCount > 0
+              ? courseIntentHref
+              : checkoutIntentHref
+          )}
+          className="primary-button"
+        >
+          Зарегистрироваться
         </Link>
       );
     }
@@ -140,7 +139,7 @@ export default function CourseProductPage({
     if (course.status === 'free') {
       return (
         <Link href={`/courses/${course.slug}`} className="primary-button">
-          {course.isStarted ? 'Открыть курс' : 'Начать бесплатно'}
+          {course.isStarted ? continueLabel : 'Начать бесплатно'}
         </Link>
       );
     }
@@ -156,7 +155,7 @@ export default function CourseProductPage({
     if (startedPreview || course.isOwned) {
       return (
         <Link href={`/courses/${course.slug}`} className="primary-button">
-          {course.progressPercent > 0 ? 'Продолжить обучение' : 'Открыть курс'}
+          {continueLabel}
         </Link>
       );
     }
@@ -164,7 +163,7 @@ export default function CourseProductPage({
     if (canOpenCourseRoute(course)) {
       return (
         <Link href={`/courses/${course.slug}`} className="primary-button">
-          Открыть ознакомительные уроки
+          Смотреть бесплатные уроки
         </Link>
       );
     }
@@ -177,7 +176,7 @@ export default function CourseProductPage({
           onClick={handleCreateOrder}
           type="button"
         >
-          {buyingTariffId === course.tariffId ? 'Открываем оплату...' : 'Купить курс'}
+          {buyingTariffId === course.tariffId ? 'Открываем оплату...' : 'Получить доступ'}
         </button>
       );
     }
@@ -195,24 +194,16 @@ export default function CourseProductPage({
     }
 
     if (!user) {
-      if (course.status === 'free') {
-        return (
-          <Link href={buildAuthHref('login', courseIntentHref)} className="secondary-button">
-            Войти
-          </Link>
-        );
-      }
-
-      if (course.previewEnabled && course.previewLessonsCount > 0) {
-        return (
-          <Link href={buildAuthHref('register', checkoutIntentHref)} className="secondary-button">
-            Купить курс
-          </Link>
-        );
-      }
-
       return (
-        <Link href={buildAuthHref('login', checkoutIntentHref)} className="secondary-button">
+        <Link
+          href={buildAuthHref(
+            'login',
+            course.previewEnabled && course.previewLessonsCount > 0
+              ? courseIntentHref
+              : checkoutIntentHref
+          )}
+          className="secondary-button"
+        >
           Войти
         </Link>
       );
@@ -226,7 +217,7 @@ export default function CourseProductPage({
           onClick={handleCreateOrder}
           type="button"
         >
-          {buyingTariffId === course.tariffId ? 'Открываем оплату...' : 'Купить курс'}
+          {buyingTariffId === course.tariffId ? 'Открываем оплату...' : 'Получить доступ'}
         </button>
       );
     }
@@ -234,7 +225,7 @@ export default function CourseProductPage({
     if (course.pendingOrder && canOpenCourseRoute(course)) {
       return (
         <Link href={`/courses/${course.slug}`} className="secondary-button">
-          Открыть курс
+          Смотреть бесплатные уроки
         </Link>
       );
     }
@@ -242,7 +233,7 @@ export default function CourseProductPage({
     if (course.isOwned) {
       return (
         <Link href="/lk" className="secondary-button">
-          В кабинет
+          Личный кабинет
         </Link>
       );
     }
@@ -257,20 +248,20 @@ export default function CourseProductPage({
   const previewCopy =
     course.status === 'paid'
       ? course.previewEnabled && course.previewLessonsCount > 0
-        ? `До оплаты по QR СБП доступны ${formatPreviewLessons(course.previewLessonsCount)}.`
-        : 'Доступ к урокам откроется после оплаты по QR СБП и ручной проверки.'
+        ? `Бесплатно доступны ${formatPreviewLessons(course.previewLessonsCount)}, чтобы познакомиться с курсом до получения полного доступа.`
+        : 'Доступ к урокам откроется после подтверждения оплаты.'
       : 'Курс доступен сразу после входа.';
 
   const afterAccessCopy =
     course.status === 'paid'
-      ? 'После оплаты по QR СБП и ручной проверки откроются все уроки и полный маршрут обучения в кабинете.'
+      ? 'После подтверждения оплаты откроются все уроки, домашние задания и полный маршрут обучения в личном кабинете.'
       : 'Все уроки курса доступны сразу, без ожидания оплаты.';
 
   return (
     <PublicPageShell user={user}>
       <section className="dnk-section program-page program-page__hero">
         <article className={`panel program-page__main ${getCatalogCourseToneClass(course)}`}>
-          <span className="eyebrow">Страница курса</span>
+          <span className="eyebrow">Курс DNK Academy</span>
           <h1>{course.title}</h1>
           <p className="program-page__lead">{course.description}</p>
 
@@ -283,7 +274,9 @@ export default function CourseProductPage({
 
           <div className="program-page__meta-row">
             {course.lessonsCount ? <span>{formatLessonCount(course.lessonsCount)}</span> : null}
-            {course.previewEnabled ? <span>{formatPreviewLessons(course.previewLessonsCount)}</span> : null}
+            {course.previewEnabled && course.previewLessonsCount > 0 ? (
+              <span>{formatPreviewLessons(course.previewLessonsCount)}</span>
+            ) : null}
           </div>
 
           <p className="panel-copy">{getCatalogCourseNextStep(course, Boolean(user))}</p>
@@ -305,7 +298,7 @@ export default function CourseProductPage({
                 ? 'Направление пока остается в каталоге как витрина и еще не открыто для самостоятельной покупки.'
                 : course.status === 'free'
                   ? 'Курс открывается сразу после входа в кабинет.'
-                  : 'Оплата проходит по QR СБП. После ручной проверки перевода курс открывается в полном доступе, это может занять немного времени.'}
+                  : 'Оплата проходит по QR СБП. После подтверждения оплаты курс открывается в полном доступе, это может занять некоторое время.'}
             </p>
           </div>
 
@@ -321,24 +314,30 @@ export default function CourseProductPage({
       </section>
 
       <section className="dnk-section program-page__grid">
-        <ProductSection eyebrow="Кому подходит" title="Для кого этот курс" items={meta.audience} />
+        <ProductSection eyebrow="Для кого" title="Кому подойдет этот курс" items={meta.audience} />
+
+        <ProductSection
+          eyebrow="Результат"
+          title="Что вы получите после прохождения"
+          items={meta.outcomes}
+        />
 
         <ProductSection
           eyebrow="Что внутри"
-          title="Что вы получите внутри курса"
+          title="Что входит в курс"
           items={meta.includes}
         />
 
         <article className="panel program-page__section">
           <span className="eyebrow">Доступ</span>
-          <h2>Как открывается курс</h2>
+          <h2>Как получить доступ</h2>
           <ul className="funnel-list">
             <li>{previewCopy}</li>
             <li>{afterAccessCopy}</li>
             {course.pendingOrder ? (
               <li>
                 Активный заказ уже создан. Вернитесь на экран оплаты, чтобы завершить перевод по
-                QR СБП или проверить статус ручной проверки.
+                QR СБП или проверить статус подтверждения оплаты.
               </li>
             ) : null}
             {course.isOwned ? (
@@ -360,8 +359,8 @@ export default function CourseProductPage({
                     </span>
                     <span className="lesson-btn__meta">
                       {lesson.isPreview
-                        ? 'Доступно до покупки'
-                        : 'Открывается в полном доступе'}
+                        ? 'Доступно бесплатно'
+                        : 'Открывается после полного доступа'}
                     </span>
                   </span>
                 </div>
@@ -381,8 +380,8 @@ export default function CourseProductPage({
           <span className="eyebrow">Следующий шаг</span>
           <h2>{meta.title}</h2>
           <p className="panel-copy">
-            Откройте курс, посмотрите ознакомительные уроки, если они доступны, и переходите к
-            оплате по QR СБП, когда будете готовы.
+            Посмотрите страницу курса, откройте бесплатные уроки, если они доступны, и переходите
+            к оплате по QR СБП, когда будете готовы получить полный доступ.
           </p>
 
           <div className="row-actions catalog-product__actions">
