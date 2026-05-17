@@ -1,6 +1,6 @@
-import type { OrderStatus, PaymentMethod } from '@prisma/client';
+import type { OrderStatus, PaymentMethod, Prisma } from '@prisma/client';
 
-export type PaymentProviderKey = 'test' | 'manual';
+export type PaymentProviderKey = 'test' | 'manual' | 'tbank';
 
 export type ProviderCheckoutSession = {
   nextStatus: OrderStatus;
@@ -8,6 +8,8 @@ export type ProviderCheckoutSession = {
   provider: PaymentProviderKey;
   statusText: string;
   paymentReference?: string | null;
+  providerPayload?: Prisma.InputJsonValue;
+  redirectUrl?: string | null;
 };
 
 export type ProviderWebhookResult = {
@@ -16,4 +18,5 @@ export type ProviderWebhookResult = {
   paymentFailureCode?: string | null;
   paymentFailureText?: string | null;
   statusText?: string | null;
+  providerPayload?: Prisma.InputJsonValue;
 };

@@ -7,6 +7,7 @@ import {
   createOrderForTariff,
   expireOrderIfNeeded,
   getOrderCheckoutUrl,
+  isTbankPaymentsEnabled,
 } from '@/lib/payments/service';
 import prisma from '@/lib/prisma';
 
@@ -151,6 +152,7 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
         lessonsCount,
         previewLessonsCount,
       }}
+      tbankEnabled={isTbankPaymentsEnabled()}
     />
   );
 }

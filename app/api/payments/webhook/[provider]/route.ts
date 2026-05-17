@@ -30,34 +30,33 @@ function hasValidWebhookSecret(request: Request, secret: string) {
 export async function POST(request: Request, { params }: RouteParams) {
   const { provider } = await params;
 
-  if (provider !== 'manual' && provider !== 'test') {
-    return Response.json(
-      { error: 'Неизвестный платежный провайдер.' },
-      { status: 404 }
-    );
+  if (provider !== 'manual' && provider !== 'test' && provider !== 'tbank') {
+    return Response.json({ error: 'Неизвестный платежный провайдер.' }, { status: 404 });
   }
 
   if (provider === 'test' && !isTestPaymentsEnabled()) {
     return Response.json({ error: 'Webhook недоступен.' }, { status: 404 });
   }
 
-  const webhookSecret = getWebhookSecret();
+  if (provider !== 'tbank') {
+    const webhookSecret = getWebhookSecret();
 
-  if (!webhookSecret) {
-    return Response.json({ error: 'Webhook не настроен.' }, { status: 503 });
-  }
+    if (!webhookSecret) {
+      return Response.json({ error: 'Webhook не настроен.' }, { status: 503 });
+    }
 
-  if (!hasValidWebhookSecret(request, webhookSecret)) {
-    return Response.json({ error: 'Недопустимый webhook secret.' }, { status: 401 });
-  }
+    if (!hasValidWebhookSecret(request, webhookSecret)) {
+      return Response.json({ error: 'Недопустимый webhook secret.' }, { status: 401 });
+    }
 
-  const contentType = request.headers.get('content-type')?.toLowerCase() ?? '';
+    const contentType = request.headers.get('content-type')?.toLowerCase() ?? '';
 
-  if (!contentType.includes('application/json')) {
-    return Response.json(
-      { error: 'Webhook payload должен быть в формате JSON.' },
-      { status: 415 }
-    );
+    if (!contentType.includes('application/json')) {
+      return Response.json(
+        { error: 'Webhook payload должен быть в формате JSON.' },
+        { status: 415 }
+      );
+    }
   }
 
   const payload = await request.json().catch(() => null);
@@ -68,20 +67,41 @@ export async function POST(request: Request, { params }: RouteParams) {
 
   if (result.kind === 'invalid_payload') {
     return Response.json(
-      { error: 'Webhook payload должен содержать orderId и status.' },
+      { error: 'Webhook payload содержит неполные или некорректные поля.' },
       { status: 400 }
+    );
+  }
+
+  if (result.kind === 'invalid_signature') {
+    return Response.json({ error: 'Неверный Token.' }, { status: 401 });
+  }
+
+  if (result.kind === 'amount_mismatch') {
+    return Response.json({ error: 'Сумма платежа не совпадает с заказом.' }, { status: 409 });
+  }
+
+  if (result.kind === 'payment_mismatch') {
+    return Response.json(
+      { error: 'Платеж не совпадает с ранее созданным T-Bank платежом.' },
+      { status: 409 }
     );
   }
 
   if (result.kind === 'invalid_status') {
-    return Response.json(
-      { error: 'Неподдерживаемый статус платежного провайдера.' },
-      { status: 400 }
-    );
+    return Response.json({ error: 'Неподдерживаемый статус платежного провайдера.' }, { status: 400 });
   }
 
   if (result.kind === 'missing_order') {
     return Response.json({ error: 'Заказ не найден.' }, { status: 404 });
+  }
+
+  if (provider === 'tbank') {
+    return new Response('OK', {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+      },
+    });
   }
 
   return Response.json({

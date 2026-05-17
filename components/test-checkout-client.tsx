@@ -43,6 +43,7 @@ type CheckoutOrder = {
 
 type CheckoutClientProps = {
   order: CheckoutOrder;
+  tbankEnabled: boolean;
 };
 
 const MANUAL_SBP_QR_SRC = '/payments/sbp-qr-manual.png';
@@ -58,7 +59,19 @@ function formatDateTime(value: string | null) {
   }).format(new Date(value));
 }
 
-function getOrderTitle(order: CheckoutOrder) {
+function isTbankPrimaryFlow(order: CheckoutOrder, tbankEnabled: boolean) {
+  return tbankEnabled && order.status === 'PENDING' && order.paymentMethod !== 'TEST';
+}
+
+function getCheckoutPaymentMethod(order: CheckoutOrder, tbankEnabled: boolean): PaymentMethod {
+  if (isTbankPrimaryFlow(order, tbankEnabled)) {
+    return 'TBANK';
+  }
+
+  return order.paymentMethod;
+}
+
+function getOrderTitle(order: CheckoutOrder, tbankEnabled: boolean) {
   if (order.status === 'PAID') {
     return 'Доступ к курсу открыт';
   }
@@ -79,20 +92,24 @@ function getOrderTitle(order: CheckoutOrder) {
     return 'Срок действия заказа истек';
   }
 
+  if (isTbankPrimaryFlow(order, tbankEnabled)) {
+    return 'Перейдите к оплате через T-Bank';
+  }
+
   return 'Оплатите курс по QR СБП';
 }
 
-function getOrderSummary(order: CheckoutOrder) {
+function getOrderSummary(order: CheckoutOrder, tbankEnabled: boolean) {
   if (order.status === 'PAID') {
     return 'Оплата подтверждена. Полный доступ к курсу уже открыт.';
   }
 
   if (order.status === 'PROCESSING') {
-    return 'Платеж уже отправлен на ручную проверку. Повторно оплачивать заказ не нужно. Проверка может занять некоторое время: дождитесь подтверждения и затем обновите статус.';
+    return 'Платеж уже отправлен на ручную проверку. Повторно оплачивать заказ не нужно. Дождитесь подтверждения оплаты и затем обновите статус.';
   }
 
   if (order.status === 'FAILED') {
-    return 'Поступление оплаты по этому заказу не удалось подтвердить. Проверьте перевод и при необходимости создайте новый заказ.';
+    return 'Поступление оплаты по этому заказу не удалось подтвердить. Проверьте платеж и при необходимости создайте новый заказ.';
   }
 
   if (order.status === 'CANCELED') {
@@ -100,15 +117,25 @@ function getOrderSummary(order: CheckoutOrder) {
   }
 
   if (order.status === 'EXPIRED') {
-    return 'У этого заказа истек срок действия. Создайте новый заказ, чтобы снова открыть QR для оплаты.';
+    return 'У этого заказа истек срок действия. Создайте новый заказ, чтобы снова открыть оплату.';
   }
 
-  return 'Отсканируйте QR СБП в банковском приложении, оплатите курс и нажмите «Я оплатил». После этого платеж уйдет на ручную проверку.';
+  if (isTbankPrimaryFlow(order, tbankEnabled)) {
+    return 'Основной сценарий оплаты ведет в T-Bank PaymentURL. После подтверждения оплаты статус заказа обновится автоматически, а доступ к курсу откроется без дополнительных шагов.';
+  }
+
+  return 'Отсканируйте QR СБП в банковском приложении, оплатите курс и затем нажмите «Я оплатил вручную», чтобы отправить платеж на ручную проверку.';
 }
 
-export default function TestCheckoutClient({ order }: CheckoutClientProps) {
+export default function TestCheckoutClient({
+  order,
+  tbankEnabled,
+}: CheckoutClientProps) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
+  const [manualFallbackOpen, setManualFallbackOpen] = useState(
+    !isTbankPrimaryFlow(order, tbankEnabled) || order.status === 'PROCESSING'
+  );
   const [feedback, setFeedback] = useState<{
     tone: 'error' | 'success';
     message: string;
@@ -116,7 +143,11 @@ export default function TestCheckoutClient({ order }: CheckoutClientProps) {
 
   const canRetry = isRetryableOrderStatus(order.status);
   const canSubmitManualReview = order.status === 'PENDING';
-  const showManualQr = order.status === 'PENDING' || order.status === 'PROCESSING';
+  const tbankPrimaryFlow = isTbankPrimaryFlow(order, tbankEnabled);
+  const showManualFallbackToggle = tbankPrimaryFlow;
+  const showManualQr =
+    (order.status === 'PENDING' || order.status === 'PROCESSING') &&
+    (manualFallbackOpen || !tbankEnabled || order.status === 'PROCESSING');
   const courseBackHref =
     order.status === 'PAID' || order.previewLessonsCount > 0
       ? `/courses/${order.courseSlug}`
@@ -149,14 +180,15 @@ export default function TestCheckoutClient({ order }: CheckoutClientProps) {
         | null;
 
       if (!response.ok) {
-        throw new Error(payload?.error || 'Не удалось отправить платеж на проверку.');
+        throw new Error(payload?.error || 'Не удалось отправить платеж на ручную проверку.');
       }
 
+      setManualFallbackOpen(true);
       setFeedback({
         tone: 'success',
         message:
           payload?.order?.status === 'PROCESSING'
-            ? 'Платеж отправлен на ручную проверку. Проверка может занять некоторое время. Как только оплата будет подтверждена, курс откроется полностью.'
+            ? 'Платеж отправлен на ручную проверку. Как только оплата будет подтверждена, курс откроется полностью.'
             : 'Статус заказа обновлен.',
       });
       router.refresh();
@@ -166,10 +198,54 @@ export default function TestCheckoutClient({ order }: CheckoutClientProps) {
         message:
           error instanceof Error
             ? error.message
-            : 'Не удалось отправить платеж на проверку.',
+            : 'Не удалось отправить платеж на ручную проверку.',
       });
     } finally {
       setPending(false);
+    }
+  }
+
+  async function handleTbankCheckout() {
+    setPending(true);
+    setFeedback(null);
+
+    try {
+      const response = await fetch(`/api/orders/${order.id}/checkout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          paymentMethod: 'TBANK',
+        }),
+      });
+
+      const payload = (await response.json().catch(() => null)) as
+        | {
+            error?: string;
+            paymentUrl?: string | null;
+          }
+        | null;
+
+      if (!response.ok || !payload?.paymentUrl) {
+        throw new Error(
+          payload?.error ||
+            'Не удалось открыть оплату через T-Bank. Можно перейти к ручной оплате.'
+        );
+      }
+
+      window.location.assign(payload.paymentUrl);
+    } catch (error) {
+      setManualFallbackOpen(true);
+      setFeedback({
+        tone: 'error',
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Не удалось открыть оплату через T-Bank. Можно перейти к ручной оплате.',
+      });
+      setPending(false);
+      return;
     }
   }
 
@@ -204,8 +280,7 @@ export default function TestCheckoutClient({ order }: CheckoutClientProps) {
     } catch (error) {
       setFeedback({
         tone: 'error',
-        message:
-          error instanceof Error ? error.message : 'Не удалось создать новый заказ.',
+        message: error instanceof Error ? error.message : 'Не удалось создать новый заказ.',
       });
       setPending(false);
       return;
@@ -236,6 +311,19 @@ export default function TestCheckoutClient({ order }: CheckoutClientProps) {
       );
     }
 
+    if (tbankPrimaryFlow) {
+      return (
+        <button
+          className="primary-button"
+          disabled={pending}
+          onClick={handleTbankCheckout}
+          type="button"
+        >
+          {pending ? 'Открываем T-Bank...' : 'Оплатить через T-Bank'}
+        </button>
+      );
+    }
+
     if (canSubmitManualReview) {
       return (
         <button
@@ -244,7 +332,7 @@ export default function TestCheckoutClient({ order }: CheckoutClientProps) {
           onClick={handleManualSubmit}
           type="button"
         >
-          {pending ? 'Отправляем на проверку...' : 'Я оплатил'}
+          {pending ? 'Отправляем на проверку...' : 'Я оплатил вручную'}
         </button>
       );
     }
@@ -265,6 +353,23 @@ export default function TestCheckoutClient({ order }: CheckoutClientProps) {
     return (
       <button className="primary-button" disabled type="button">
         Оплата недоступна
+      </button>
+    );
+  }
+
+  function renderManualFallbackToggle() {
+    if (!showManualFallbackToggle) {
+      return null;
+    }
+
+    return (
+      <button
+        className="ghost-button"
+        disabled={pending}
+        onClick={() => setManualFallbackOpen((current) => !current)}
+        type="button"
+      >
+        {manualFallbackOpen ? 'Скрыть ручную оплату' : 'Другой способ оплаты'}
       </button>
     );
   }
@@ -294,9 +399,9 @@ export default function TestCheckoutClient({ order }: CheckoutClientProps) {
               {getOrderStatusLabel(order.status)}
             </span>
           </div>
-          <h1 style={{ marginTop: '0.9rem' }}>{getOrderTitle(order)}</h1>
+          <h1 style={{ marginTop: '0.9rem' }}>{getOrderTitle(order, tbankEnabled)}</h1>
           <p className="panel-copy" style={{ marginTop: '0.75rem' }}>
-            {getOrderSummary(order)}
+            {getOrderSummary(order, tbankEnabled)}
           </p>
         </article>
 
@@ -332,7 +437,7 @@ export default function TestCheckoutClient({ order }: CheckoutClientProps) {
               </div>
               <div>
                 <dt>Способ оплаты</dt>
-                <dd>{getPaymentMethodLabel('MANUAL')}</dd>
+                <dd>{getPaymentMethodLabel(getCheckoutPaymentMethod(order, tbankEnabled))}</dd>
               </div>
             </div>
 
@@ -340,8 +445,8 @@ export default function TestCheckoutClient({ order }: CheckoutClientProps) {
               <div className="status-card">
                 <strong>Что входит в доступ</strong>
                 <p>
-                  Все уроки курса, домашние задания, сохранение прогресса и возврат в
-                  кабинет с того места, где вы остановились.
+                  Все уроки курса, домашние задания, сохранение прогресса и возврат в кабинет с
+                  того места, где вы остановились.
                 </p>
               </div>
               <div className="status-card">
@@ -362,23 +467,19 @@ export default function TestCheckoutClient({ order }: CheckoutClientProps) {
               <span className={getOrderStatusBadgeClass(order.status)}>
                 {getOrderStatusLabel(order.status)}
               </span>
-              <span className="badge badge-complete">
-                Создан {formatDateTime(order.createdAt)}
-              </span>
+              <span className="badge badge-complete">Создан {formatDateTime(order.createdAt)}</span>
               {order.expiresAt ? (
                 <span className="badge badge-pending">
                   Действует до {formatDateTime(order.expiresAt)}
                 </span>
               ) : null}
               {order.paidAt ? (
-                <span className="badge badge-paid">
-                  Оплачен {formatDateTime(order.paidAt)}
-                </span>
+                <span className="badge badge-paid">Оплачен {formatDateTime(order.paidAt)}</span>
               ) : null}
             </div>
 
             <p className="panel-copy" style={{ marginTop: '1rem' }}>
-              {getOrderSummary(order)}
+              {getOrderSummary(order, tbankEnabled)}
             </p>
 
             {showManualQr ? (
@@ -393,25 +494,26 @@ export default function TestCheckoutClient({ order }: CheckoutClientProps) {
                 </div>
                 <div className="manual-qr-card__content">
                   <div className="status-card">
-                    <strong>Как оплатить</strong>
+                    <strong>Ручная оплата по QR</strong>
                     <p>
-                      Отсканируйте QR СБП в банковском приложении, переведите{' '}
-                      {formatCoursePrice(order.amount)} и затем нажмите «Я оплатил».
+                      Используйте этот сценарий как запасной, если T-Bank не открылся или нужен
+                      резервный способ оплаты. Отсканируйте QR в банковском приложении и переведите{' '}
+                      {formatCoursePrice(order.amount)}.
                     </p>
                   </div>
                   <div className="status-card">
                     <strong>Проверьте перед подтверждением</strong>
                     <p>
-                      Курс: {order.courseTitle}. Сумма: {formatCoursePrice(order.amount)}.
-                      Номер заказа: #{order.id}.
+                      Курс: {order.courseTitle}. Сумма: {formatCoursePrice(order.amount)}. Номер
+                      заказа: #{order.id}.
                     </p>
                   </div>
                   <div className="status-card">
-                    <strong>После кнопки «Я оплатил»</strong>
+                    <strong>После кнопки «Я оплатил вручную»</strong>
                     <p>
                       Заказ перейдет в ожидание подтверждения оплаты. Проверка может занять
-                      некоторое время. Если статус уже «Проверка оплаты», повторно оплачивать и
-                      отправлять заказ не нужно.
+                      некоторое время. Если статус уже «Проверка оплаты», повторно отправлять заказ
+                      не нужно.
                     </p>
                   </div>
                 </div>
@@ -433,6 +535,7 @@ export default function TestCheckoutClient({ order }: CheckoutClientProps) {
               <Link href={courseBackHref} className="secondary-button">
                 {courseBackLabel}
               </Link>
+              {renderManualFallbackToggle()}
             </div>
 
             <div className="checkout-mobile-bar">
@@ -441,6 +544,12 @@ export default function TestCheckoutClient({ order }: CheckoutClientProps) {
                 {courseBackLabel}
               </Link>
             </div>
+
+            {showManualFallbackToggle ? (
+              <div className="row-actions" style={{ marginTop: '0.75rem' }}>
+                {renderManualFallbackToggle()}
+              </div>
+            ) : null}
 
             <div className="status-stack" style={{ marginTop: '1rem' }}>
               <div className="status-card">
@@ -451,8 +560,10 @@ export default function TestCheckoutClient({ order }: CheckoutClientProps) {
                     : order.status === 'PROCESSING'
                     ? 'Платеж уже на ручной проверке. Дождитесь завершения проверки оплаты и затем обновите статус заказа. Если проверка затянулась, свяжитесь с нами.'
                     : canRetry
-                    ? 'Создайте новый заказ и снова оплатите курс по QR СБП.'
-                    : 'Оплатите заказ по QR СБП и нажмите «Я оплатил», чтобы передать платеж на ручную проверку.'}
+                    ? 'Создайте новый заказ и снова откройте оплату. После подтверждения оплаты доступ откроется автоматически.'
+                    : tbankPrimaryFlow
+                    ? 'Откройте T-Bank, завершите оплату и затем вернитесь на страницу заказа. Если ссылка не открылась, используйте ручную оплату как запасной сценарий.'
+                    : 'Оплатите заказ по QR СБП и затем нажмите «Я оплатил вручную», чтобы передать платеж на ручную проверку.'}
                 </p>
               </div>
               <div className="status-card">

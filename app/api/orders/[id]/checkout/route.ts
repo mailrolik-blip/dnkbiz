@@ -1,6 +1,7 @@
 import { getOptionalCurrentUser } from '@/lib/auth';
 import {
   getOrderCheckoutUrl,
+  getOrderRedirectUrl,
   normalizePaymentMethod,
   startOrderCheckout,
 } from '@/lib/payments/service';
@@ -24,10 +25,7 @@ export async function POST(request: Request, { params }: RouteParams) {
   const paymentMethod = normalizePaymentMethod(body?.paymentMethod);
 
   if (!Number.isInteger(orderId) || orderId <= 0) {
-    return Response.json(
-      { error: 'Некорректный идентификатор заказа.' },
-      { status: 400 }
-    );
+    return Response.json({ error: 'Некорректный идентификатор заказа.' }, { status: 400 });
   }
 
   if (!paymentMethod) {
@@ -55,13 +53,17 @@ export async function POST(request: Request, { params }: RouteParams) {
       },
       checkoutUrl: getOrderCheckoutUrl(order.id),
       courseSlug: order.tariff.course.slug,
+      paymentUrl: getOrderRedirectUrl(order),
     });
   } catch (error) {
     console.error(error);
+
     return Response.json(
       {
         error:
-          'Не удалось открыть оплату или отправить платеж на ручную проверку. Попробуйте еще раз.',
+          error instanceof Error
+            ? error.message
+            : 'Не удалось открыть оплату или отправить платеж на ручную проверку. Попробуйте еще раз.',
       },
       { status: 409 }
     );

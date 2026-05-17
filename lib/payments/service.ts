@@ -10,6 +10,14 @@ import {
   isRetryableOrderStatus,
 } from './constants';
 import { createManualCheckoutSession, mapManualProviderStatus } from './providers/manual';
+import {
+  createTbankCheckoutSession,
+  getStoredTbankPayment,
+  hasValidTbankToken,
+  hasValidTbankTerminalKey,
+  isTbankPaymentsEnabled,
+  mapTbankProviderStatus,
+} from './providers/tbank';
 import { createTestCheckoutSession, mapTestProviderStatus } from './providers/test';
 import type { PaymentProviderKey, ProviderWebhookResult } from './types';
 
@@ -28,6 +36,7 @@ const managedOrderSelect = {
   statusText: true,
   paymentFailureCode: true,
   paymentFailureText: true,
+  providerPayload: true,
   createdAt: true,
   updatedAt: true,
   tariff: {
@@ -87,6 +96,10 @@ function getProviderWebhookResult(
     return mapTestProviderStatus(status);
   }
 
+  if (provider === 'tbank') {
+    return mapTbankProviderStatus(status);
+  }
+
   return mapManualProviderStatus(status);
 }
 
@@ -99,6 +112,20 @@ async function getManagedOrder(orderId: number) {
   });
 }
 
+function cloneProviderPayload(value: unknown) {
+  return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
+}
+
+export function getOrderRedirectUrl(
+  order: Pick<ManagedOrder, 'paymentMethod' | 'providerPayload'>
+) {
+  if (order.paymentMethod !== 'TBANK') {
+    return null;
+  }
+
+  return getStoredTbankPayment(order.providerPayload)?.paymentUrl ?? null;
+}
+
 export function getOrderCheckoutUrl(orderId: number) {
   return `/checkout?orderId=${orderId}`;
 }
@@ -107,8 +134,10 @@ export function isTestPaymentsEnabled() {
   return process.env.ENABLE_TEST_PAYMENTS === 'true';
 }
 
+export { isTbankPaymentsEnabled };
+
 export function getDefaultPaymentMethod(): PaymentMethod {
-  return 'MANUAL';
+  return isTbankPaymentsEnabled() ? 'TBANK' : 'MANUAL';
 }
 
 export function isPaymentMethodAvailable(method: PaymentMethod) {
@@ -116,11 +145,15 @@ export function isPaymentMethodAvailable(method: PaymentMethod) {
     return isTestPaymentsEnabled();
   }
 
-  return true;
+  if (method === 'TBANK') {
+    return isTbankPaymentsEnabled();
+  }
+
+  return method === 'MANUAL';
 }
 
 export function normalizePaymentMethod(value: unknown): PaymentMethod | null {
-  return value === 'TEST' || value === 'MANUAL' ? value : null;
+  return value === 'TEST' || value === 'TBANK' || value === 'MANUAL' ? value : null;
 }
 
 export async function expireStaleOrdersForUser(userId: number) {
@@ -396,12 +429,15 @@ export async function startOrderCheckout(params: {
   const session =
     params.paymentMethod === 'TEST'
       ? createTestCheckoutSession()
+      : params.paymentMethod === 'TBANK'
+      ? await createTbankCheckoutSession(order)
       : createManualCheckoutSession(order.id);
 
   return applyOrderStatusTransition(order.id, session.nextStatus, {
     paymentMethod: session.paymentMethod,
     paymentReference: session.paymentReference ?? null,
     statusText: session.statusText,
+    providerPayload: session.providerPayload,
   });
 }
 
@@ -443,6 +479,110 @@ export async function processPaymentWebhook(params: {
   provider: PaymentProviderKey;
   payload: unknown;
 }) {
+  if (params.provider === 'tbank') {
+    const data =
+      params.payload && typeof params.payload === 'object'
+        ? (params.payload as Record<string, unknown>)
+        : null;
+
+    const orderId = Number(data?.OrderId);
+    const providerStatus =
+      typeof data?.Status === 'string' ? data.Status.trim().toUpperCase() : null;
+    const paymentId =
+      data?.PaymentId !== undefined && data.PaymentId !== null
+        ? String(data.PaymentId)
+        : null;
+    const amount = Number(data?.Amount);
+
+    if (!data || !Number.isInteger(orderId) || orderId <= 0 || !providerStatus || !paymentId) {
+      return {
+        kind: 'invalid_payload' as const,
+      };
+    }
+
+    if (!hasValidTbankTerminalKey(data.TerminalKey) || !hasValidTbankToken(data)) {
+      return {
+        kind: 'invalid_signature' as const,
+      };
+    }
+
+    const result = getProviderWebhookResult(params.provider, providerStatus);
+
+    if (!result) {
+      return {
+        kind: 'invalid_status' as const,
+      };
+    }
+
+    const existingOrder = await getManagedOrder(orderId);
+
+    if (!existingOrder) {
+      return {
+        kind: 'missing_order' as const,
+      };
+    }
+
+    if (!Number.isFinite(amount) || amount !== Math.round(existingOrder.amount * 100)) {
+      return {
+        kind: 'amount_mismatch' as const,
+      };
+    }
+
+    const storedTbankPayment = getStoredTbankPayment(existingOrder.providerPayload);
+
+    if (
+      storedTbankPayment?.paymentId &&
+      paymentId &&
+      storedTbankPayment.paymentId !== paymentId
+    ) {
+      return {
+        kind: 'payment_mismatch' as const,
+      };
+    }
+
+    if (existingOrder.paymentMethod === 'MANUAL' && existingOrder.status === 'PROCESSING') {
+      if (result.status !== 'PAID') {
+        return {
+          kind: 'processed' as const,
+          order: existingOrder,
+        };
+      }
+    }
+
+    const providerPayload = storedTbankPayment
+      ? cloneProviderPayload({
+          ...storedTbankPayment,
+          lastWebhookAt: new Date().toISOString(),
+          raw: data,
+          status: providerStatus,
+          success: data.Success === true,
+        })
+      : cloneProviderPayload({
+          ...data,
+          provider: 'tbank',
+        });
+
+    const updatedOrder = await applyOrderStatusTransition(orderId, result.status, {
+      paymentMethod: 'TBANK',
+      paymentReference: paymentId,
+      paymentFailureCode: result.paymentFailureCode ?? null,
+      paymentFailureText: result.paymentFailureText ?? null,
+      statusText: result.statusText ?? null,
+      providerPayload,
+    });
+
+    if (!updatedOrder) {
+      return {
+        kind: 'missing_order' as const,
+      };
+    }
+
+    return {
+      kind: 'processed' as const,
+      order: updatedOrder,
+    };
+  }
+
   const data =
     params.payload && typeof params.payload === 'object'
       ? (params.payload as Record<string, unknown>)
@@ -474,7 +614,7 @@ export async function processPaymentWebhook(params: {
     statusText: result.statusText ?? null,
     providerPayload:
       data && Object.keys(data).length > 0
-        ? (JSON.parse(JSON.stringify(data)) as Prisma.InputJsonValue)
+        ? cloneProviderPayload(data)
         : undefined,
   });
 

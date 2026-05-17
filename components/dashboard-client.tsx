@@ -75,7 +75,7 @@ function getDashboardCourseHint(course: CatalogCourseCard) {
   if (course.pendingOrder) {
     return course.pendingOrder.status === 'PROCESSING'
       ? 'Платеж на ручной проверке. Это может занять немного времени.'
-      : 'Оплатите по QR СБП и нажмите «Я оплатил».';
+      : 'Заказ уже создан. Откройте экран оплаты, чтобы завершить покупку.';
   }
 
   if (course.isOwned) {
@@ -408,7 +408,7 @@ function DashboardCourseCard({
           <p>
             {course.pendingOrder.status === 'PROCESSING'
               ? 'Платеж отправлен на ручную проверку. Если статус долго не меняется, напишите нам через контакты.'
-              : 'Оплатите курс по QR СБП и нажмите «Я оплатил», чтобы отправить платеж на ручную проверку.'}
+              : 'Вернитесь на экран оплаты, чтобы завершить покупку или открыть запасной способ оплаты.'}
           </p>
         </div>
       ) : null}
@@ -624,7 +624,7 @@ export default function DashboardClient({
     quickActionsNote =
       pendingPriorityCourse.pendingOrder.status === 'PROCESSING'
         ? 'Платеж уже отправлен на ручную проверку.'
-        : 'Оплатите курс по QR СБП и подтвердите перевод.';
+        : 'Откройте экран оплаты и завершите покупку.';
     quickActionsPrimaryAction = (
       <Link className="primary-button" href={pendingPriorityCourse.pendingOrder.checkoutUrl}>
         {getActiveOrderActionLabel(pendingPriorityCourse.pendingOrder.status)}

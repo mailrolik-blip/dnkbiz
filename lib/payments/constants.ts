@@ -56,5 +56,9 @@ export function getPaymentMethodLabel(method: PaymentMethod) {
     return 'Локальная проверка';
   }
 
+  if (method === 'TBANK') {
+    return 'T-Bank DEMO';
+  }
+
   return 'СБП / ручная проверка';
 }
