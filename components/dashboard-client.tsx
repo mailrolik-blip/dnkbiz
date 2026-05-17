@@ -71,6 +71,14 @@ type DashboardQuickActionsProps = {
   title: string;
 };
 
+type DashboardPriorityCardProps = {
+  actions: ReactNode;
+  badges?: ReactNode;
+  eyebrow: string;
+  note: string;
+  title: string;
+};
+
 function getDashboardCourseHint(course: CatalogCourseCard) {
   if (course.pendingOrder) {
     return course.pendingOrder.status === 'PROCESSING'
@@ -298,6 +306,28 @@ function DashboardQuickActions({
         {secondaryAction ?? null}
         {tertiaryAction ?? null}
       </div>
+    </article>
+  );
+}
+
+function DashboardPriorityCard({
+  actions,
+  badges,
+  eyebrow,
+  note,
+  title,
+}: DashboardPriorityCardProps) {
+  return (
+    <article className="panel dashboard-priority-card">
+      <div className="dashboard-priority-card__head">
+        <span className="eyebrow">{eyebrow}</span>
+        {badges ? <div className="badge-row">{badges}</div> : null}
+      </div>
+      <div className="dashboard-priority-card__copy">
+        <h2>{title}</h2>
+        <p className="panel-copy">{note}</p>
+      </div>
+      <div className="dashboard-priority-card__actions">{actions}</div>
     </article>
   );
 }
@@ -700,6 +730,27 @@ export default function DashboardClient({
     quickActionsNote = 'Выберите стартовый курс и начните с первого урока.';
   }
 
+  const mobileContinueCourse =
+    activityFallbackCourse ?? freeStarterCourse ?? previewStarterCourse ?? pendingPriorityCourse ?? null;
+  const mobileContinueBadges = mobileContinueCourse ? (
+    <>
+      <span className={getCatalogCourseStatusClass(mobileContinueCourse)}>
+        {getCatalogCourseStatusLabel(mobileContinueCourse)}
+      </span>
+      {mobileContinueCourse.lessonsCount ? (
+        <span className="badge badge-complete">
+          {mobileContinueCourse.completedLessonsCount}/{mobileContinueCourse.lessonsCount} завершено
+        </span>
+      ) : null}
+    </>
+  ) : null;
+  const mobileContinueTitle = mobileContinueCourse?.title ?? quickActionsTitle;
+  const mobileContinueNote = activity.lastActiveLesson
+    ? `Последний урок: «${activity.lastActiveLesson.lessonTitle}».`
+    : mobileContinueCourse?.nextLessonTitle
+      ? `Следующий урок: ${mobileContinueCourse.nextLessonTitle}.`
+      : quickActionsNote;
+
   return (
     <main className="page-shell dashboard-page">
       <div className="top-nav">
@@ -739,19 +790,82 @@ export default function DashboardClient({
           <h1 className="dashboard-page__title">Личный кабинет</h1>
         </header>
 
+        <section className="dashboard-mobile-only dashboard-mobile-priority">
+          <DashboardPriorityCard
+            actions={
+              <>
+                <Link className="primary-button" href={activityPrimaryAction.href}>
+                  {activityPrimaryAction.label}
+                </Link>
+                {mobileContinueCourse && isStartedPreviewCourse(mobileContinueCourse) ? (
+                  renderBuyAction(mobileContinueCourse, 'secondary-button')
+                ) : (
+                  <Link className="ghost-button" href="/catalog">
+                    Каталог
+                  </Link>
+                )}
+              </>
+            }
+            badges={mobileContinueBadges}
+            eyebrow="Продолжить обучение"
+            note={mobileContinueNote}
+            title={mobileContinueTitle}
+          />
+
+          {pendingCourses.length > 0 ? (
+            <article className="panel dashboard-priority-card" id="pending-payments">
+              <div className="dashboard-priority-card__head">
+                <span className="eyebrow">Оплата / заказы</span>
+                <div className="badge-row">
+                  <span className="badge badge-pending">
+                    {pendingCourses.length} {pendingCourses.length === 1 ? 'заказ' : 'заказа'} в работе
+                  </span>
+                </div>
+              </div>
+              <div className="dashboard-pending-compact">
+                {pendingCourses.map((course) => (
+                  <article className="dashboard-pending-compact__item" key={course.slug}>
+                    <div className="dashboard-pending-compact__copy">
+                      <strong>{course.title}</strong>
+                      <p>{getDashboardCourseHint(course)}</p>
+                    </div>
+                    <div className="dashboard-pending-compact__actions">
+                      <Link className="primary-button" href={course.pendingOrder!.checkoutUrl}>
+                        {getActiveOrderActionLabel(course.pendingOrder!.status)}
+                      </Link>
+                      <Link
+                        className="secondary-button"
+                        href={
+                          canOpenCourseRoute(course)
+                            ? `/courses/${course.slug}`
+                            : getCourseCatalogHref(course.slug)
+                        }
+                      >
+                        {canOpenCourseRoute(course) ? 'К курсу' : 'Страница курса'}
+                      </Link>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </article>
+          ) : null}
+        </section>
+
         <section className="dashboard-overview">
           <DashboardProfileCard feedback={feedback} user={user} />
-          <DashboardQuickActions
-            note={quickActionsNote}
-            primaryAction={quickActionsPrimaryAction}
-            secondaryAction={quickActionsSecondaryAction}
-            tertiaryAction={
-              <Link className="ghost-button" href="/help">
-                Помощь
-              </Link>
-            }
-            title={quickActionsTitle}
-          />
+          <div className="dashboard-desktop-only">
+            <DashboardQuickActions
+              note={quickActionsNote}
+              primaryAction={quickActionsPrimaryAction}
+              secondaryAction={quickActionsSecondaryAction}
+              tertiaryAction={
+                <Link className="ghost-button" href="/help">
+                  Помощь
+                </Link>
+              }
+              title={quickActionsTitle}
+            />
+          </div>
         </section>
 
         <section className="dashboard-activity-shell">
@@ -763,7 +877,7 @@ export default function DashboardClient({
         </section>
 
         {pendingCourses.length > 0 ? (
-          <section className="panel dashboard-section">
+          <section className="panel dashboard-section dashboard-desktop-only">
             <SectionIntro
               description="Здесь лежат заказы, которые еще не оплачены по QR СБП или уже отправлены на ручную проверку."
               eyebrow="Продолжить оплату"

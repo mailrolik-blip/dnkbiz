@@ -129,13 +129,15 @@ export function PublicFooter() {
 
 export function PublicPageShell({
   children,
+  className,
   user = null,
 }: {
   children: ReactNode;
+  className?: string;
   user?: PublicUser;
 }) {
   return (
-    <main className="page-shell public-page-shell">
+    <main className={['page-shell', 'public-page-shell', className].filter(Boolean).join(' ')}>
       <PublicHeader user={user} />
       <div className="public-page-shell__body">{children}</div>
       <PublicFooter />

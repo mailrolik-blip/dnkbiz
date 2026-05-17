@@ -27,6 +27,7 @@ import {
 } from '@/lib/purchase-ux';
 
 type CourseProductPageProps = CourseProductPageData;
+type CourseModule = NonNullable<ReturnType<typeof buildCourseModules>>[number];
 
 function getContinueLabel(course: CourseProductPageData['course']) {
   return course.isStarted || course.progressPercent > 0 || course.completedLessonsCount > 0
@@ -70,6 +71,55 @@ function buildCourseModules(outline: CourseProductPageData['outline'], slug: str
       ),
     }))
     .filter((module) => module.lessons.length > 0);
+}
+
+function CourseModuleLessonList({
+  lessons,
+}: {
+  lessons: CourseModule['lessons'];
+}) {
+  return (
+    <div className="lessons-list">
+      {lessons.map((lesson) => (
+        <div key={lesson.id} className="lesson-btn">
+          <span className="lesson-btn__body">
+            <span className="lesson-btn__title">
+              {lesson.position}. {lesson.title}
+            </span>
+            <span className="lesson-btn__meta">
+              {lesson.isPreview
+                ? 'Доступно бесплатно'
+                : 'Открывается после полного доступа'}
+            </span>
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function CourseModuleAccordion({
+  defaultOpen = false,
+  module,
+}: {
+  defaultOpen?: boolean;
+  module: CourseModule;
+}) {
+  return (
+    <details className="course-module-accordion" open={defaultOpen}>
+      <summary className="course-module-accordion__summary">
+        <div className="course-module-accordion__copy">
+          <span className="eyebrow">{module.title}</span>
+          <strong>{module.lessonsLabel}</strong>
+          <p>{module.summary}</p>
+        </div>
+        <span className="course-module-accordion__count">{module.lessons.length} урока</span>
+      </summary>
+      <div className="course-module-accordion__body">
+        <CourseModuleLessonList lessons={module.lessons} />
+      </div>
+    </details>
+  );
 }
 
 export default function CourseProductPage({
@@ -280,7 +330,10 @@ export default function CourseProductPage({
       : 'Все уроки курса доступны сразу, без ожидания оплаты.';
 
   return (
-    <PublicPageShell user={user}>
+    <PublicPageShell
+      className="page-shell--with-sticky-mobile-bar public-page-shell--with-sticky-mobile-bar"
+      user={user}
+    >
       <section className="dnk-section program-page program-page__hero">
         <article className={`panel program-page__main ${getCatalogCourseToneClass(course)}`}>
           <span className="eyebrow">Курс DNK Academy</span>
@@ -373,36 +426,32 @@ export default function CourseProductPage({
           <h2>Что внутри по модулям</h2>
           {outline.length > 0 ? (
             courseModules ? (
-              <div style={{ display: 'grid', gap: '1rem' }}>
-                {courseModules.map((module) => (
-                  <div key={module.id} style={{ display: 'grid', gap: '0.75rem' }}>
-                    <div style={{ display: 'grid', gap: '0.25rem' }}>
-                      <span className="eyebrow">{module.title}</span>
-                      <h3 style={{ margin: 0 }}>{module.lessonsLabel}</h3>
-                      <p className="panel-copy" style={{ margin: 0 }}>
-                        {module.summary}
-                      </p>
-                    </div>
+              <>
+                <div className="program-modules-desktop" style={{ display: 'grid', gap: '1rem' }}>
+                  {courseModules.map((module) => (
+                    <div key={module.id} style={{ display: 'grid', gap: '0.75rem' }}>
+                      <div style={{ display: 'grid', gap: '0.25rem' }}>
+                        <span className="eyebrow">{module.title}</span>
+                        <h3 style={{ margin: 0 }}>{module.lessonsLabel}</h3>
+                        <p className="panel-copy" style={{ margin: 0 }}>
+                          {module.summary}
+                        </p>
+                      </div>
 
-                    <div className="lessons-list">
-                      {module.lessons.map((lesson) => (
-                        <div key={lesson.id} className="lesson-btn">
-                          <span className="lesson-btn__body">
-                            <span className="lesson-btn__title">
-                              {lesson.position}. {lesson.title}
-                            </span>
-                            <span className="lesson-btn__meta">
-                              {lesson.isPreview
-                                ? 'Доступно бесплатно'
-                                : 'Открывается после полного доступа'}
-                            </span>
-                          </span>
-                        </div>
-                      ))}
+                      <CourseModuleLessonList lessons={module.lessons} />
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+                <div className="program-modules-mobile">
+                  {courseModules.map((module, index) => (
+                    <CourseModuleAccordion
+                      defaultOpen={index === 0}
+                      key={module.id}
+                      module={module}
+                    />
+                  ))}
+                </div>
+              </>
             ) : (
               <div className="lessons-list">
                 {outline.map((lesson) => (
@@ -447,6 +496,14 @@ export default function CourseProductPage({
           </div>
         </article>
       </section>
+
+      <div className="course-product-mobile-bar">
+        <div className="course-product-mobile-bar__copy">
+          <span>{course.status === 'free' ? 'Доступен сразу' : 'Основной CTA оплаты'}</span>
+          <strong>{formatCoursePrice(course.price)}</strong>
+        </div>
+        {renderPrimaryAction()}
+      </div>
     </PublicPageShell>
   );
 }

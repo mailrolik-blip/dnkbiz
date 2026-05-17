@@ -375,7 +375,7 @@ export default function TestCheckoutClient({
   }
 
   return (
-    <main className="page-shell">
+    <main className="page-shell page-shell--with-sticky-mobile-bar">
       <div className="top-nav">
         <Link href="/" className="brand">
           <span className="brand-mark" />

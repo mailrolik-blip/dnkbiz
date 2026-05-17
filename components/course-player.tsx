@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import type { CourseViewerData, CourseViewerLesson } from '@/lib/course-access';
 import { dnkFeaturedPrograms } from '@/lib/dnk-content';
+import { getCourseCatalogHref } from '@/lib/lms-catalog';
 import { getActiveOrderActionLabel } from '@/lib/payments/constants';
 import { formatPreviewLessons } from '@/lib/purchase-ux';
 
@@ -780,6 +781,13 @@ export default function CoursePlayer({
 
   const currentLesson =
     lessons.find((lesson) => lesson.id === currentLessonId) ?? lessons[0] ?? null;
+  const currentLessonIndex = currentLesson
+    ? lessons.findIndex((lesson) => lesson.id === currentLesson.id)
+    : -1;
+  const nextLesson =
+    currentLessonIndex >= 0 && currentLessonIndex < lessons.length - 1
+      ? lessons[currentLessonIndex + 1]
+      : null;
   const completedCount = lessons.filter((lesson) => lesson.progress?.completed).length;
   const progressPercent =
     lessons.length > 0 ? Math.round((completedCount / lessons.length) * 100) : 0;
@@ -797,6 +805,8 @@ export default function CoursePlayer({
   const currentLessonLocked = currentLesson?.isLocked ?? false;
   const assistantUiEnabled = false;
   const relatedCatalogRailEnabled = false;
+  const courseCatalogHref = getCourseCatalogHref(courseState.slug);
+  const hasPreviewBar = courseState.access.accessMode === 'PREVIEW';
 
   function updateLesson(
     lessonId: number,
@@ -829,6 +839,14 @@ export default function CoursePlayer({
     if (successOpen) {
       setSuccessOpen(false);
     }
+  }
+
+  function openNextLesson() {
+    if (!nextLesson) {
+      return;
+    }
+
+    openLesson(nextLesson.id);
   }
 
   function handleHomeworkTextChange(text: string) {
@@ -1013,7 +1031,9 @@ export default function CoursePlayer({
   }
 
   return (
-    <main className="page-shell">
+    <main
+      className={`page-shell ${hasPreviewBar ? 'page-shell--with-sticky-mobile-bar' : ''}`.trim()}
+    >
       <div className="top-nav">
         <Link href="/" className="brand">
           <span className="brand-mark" />
@@ -1064,6 +1084,115 @@ export default function CoursePlayer({
             <span className="badge badge-complete">{progressPercent}% прогресса</span>
           </div>
         </div>
+
+        {currentLesson ? (
+          <div className="course-player-mobile-toolbar">
+            <div className="course-player-mobile-toolbar__summary">
+              <span className="eyebrow">Сейчас в курсе</span>
+              <strong>
+                Урок {currentLesson.position}. {currentLesson.title}
+              </strong>
+              <p>
+                Прогресс по курсу: {progressPercent}%.{' '}
+                {nextLesson ? `Дальше: урок ${nextLesson.position}.` : 'Это последний урок курса.'}
+              </p>
+            </div>
+            <div className="course-player-mobile-toolbar__actions">
+              <Link className="secondary-button" href="/lk">
+                К кабинету
+              </Link>
+              <Link className="ghost-button" href={courseCatalogHref}>
+                О курсе
+              </Link>
+              {nextLesson ? (
+                <button className="primary-button" onClick={openNextLesson} type="button">
+                  Следующий урок
+                </button>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+
+        <details className="course-mobile-outline" open>
+          <summary className="course-mobile-outline__summary">
+            <div>
+              <span className="eyebrow">Навигация по курсу</span>
+              <strong>Программа и прогресс</strong>
+            </div>
+            <span className="course-mobile-outline__progress">{progressPercent}%</span>
+          </summary>
+          <div className="course-mobile-outline__body">
+            <div className="progress-box">
+              <div className="progress-info">
+                <span>Текущий урок</span>
+                <span>
+                  {currentLesson ? `${currentLesson.position}/${lessons.length}` : `${lessons.length} уроков`}
+                </span>
+              </div>
+              <div className="progress-line">
+                <div className="progress-fill" style={{ width: `${progressPercent}%` }} />
+              </div>
+            </div>
+
+            {courseState.access.accessMode === 'PREVIEW' ? (
+              <div className="course-preview-summary">
+                <span className="eyebrow">Ознакомительный доступ</span>
+                <span className="badge badge-pending">
+                  {previewCompletedCount}/{courseState.access.previewLessonsCount} урока открыто
+                </span>
+                <p className="muted-text">
+                  Полный доступ открывается после подтверждения оплаты, а прогресс по первым урокам уже сохранен.
+                </p>
+              </div>
+            ) : null}
+
+            <div className="course-player-mobile-toolbar__actions">
+              <Link className="secondary-button" href="/lk">
+                К кабинету
+              </Link>
+              <Link className="ghost-button" href={courseCatalogHref}>
+                Страница курса
+              </Link>
+              {nextLesson ? (
+                <button className="primary-button" onClick={openNextLesson} type="button">
+                  Следующий урок
+                </button>
+              ) : null}
+            </div>
+
+            <div className="lessons-list">
+              {lessons.map((lesson) => (
+                <button
+                  key={lesson.id}
+                  className={`lesson-btn ${
+                    lesson.id === currentLessonId ? 'active' : ''
+                  } ${lesson.progress?.completed ? 'completed' : ''} ${
+                    lesson.isLocked ? 'lesson-btn--locked' : ''
+                  }`}
+                  onClick={() => openLesson(lesson.id)}
+                  type="button"
+                >
+                  <span className="lesson-btn__body">
+                    <span className="lesson-btn__title">
+                      {lesson.position}. {lesson.title}
+                    </span>
+                    <span className="lesson-btn__meta">
+                      {lesson.isLocked
+                        ? 'Откроется после подтверждения оплаты'
+                        : lesson.isPreview && courseState.access.accessMode === 'PREVIEW'
+                          ? 'Открыто до покупки'
+                          : lesson.description ||
+                            'Откройте урок, чтобы посмотреть содержание и практику.'}
+                    </span>
+                  </span>
+                  <span className="check-icon">
+                    {lesson.isLocked ? <LockIcon /> : <CheckIcon />}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </details>
 
         <div className="lms-wrapper">
           <article className="glass-panel lms-main glow-target">
@@ -1243,6 +1372,19 @@ export default function CoursePlayer({
                               ? 'Сохраняем...'
                               : 'Сохранить прогресс'}
                           </button>
+                          {nextLesson ? (
+                            <button
+                              className="secondary-button"
+                              onClick={openNextLesson}
+                              type="button"
+                            >
+                              Следующий урок
+                            </button>
+                          ) : (
+                            <Link className="secondary-button" href="/lk">
+                              Вернуться в кабинет
+                            </Link>
+                          )}
                         </div>
                       </div>
                     </>
