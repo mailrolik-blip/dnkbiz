@@ -1,3 +1,5 @@
+import { accountingCoursePublicProfile } from '@/lib/course-content/1c-accounting-83.js';
+
 export type CatalogGroupId =
   | 'office-accounting'
   | 'safety'
@@ -152,28 +154,15 @@ const catalogCourseDefinitions: CatalogCourseDefinition[] = [
     ],
   },
   {
-    slug: '1c-accounting-83',
-    title: '1С: Бухгалтерия 8.3',
-    description:
-      'Курс по бухгалтерскому учету, проводкам и повседневной работе в 1С для специалистов и руководителей небольших команд.',
+    slug: accountingCoursePublicProfile.slug,
+    title: accountingCoursePublicProfile.title,
+    description: accountingCoursePublicProfile.catalogDescription,
     price: 12000,
     groupId: 'office-accounting',
     order: 30,
-    audience: [
-      'Бухгалтерам и помощникам бухгалтера',
-      'Офисным специалистам, которым нужно уверенно работать в 1С',
-      'Тем, кто хочет быстрее освоить типовые операции и документы',
-    ],
-    outcomes: [
-      'Разберетесь в типовых операциях и документах 1С: Бухгалтерия 8.3',
-      'Сможете увереннее работать с учетом, проводками и базовой отчетностью',
-      'Снизите количество ошибок в повседневных сценариях работы в 1С',
-    ],
-    includes: [
-      'Типовые документы и ежедневные сценарии работы в 1С',
-      'Понимание проводок, отчетности и логики учета в системе',
-      'Практические задания по основным операциям без отрыва от реальной работы',
-    ],
+    audience: accountingCoursePublicProfile.audience,
+    outcomes: accountingCoursePublicProfile.outcomes,
+    includes: accountingCoursePublicProfile.includes,
   },
   {
     slug: '1c-payroll-and-hr',

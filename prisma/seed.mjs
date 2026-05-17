@@ -1,6 +1,9 @@
 import { PrismaClient } from '@prisma/client';
+import { readFileSync } from 'node:fs';
 import { randomBytes, scrypt as scryptCallback } from 'node:crypto';
 import { promisify } from 'node:util';
+
+import { accountingCoursePublicProfile } from '../lib/course-content/1c-accounting-83.js';
 
 const prisma = new PrismaClient();
 const scrypt = promisify(scryptCallback);
@@ -467,7 +470,7 @@ Excel полезен как рабочий инструмент, а не как 
   }));
 }
 
-function buildAccountingLessons() {
+function buildAccountingLessonsLegacy() {
   const youtubeIntro = 'https://www.youtube.com/watch?v=ysz5S6PUM-U';
   const demoMp4 = 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4';
 
@@ -801,6 +804,398 @@ function buildOccupationalSafetyLessons() {
     position: index + 1,
     isPreview: index < 2,
   }));
+}
+
+const accountingCourseLessonBlueprints = [
+  {
+    lessonNumber: 1,
+    title: 'Что такое 1С и зачем она нужна малому бизнесу',
+    slug: '1c-lesson-01-what-is-1c',
+    sourceFile: '02-lessons-1-2-preview.md',
+    isPreview: true,
+  },
+  {
+    lessonNumber: 2,
+    title: 'Интерфейс 1С: где искать документы, справочники и отчёты',
+    slug: '1c-lesson-02-interface-and-navigation',
+    sourceFile: '02-lessons-1-2-preview.md',
+    isPreview: true,
+  },
+  {
+    lessonNumber: 3,
+    title: 'Учебная база: как безопасно тренироваться и не бояться ошибок',
+    slug: '1c-lesson-03-training-database',
+    sourceFile: '03-lessons-3-5.md',
+    isPreview: false,
+  },
+  {
+    lessonNumber: 4,
+    title: 'Создаём организацию: реквизиты, настройки, учётная политика простыми словами',
+    slug: '1c-lesson-04-create-organization',
+    sourceFile: '03-lessons-3-5.md',
+    isPreview: false,
+  },
+  {
+    lessonNumber: 5,
+    title: 'Контрагенты, договоры, товары и услуги',
+    slug: '1c-lesson-05-counterparties-contracts-and-products',
+    sourceFile: '03-lessons-3-5.md',
+    isPreview: false,
+  },
+  {
+    lessonNumber: 6,
+    title: 'Покупка товара или услуги: поступление от поставщика',
+    slug: '1c-lesson-06-purchase-from-supplier',
+    sourceFile: '04-lessons-6-8.md',
+    isPreview: false,
+  },
+  {
+    lessonNumber: 7,
+    title: 'Продажа клиенту: счёт, реализация, акт или накладная',
+    slug: '1c-lesson-07-sale-to-client',
+    sourceFile: '04-lessons-6-8.md',
+    isPreview: false,
+  },
+  {
+    lessonNumber: 8,
+    title: 'Оплаты: банк, касса, входящие и исходящие платежи',
+    slug: '1c-lesson-08-payments-bank-and-cash',
+    sourceFile: '04-lessons-6-8.md',
+    isPreview: false,
+  },
+  {
+    lessonNumber: 9,
+    title: 'Как исправлять простые ошибки в документах',
+    slug: '1c-lesson-09-fix-document-errors',
+    sourceFile: '05-lessons-9-10-final.md',
+    isPreview: false,
+  },
+  {
+    lessonNumber: 10,
+    title: 'Итоговая проверка: отчёты, остатки, задолженности и рабочий чек-лист',
+    slug: '1c-lesson-10-final-review-and-checklist',
+    sourceFile: '05-lessons-9-10-final.md',
+    isPreview: false,
+    appendixSections: [
+      'Что пользователь сделал за курс',
+      'Финальный чек-лист внедрения',
+      '7-дневный план применения после курса',
+    ],
+  },
+];
+
+const accountingCourseFinalScreenContent = `## Финальный экран завершения курса
+
+## Заголовок
+
+## Вы завершили курс
+## 1С: Бухгалтерия 8.3 — уверенный старт
+
+## Основной текст
+
+Вы прошли не просто набор уроков, а собрали базовый учебный цикл работы в 1С.
+
+Теперь вы понимаете, как связаны между собой:
+
+> организация → контрагенты → товары и услуги → покупка → продажа → оплаты → ошибки → отчёты.
+
+Этот курс не делает вас профессиональным бухгалтером и не заменяет полноценную бухгалтерскую подготовку.
+Но он даёт главное для старта:
+
+> вы перестаёте смотреть на 1С как на хаос и начинаете понимать базовую логику работы в программе.
+
+## Ваш практический результат
+
+За курс вы создали учебную систему в 1С и провели основные операции малого бизнеса.
+
+Вы научились:
+
+- ориентироваться в интерфейсе;
+- понимать назначение разделов;
+- создавать учебную организацию;
+- работать с контрагентами;
+- понимать роль договоров;
+- отличать товары от услуг;
+- оформлять поступление от поставщика;
+- оформлять продажу клиенту;
+- отражать входящие и исходящие оплаты;
+- находить простые ошибки;
+- проверять результат через отчёты.
+
+## Финальная фраза результата
+
+> Теперь у вас есть базовая практическая схема работы в 1С: от создания данных до проверки документов и оплат через отчёты.
+
+## CTA после курса
+
+Скачать финальный чек-лист внедрения
+
+Дополнительный текст:
+
+> Используйте его, чтобы перенести учебную логику на реальные задачи аккуратно и без хаоса.`;
+
+function readAccountingCourseDoc(fileName) {
+  return readFileSync(new URL(`../docs/course-content/1c/${fileName}`, import.meta.url), 'utf8')
+    .replace(/^\uFEFF/, '')
+    .replace(/\r\n/g, '\n');
+}
+
+function splitAccountingTopLevelSections(markdown) {
+  const sections = [];
+  let currentHeading = null;
+  let currentLines = [];
+
+  for (const line of markdown.split('\n')) {
+    if (line.startsWith('# ')) {
+      if (currentHeading) {
+        sections.push({
+          heading: currentHeading,
+          body: currentLines.join('\n').trim(),
+        });
+      }
+
+      currentHeading = line.slice(2).trim();
+      currentLines = [];
+      continue;
+    }
+
+    if (currentHeading) {
+      currentLines.push(line);
+    }
+  }
+
+  if (currentHeading) {
+    sections.push({
+      heading: currentHeading,
+      body: currentLines.join('\n').trim(),
+    });
+  }
+
+  return sections;
+}
+
+function splitAccountingSecondarySections(markdown) {
+  const sections = [];
+  let currentHeading = null;
+  let currentLines = [];
+
+  for (const line of markdown.split('\n')) {
+    if (line.startsWith('## ')) {
+      if (currentHeading) {
+        sections.push({
+          heading: currentHeading,
+          body: currentLines.join('\n').trim(),
+        });
+      }
+
+      currentHeading = line.slice(3).trim();
+      currentLines = [];
+      continue;
+    }
+
+    if (currentHeading) {
+      currentLines.push(line);
+    }
+  }
+
+  if (currentHeading) {
+    sections.push({
+      heading: currentHeading,
+      body: currentLines.join('\n').trim(),
+    });
+  }
+
+  return sections;
+}
+
+function getRequiredAccountingSection(sectionMap, heading) {
+  const section = sectionMap.get(heading);
+
+  if (!section) {
+    throw new Error(`Не найден markdown-блок "${heading}" в материалах курса 1С.`);
+  }
+
+  return section;
+}
+
+function getRequiredAccountingSubsection(markdown, heading) {
+  const subsection = splitAccountingSecondarySections(markdown).find(
+    (section) => section.heading === heading
+  );
+
+  if (!subsection) {
+    throw new Error(`Не найден подраздел "${heading}" в материалах курса 1С.`);
+  }
+
+  return subsection.body;
+}
+
+function compactAccountingText(text) {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function parseAccountingTableRow(line) {
+  return line
+    .trim()
+    .replace(/^\|/, '')
+    .replace(/\|$/, '')
+    .split('|')
+    .map((cell) => compactAccountingText(cell));
+}
+
+function isAccountingTableSeparator(row) {
+  return row.every((cell) => cell.length > 0 && /^:?-{3,}:?$/.test(cell));
+}
+
+function convertAccountingTableToList(tableLines) {
+  const rows = tableLines
+    .map((line) => parseAccountingTableRow(line))
+    .filter((row) => row.some((cell) => cell.length > 0));
+  const contentRows = rows.filter((row) => !isAccountingTableSeparator(row));
+
+  if (contentRows.length < 2) {
+    return tableLines;
+  }
+
+  const [header, ...values] = contentRows;
+
+  return values.map((row) => {
+    if (header.length === 2 && row.length >= 2) {
+      return `- ${row[0]}: ${row.slice(1).join(' — ')}`;
+    }
+
+    return `- ${row.join(' — ')}`;
+  });
+}
+
+function normalizeAccountingMarkdown(markdown) {
+  const normalizedLines = [];
+  const lines = markdown.split('\n');
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+
+    if (line.trim().startsWith('|')) {
+      const tableLines = [];
+      let cursor = index;
+
+      while (cursor < lines.length && lines[cursor].trim().startsWith('|')) {
+        tableLines.push(lines[cursor]);
+        cursor += 1;
+      }
+
+      normalizedLines.push(...convertAccountingTableToList(tableLines));
+      index = cursor - 1;
+      continue;
+    }
+
+    normalizedLines.push(line);
+  }
+
+  return normalizedLines
+    .join('\n')
+    .replace(/^---\s*$/gm, '')
+    .replace(/^###\s+/gm, '## ')
+    .replace(/^#\s+/gm, '## ')
+    .replace(/^- \[ \]\s+/gm, '- ')
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function getAccountingChecklistOptions(markdown) {
+  return Array.from(markdown.matchAll(/^- \[ \]\s+(.+)$/gm), (match) => match[1].trim());
+}
+
+function buildAccountingLessons() {
+  const sourceFileNames = [...new Set(accountingCourseLessonBlueprints.map((lesson) => lesson.sourceFile))];
+  const sourceSectionMaps = new Map(
+    sourceFileNames.map((fileName) => [
+      fileName,
+      new Map(
+        splitAccountingTopLevelSections(readAccountingCourseDoc(fileName)).map((section) => [
+          section.heading,
+          section.body,
+        ])
+      ),
+    ])
+  );
+
+  return accountingCourseLessonBlueprints.map((lesson, index) => {
+    const sectionMap = sourceSectionMaps.get(lesson.sourceFile);
+
+    if (!sectionMap) {
+      throw new Error(`Не удалось открыть markdown-материалы курса 1С из файла ${lesson.sourceFile}.`);
+    }
+
+    const lessonSection = getRequiredAccountingSection(
+      sectionMap,
+      `Урок ${lesson.lessonNumber}. ${lesson.title}`
+    );
+    const practiceSection = getRequiredAccountingSection(
+      sectionMap,
+      `Практическое задание к уроку ${lesson.lessonNumber}`
+    );
+    const checklistSection = getRequiredAccountingSection(
+      sectionMap,
+      `Чек-лист самопроверки к уроку ${lesson.lessonNumber}`
+    );
+    const lessonDescription = compactAccountingText(
+      getRequiredAccountingSubsection(lessonSection, 'Цель урока').split('\n\n')[0]
+    );
+    const whatUserShouldUnderstand = getRequiredAccountingSubsection(
+      checklistSection,
+      'Что пользователь должен понять после урока'
+    );
+    const appendixSections = (lesson.appendixSections ?? []).map((heading) => {
+      const appendixSection = getRequiredAccountingSection(sectionMap, heading);
+      return `## ${heading}\n\n${appendixSection}`;
+    });
+    const finalScreenContent =
+      lesson.lessonNumber === 10 ? accountingCourseFinalScreenContent : null;
+    const lessonContent = normalizeAccountingMarkdown(
+      [
+        lessonSection,
+        '## Практическое задание',
+        practiceSection,
+        '## Что пользователь должен понять после урока',
+        whatUserShouldUnderstand,
+      ].join('\n\n')
+    );
+    const normalizedFinalScreenContent = finalScreenContent
+      ? normalizeAccountingMarkdown(finalScreenContent)
+      : null;
+    const normalizedAppendixContent =
+      appendixSections.length > 0
+        ? normalizeAccountingMarkdown(appendixSections.join('\n\n'))
+        : null;
+
+    return {
+      title: lesson.title,
+      slug: lesson.slug,
+      description: lessonDescription,
+      content: [
+        lessonContent,
+        normalizedFinalScreenContent,
+        normalizedAppendixContent,
+      ]
+        .filter(Boolean)
+        .join('\n\n'),
+      videoUrl: null,
+      videoProvider: null,
+      homeworkTitle: `Практика и самопроверка к уроку ${lesson.lessonNumber}`,
+      homeworkPrompt: compactAccountingText(getRequiredAccountingSubsection(practiceSection, 'Задание')),
+      homeworkType: 'CHECKLIST',
+      homeworkOptions: getAccountingChecklistOptions(checklistSection),
+      position: index + 1,
+      isPreview: lesson.isPreview,
+    };
+  });
 }
 
 function buildFreeWordLessons() {
@@ -1183,10 +1578,9 @@ function buildMarketingSalesManagementLessons() {
 function buildShowcaseCourses() {
   return [
     {
-      title: '1С: Бухгалтерия 8.3',
-      slug: '1c-accounting-83',
-      description:
-        'Витринный курс по бухгалтерскому учёту, проводкам и повседневной работе в 1С для специалистов и руководителей.',
+      title: accountingCoursePublicProfile.title,
+      slug: accountingCoursePublicProfile.slug,
+      description: accountingCoursePublicProfile.catalogDescription,
     },
     {
       title: '1С: Зарплата и кадры',
@@ -1439,19 +1833,17 @@ async function main() {
 
   const accountingCourse = await prisma.course.upsert({
     where: {
-      slug: '1c-accounting-83',
+      slug: accountingCoursePublicProfile.slug,
     },
     update: {
-      title: '1С: Бухгалтерия 8.3',
-      description:
-        'Практический курс по бухгалтерскому учету в 1С: ежедневная работа с документами, платежами, отчетами и базовым закрытием месяца.',
+      title: accountingCoursePublicProfile.title,
+      description: accountingCoursePublicProfile.catalogDescription,
       isPublished: true,
     },
     create: {
-      title: '1С: Бухгалтерия 8.3',
-      slug: '1c-accounting-83',
-      description:
-        'Практический курс по бухгалтерскому учету в 1С: ежедневная работа с документами, платежами, отчетами и базовым закрытием месяца.',
+      title: accountingCoursePublicProfile.title,
+      slug: accountingCoursePublicProfile.slug,
+      description: accountingCoursePublicProfile.catalogDescription,
       isPublished: true,
     },
   });
@@ -1577,24 +1969,24 @@ async function main() {
       courseId: practicalCourse.id,
     },
     }),
-    prisma.tariff.upsert({
-      where: {
-        slug: '1c-accounting-83-access',
-      },
-      update: {
-        title: 'Доступ к курсу 1С: Бухгалтерия 8.3',
-        price: 12000,
-        interval: 'one-time',
-        isActive: true,
-        courseId: accountingCourse.id,
-      },
-      create: {
-        title: 'Доступ к курсу 1С: Бухгалтерия 8.3',
-        slug: '1c-accounting-83-access',
-        price: 12000,
-        interval: 'one-time',
-        isActive: true,
-        courseId: accountingCourse.id,
+      prisma.tariff.upsert({
+        where: {
+          slug: accountingCoursePublicProfile.tariffSlug,
+        },
+        update: {
+          title: `Доступ к курсу ${accountingCoursePublicProfile.title}`,
+          price: 12000,
+          interval: 'one-time',
+          isActive: true,
+          courseId: accountingCourse.id,
+        },
+        create: {
+          title: `Доступ к курсу ${accountingCoursePublicProfile.title}`,
+          slug: accountingCoursePublicProfile.tariffSlug,
+          price: 12000,
+          interval: 'one-time',
+          isActive: true,
+          courseId: accountingCourse.id,
       },
     }),
     prisma.tariff.upsert({

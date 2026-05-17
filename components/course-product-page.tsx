@@ -6,6 +6,7 @@ import { useState } from 'react';
 
 import { PublicPageShell } from '@/components/public-shell';
 import type { CourseProductPageData } from '@/lib/course-product';
+import { accountingCoursePublicProfile } from '@/lib/course-content/1c-accounting-83.js';
 import {
   buildAuthHref,
   getCheckoutIntentPath,
@@ -55,6 +56,22 @@ function ProductSection({
   );
 }
 
+function buildCourseModules(outline: CourseProductPageData['outline'], slug: string) {
+  if (slug !== accountingCoursePublicProfile.slug) {
+    return null;
+  }
+
+  return accountingCoursePublicProfile.moduleOutline
+    .map((module) => ({
+      ...module,
+      lessons: outline.filter(
+        (lesson) =>
+          lesson.position >= module.startLesson && lesson.position <= module.endLesson
+      ),
+    }))
+    .filter((module) => module.lessons.length > 0);
+}
+
 export default function CourseProductPage({
   user,
   course,
@@ -72,6 +89,7 @@ export default function CourseProductPage({
     ? getCheckoutIntentPath(course.tariffId)
     : productPageHref;
   const continueLabel = getContinueLabel(course);
+  const courseModules = buildCourseModules(outline, course.slug);
 
   async function handleCreateOrder() {
     if (!course.tariffId) {
@@ -246,14 +264,18 @@ export default function CourseProductPage({
   }
 
   const previewCopy =
-    course.status === 'paid'
+    course.slug === accountingCoursePublicProfile.slug
+      ? `Бесплатно доступны первые 2 урока: «${accountingCoursePublicProfile.previewLessonTitles[0]}» и «${accountingCoursePublicProfile.previewLessonTitles[1]}».`
+      : course.status === 'paid'
       ? course.previewEnabled && course.previewLessonsCount > 0
         ? `Бесплатно доступны ${formatPreviewLessons(course.previewLessonsCount)}, чтобы познакомиться с курсом до получения полного доступа.`
         : 'Доступ к урокам откроется после подтверждения оплаты.'
       : 'Курс доступен сразу после входа.';
 
   const afterAccessCopy =
-    course.status === 'paid'
+    course.slug === accountingCoursePublicProfile.slug
+      ? 'После подтверждения оплаты откроются уроки 3–10, практические задания, чек-листы самопроверки, финальный чек-лист внедрения и 7-дневный план применения.'
+      : course.status === 'paid'
       ? 'После подтверждения оплаты откроются все уроки, домашние задания и полный маршрут обучения в личном кабинете.'
       : 'Все уроки курса доступны сразу, без ожидания оплаты.';
 
@@ -350,22 +372,55 @@ export default function CourseProductPage({
           <span className="eyebrow">Программа</span>
           <h2>Что внутри по модулям</h2>
           {outline.length > 0 ? (
-            <div className="lessons-list">
-              {outline.slice(0, 6).map((lesson) => (
-                <div key={lesson.id} className="lesson-btn">
-                  <span className="lesson-btn__body">
-                    <span className="lesson-btn__title">
-                      {lesson.position}. {lesson.title}
+            courseModules ? (
+              <div style={{ display: 'grid', gap: '1rem' }}>
+                {courseModules.map((module) => (
+                  <div key={module.id} style={{ display: 'grid', gap: '0.75rem' }}>
+                    <div style={{ display: 'grid', gap: '0.25rem' }}>
+                      <span className="eyebrow">{module.title}</span>
+                      <h3 style={{ margin: 0 }}>{module.lessonsLabel}</h3>
+                      <p className="panel-copy" style={{ margin: 0 }}>
+                        {module.summary}
+                      </p>
+                    </div>
+
+                    <div className="lessons-list">
+                      {module.lessons.map((lesson) => (
+                        <div key={lesson.id} className="lesson-btn">
+                          <span className="lesson-btn__body">
+                            <span className="lesson-btn__title">
+                              {lesson.position}. {lesson.title}
+                            </span>
+                            <span className="lesson-btn__meta">
+                              {lesson.isPreview
+                                ? 'Доступно бесплатно'
+                                : 'Открывается после полного доступа'}
+                            </span>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="lessons-list">
+                {outline.map((lesson) => (
+                  <div key={lesson.id} className="lesson-btn">
+                    <span className="lesson-btn__body">
+                      <span className="lesson-btn__title">
+                        {lesson.position}. {lesson.title}
+                      </span>
+                      <span className="lesson-btn__meta">
+                        {lesson.isPreview
+                          ? 'Доступно бесплатно'
+                          : 'Открывается после полного доступа'}
+                      </span>
                     </span>
-                    <span className="lesson-btn__meta">
-                      {lesson.isPreview
-                        ? 'Доступно бесплатно'
-                        : 'Открывается после полного доступа'}
-                    </span>
-                  </span>
-                </div>
-              ))}
-            </div>
+                  </div>
+                ))}
+              </div>
+            )
           ) : (
             <p className="panel-copy">
               Полная программа еще не опубликована. Направление остается в каталоге как витрина

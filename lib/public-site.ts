@@ -1,3 +1,5 @@
+import { accountingCoursePublicProfile } from '@/lib/course-content/1c-accounting-83.js';
+
 export const publicBrandName = 'Бизнес школа ДНК';
 
 export const publicBrandLead =
@@ -154,7 +156,7 @@ export const publicCareerOrientations = [
   {
     title: 'Специалист по 1С / помощник бухгалтера',
     body: 'Помогает подготовиться к типовым операциям в 1С, учету, кадровым документам и рабочим сценариям офиса.',
-    related: ['1С: Бухгалтерия 8.3', '1С: Зарплата и кадры'],
+    related: [accountingCoursePublicProfile.title, '1С: Зарплата и кадры'],
   },
   {
     title: 'Офис-менеджер / администратор',

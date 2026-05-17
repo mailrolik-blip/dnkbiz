@@ -1291,11 +1291,11 @@ export default function CoursePlayer({
                 <span className="badge badge-pending">
                   {previewCompletedCount}/{courseState.access.previewLessonsCount} урока открыто
                 </span>
-                <p className="muted-text">
-                  Сначала можно пройти первые уроки и оценить формат курса. После оплаты по QR СБП
-                  и подтверждения оплаты откроются остальные модули, практика и полный доступ в
-                  кабинете. Проверка может занять немного времени.
-                </p>
+                  <p className="muted-text">
+                    Сначала можно пройти первые уроки и оценить формат курса. После подтверждения
+                    оплаты откроются остальные модули, практика и полный доступ в кабинете.
+                    Проверка может занять немного времени.
+                  </p>
                 {courseState.access.tariff ? (
                   <div className="badge-row">
                     <span className="badge badge-paid">

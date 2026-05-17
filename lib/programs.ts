@@ -1,3 +1,5 @@
+import { accountingCoursePublicProfile } from '@/lib/course-content/1c-accounting-83.js';
+
 // Archived showcase data for the secondary `/programs/:slug` route.
 // The main product flow uses the self-serve LMS catalog and `/catalog/:slug`.
 export type ShowcaseCourseStatus = 'ACTIVE' | 'SHOWCASE' | 'SOON';
@@ -24,35 +26,20 @@ export type ShowcaseProgram = ShowcaseCourse & {
 
 export const showcasePrograms: ShowcaseProgram[] = [
   {
-    title: '1С: Бухгалтерия 8.3',
-    slug: '1c-accounting-83',
-    description:
-      'Практический курс по учету, проводкам, операциям и базовой работе в 1С для специалистов и руководителей небольших команд.',
+    title: accountingCoursePublicProfile.title,
+    slug: accountingCoursePublicProfile.slug,
+    description: accountingCoursePublicProfile.showcase.description,
     price: 12000,
     category: '1С и бухгалтерия',
     status: 'SHOWCASE',
-    audience: [
-      'Бухгалтерам и помощникам бухгалтера, которым нужно уверенно работать в 1С без случайных пробелов.',
-      'Руководителям и собственникам, которые хотят лучше понимать учетные процессы и логику базы.',
-      'Офисным специалистам, которым нужно быстрее войти в рабочий контур и снять зависимость от ручных подсказок.',
-    ],
-    tasks: [
-      'Разобраться с базовыми операциями, проводками и документами без хаотичного обучения по роликам.',
-      'Собрать понятный рабочий маршрут по ежедневным задачам в 1С и сократить число ошибок в учете.',
-      'Быстрее адаптировать нового сотрудника в бухгалтерском блоке и стандартизировать типовые действия.',
-    ],
-    format: 'Онлайн-программа в личном кабинете Бизнес школы ДНК с фокусом на прикладные учетные сценарии.',
-    formatItems: [
-      'Материалы и сценарии собраны в одной программе без разрозненных файлов.',
-      'Формат подходит для индивидуального обучения и для ввода сотрудника в должность.',
-      'Запуск и детали доступа подтверждаем после заявки.',
-    ],
-    statusDescription:
-      'Программа уже заведена в каталог Бизнес школы ДНК. После заявки помогаем подтвердить формат, дату старта и подходящий сценарий доступа.',
-    leadTitle: 'Оставьте заявку на курс по 1С: Бухгалтерия 8.3',
-    leadDescription:
-      'Мы свяжемся, уточним ваш уровень и подскажем, подойдет ли программа для личного обучения или для команды.',
-    priceNote: 'Стоимость указана за базовый индивидуальный доступ.',
+    audience: accountingCoursePublicProfile.showcase.audience,
+    tasks: accountingCoursePublicProfile.showcase.tasks,
+    format: accountingCoursePublicProfile.showcase.format,
+    formatItems: accountingCoursePublicProfile.showcase.formatItems,
+    statusDescription: accountingCoursePublicProfile.showcase.statusDescription,
+    leadTitle: accountingCoursePublicProfile.showcase.leadTitle,
+    leadDescription: accountingCoursePublicProfile.showcase.leadDescription,
+    priceNote: accountingCoursePublicProfile.showcase.priceNote,
   },
   {
     title: '1С: Зарплата и кадры',
