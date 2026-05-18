@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
 
 type MobileNavItem = {
+  disabled?: boolean;
   href: string;
   icon: ReactNode;
   isActive: boolean;
@@ -50,6 +51,16 @@ function PaymentIcon() {
   );
 }
 
+function TeacherIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
+      <path d="M4 7.5A2.5 2.5 0 0 1 6.5 5h11A2.5 2.5 0 0 1 20 7.5v6A2.5 2.5 0 0 1 17.5 16H11l-4 3v-3H6.5A2.5 2.5 0 0 1 4 13.5v-6Z" />
+      <path d="M8.5 9.5h7" />
+      <path d="M8.5 12.5H13" />
+    </svg>
+  );
+}
+
 function ProfileIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
@@ -70,59 +81,108 @@ export default function MobileBottomNav() {
     return null;
   }
 
+  const isLessonPath = pathname.startsWith('/courses/');
   const paymentHref = pathname === '/checkout' ? '/checkout' : '/lk#pending-payments';
 
-  const items: MobileNavItem[] = [
-    {
-      href: '/',
-      icon: <HomeIcon />,
-      isActive: pathname === '/',
-      label: 'Главная',
-    },
-    {
-      href: '/catalog',
-      icon: <CoursesIcon />,
-      isActive: pathname === '/catalog' || pathname.startsWith('/catalog/'),
-      label: 'Курсы',
-    },
-    {
-      href: '/lk',
-      icon: <LearnIcon />,
-      isActive: pathname === '/lk' || pathname.startsWith('/courses/'),
-      label: 'Мои курсы',
-    },
-    {
-      href: paymentHref,
-      icon: <PaymentIcon />,
-      isActive: pathname === '/checkout',
-      label: 'Оплата',
-    },
-    {
-      href: '/profile',
-      icon: <ProfileIcon />,
-      isActive: pathname === '/profile',
-      label: 'Профиль',
-    },
-  ];
+  const items: MobileNavItem[] = isLessonPath
+    ? [
+        {
+          href: '/',
+          icon: <HomeIcon />,
+          isActive: pathname === '/',
+          label: 'Главная',
+        },
+        {
+          href: '/catalog',
+          icon: <CoursesIcon />,
+          isActive: pathname === '/catalog' || pathname.startsWith('/catalog/'),
+          label: 'Курсы',
+        },
+        {
+          href: '/lk',
+          icon: <LearnIcon />,
+          isActive: pathname === '/lk' || pathname.startsWith('/courses/'),
+          label: 'Мои курсы',
+        },
+        {
+          disabled: true,
+          href: '#',
+          icon: <TeacherIcon />,
+          isActive: false,
+          label: 'AI учитель',
+        },
+        {
+          href: '/profile',
+          icon: <ProfileIcon />,
+          isActive: pathname === '/profile',
+          label: 'Настройки',
+        },
+      ]
+    : [
+        {
+          href: '/',
+          icon: <HomeIcon />,
+          isActive: pathname === '/',
+          label: 'Главная',
+        },
+        {
+          href: '/catalog',
+          icon: <CoursesIcon />,
+          isActive: pathname === '/catalog' || pathname.startsWith('/catalog/'),
+          label: 'Курсы',
+        },
+        {
+          href: '/lk',
+          icon: <LearnIcon />,
+          isActive: pathname === '/lk' || pathname.startsWith('/courses/'),
+          label: 'Мои курсы',
+        },
+        {
+          href: paymentHref,
+          icon: <PaymentIcon />,
+          isActive: pathname === '/checkout',
+          label: 'Оплата',
+        },
+        {
+          href: '/profile',
+          icon: <ProfileIcon />,
+          isActive: pathname === '/profile',
+          label: 'Профиль',
+        },
+      ];
 
   return (
     <nav aria-label="Нижняя мобильная навигация" className="mobile-bottom-nav">
       <div className="mobile-bottom-nav__list">
-        {items.map((item) => (
-          <Link
-            key={item.label}
-            aria-current={item.isActive ? 'page' : undefined}
-            className={`mobile-bottom-nav__item ${
-              item.isActive ? 'mobile-bottom-nav__item--active' : ''
-            }`}
-            href={item.href}
-          >
-            <span className="mobile-bottom-nav__icon" aria-hidden="true">
-              {item.icon}
-            </span>
-            <span className="mobile-bottom-nav__label">{item.label}</span>
-          </Link>
-        ))}
+        {items.map((item) =>
+          item.disabled ? (
+            <button
+              key={item.label}
+              aria-disabled="true"
+              className="mobile-bottom-nav__item mobile-bottom-nav__item--placeholder"
+              type="button"
+            >
+              <span className="mobile-bottom-nav__icon" aria-hidden="true">
+                {item.icon}
+              </span>
+              <span className="mobile-bottom-nav__label">{item.label}</span>
+            </button>
+          ) : (
+            <Link
+              key={item.label}
+              aria-current={item.isActive ? 'page' : undefined}
+              className={`mobile-bottom-nav__item ${
+                item.isActive ? 'mobile-bottom-nav__item--active' : ''
+              }`}
+              href={item.href}
+            >
+              <span className="mobile-bottom-nav__icon" aria-hidden="true">
+                {item.icon}
+              </span>
+              <span className="mobile-bottom-nav__label">{item.label}</span>
+            </Link>
+          )
+        )}
       </div>
     </nav>
   );

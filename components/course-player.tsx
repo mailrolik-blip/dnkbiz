@@ -640,6 +640,7 @@ function PaywallBlock({
 function LessonHomeworkPanel({
   className,
   compact = false,
+  secondaryActionLabel,
   showChecklistOptions = true,
   homeworkDraft,
   homeworkOptions,
@@ -655,6 +656,7 @@ function LessonHomeworkPanel({
 }: {
   className?: string;
   compact?: boolean;
+  secondaryActionLabel?: string;
   showChecklistOptions?: boolean;
   homeworkDraft: HomeworkDraft;
   homeworkOptions: string[];
@@ -775,7 +777,7 @@ function LessonHomeworkPanel({
         </button>
         {nextLesson ? (
           <button className="secondary-button" onClick={onOpenNextLesson} type="button">
-            Следующий урок
+            {secondaryActionLabel || 'Следующий урок'}
           </button>
         ) : (
           <Link className="secondary-button" href="/lk">
@@ -815,6 +817,9 @@ export default function CoursePlayer({
   const [chatDraft, setChatDraft] = useState('');
   const [activeMobileCardIndex, setActiveMobileCardIndex] = useState(0);
   const [mobileCardDetailsOpen, setMobileCardDetailsOpen] = useState(false);
+  const [mobileCardMotion, setMobileCardMotion] = useState<'forward' | 'backward' | null>(null);
+  const [mobileCardReadProgress, setMobileCardReadProgress] = useState(0);
+  const [mobileBottomNavCondensed, setMobileBottomNavCondensed] = useState(false);
   const [showLessonTip, setShowLessonTip] = useState(true);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
@@ -826,6 +831,7 @@ export default function CoursePlayer({
   const chatBodyRef = useRef<HTMLDivElement | null>(null);
   const completionRef = useRef(initialCourseComplete);
   const mobileCardBodyRef = useRef<HTMLDivElement | null>(null);
+  const mobileBottomNavTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mobileGestureRef = useRef<{
     bodyClientHeight: number;
     bodyScrollHeight: number;
@@ -919,7 +925,38 @@ export default function CoursePlayer({
   useEffect(() => {
     setActiveMobileCardIndex(0);
     setMobileCardDetailsOpen(false);
+    setMobileCardMotion(null);
+    setMobileCardReadProgress(0);
   }, [currentLessonId]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') {
+      return;
+    }
+
+    const shouldLockLessonViewport = lessons.some((lesson) => lesson.id === currentLessonId);
+    const shouldUseCompactLessonNav = shouldLockLessonViewport || mobileBottomNavCondensed;
+
+    document.body.classList.toggle('mobile-lesson-screen', shouldLockLessonViewport);
+    document.body.classList.toggle('mobile-lesson-nav-condensed', shouldUseCompactLessonNav);
+
+    return () => {
+      document.body.classList.remove('mobile-lesson-screen');
+      document.body.classList.remove('mobile-lesson-nav-condensed');
+    };
+  }, [currentLessonId, lessons, mobileBottomNavCondensed]);
+
+  useEffect(() => {
+    return () => {
+      if (mobileBottomNavTimeoutRef.current) {
+        clearTimeout(mobileBottomNavTimeoutRef.current);
+      }
+
+      if (typeof document !== 'undefined') {
+        document.body.classList.remove('mobile-lesson-nav-condensed');
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const currentLesson = lessons.find((lesson) => lesson.id === currentLessonId);
@@ -1148,6 +1185,59 @@ export default function CoursePlayer({
       ? Math.round(((activeMobileCardIndex + 1) / mobileLessonCards.length) * 100)
       : 0;
   const mobileCardHasDetails = (activeMobileCard?.detailBlocks?.length ?? 0) > 0;
+  const activeMobileCardIsFullyRead = mobileCardReadProgress >= 0.985;
+
+  useEffect(() => {
+    if (currentLessonLocked || mobileLessonCards.length === 0) {
+      setMobileCardReadProgress(1);
+      return;
+    }
+
+    const body = mobileCardBodyRef.current;
+
+    if (!body) {
+      return;
+    }
+
+    body.scrollTop = 0;
+    setMobileCardReadProgress(0);
+
+    const handleScroll = () => {
+      syncMobileCardReadProgress();
+      extendMobileBottomNavCondensedState();
+    };
+
+    handleScroll();
+    body.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      body.removeEventListener('scroll', handleScroll);
+    };
+  }, [activeMobileCardIndex, currentLessonLocked, mobileLessonCards.length]);
+
+  useEffect(() => {
+    if (!mobileCardMotion) {
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      setMobileCardMotion(null);
+    }, 220);
+
+    return () => clearTimeout(timeout);
+  }, [mobileCardMotion]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || currentLessonLocked || mobileLessonCards.length === 0) {
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      syncMobileCardReadProgress();
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [activeMobileCardIndex, currentLessonLocked, mobileCardDetailsOpen, mobileLessonCards.length]);
 
   function updateLesson(
     lessonId: number,
@@ -1190,14 +1280,75 @@ export default function CoursePlayer({
     openLesson(nextLesson.id);
   }
 
+  function extendMobileBottomNavCondensedState() {
+    if (typeof window === 'undefined' || window.innerWidth > 960) {
+      return;
+    }
+
+    setMobileBottomNavCondensed(true);
+
+    if (mobileBottomNavTimeoutRef.current) {
+      clearTimeout(mobileBottomNavTimeoutRef.current);
+    }
+
+    mobileBottomNavTimeoutRef.current = setTimeout(() => {
+      setMobileBottomNavCondensed(false);
+    }, 1400);
+  }
+
+  function syncMobileCardReadProgress() {
+    const body = mobileCardBodyRef.current;
+
+    if (!body) {
+      setMobileCardReadProgress(1);
+      return true;
+    }
+
+    const readableDistance = Math.max(body.scrollHeight - body.clientHeight, 0);
+
+    if (readableDistance <= 12) {
+      setMobileCardReadProgress(1);
+      return true;
+    }
+
+    const nextProgress = Math.min(1, body.scrollTop / readableDistance);
+    setMobileCardReadProgress(nextProgress);
+
+    return nextProgress >= 0.985;
+  }
+
+  function nudgeMobileCardBodyForward() {
+    const body = mobileCardBodyRef.current;
+
+    if (!body) {
+      return false;
+    }
+
+    const remaining = body.scrollHeight - body.clientHeight - body.scrollTop;
+
+    if (remaining <= 18) {
+      setMobileCardReadProgress(1);
+      return false;
+    }
+
+    body.scrollBy({
+      top: Math.min(Math.max(body.clientHeight * 0.84, 160), remaining),
+      behavior: 'smooth',
+    });
+
+    return true;
+  }
+
   function openPreviousMobileCard() {
     setMobileCardDetailsOpen(false);
+    setMobileCardMotion('backward');
     setActiveMobileCardIndex((current) => Math.max(current - 1, 0));
   }
 
   function openNextMobileCard() {
     setShowLessonTip(false);
     setMobileCardDetailsOpen(false);
+    setMobileCardMotion('forward');
     setActiveMobileCardIndex((current) =>
       Math.min(current + 1, Math.max(mobileLessonCards.length - 1, 0))
     );
@@ -1205,11 +1356,13 @@ export default function CoursePlayer({
 
   function toggleMobileCardDetails() {
     setShowLessonTip(false);
+    extendMobileBottomNavCondensedState();
     setMobileCardDetailsOpen((current) => !current);
   }
 
   function handleMobileCardBackwardIntent(preferDetails: boolean) {
     setShowLessonTip(false);
+    extendMobileBottomNavCondensedState();
 
     if (preferDetails && mobileCardHasDetails) {
       setMobileCardDetailsOpen((current) => !current);
@@ -1228,6 +1381,11 @@ export default function CoursePlayer({
 
   function handleMobileCardForwardIntent() {
     setShowLessonTip(false);
+    extendMobileBottomNavCondensedState();
+
+    if (!syncMobileCardReadProgress() && nudgeMobileCardBodyForward()) {
+      return;
+    }
 
     if (activeMobileCardIndex < mobileLessonCards.length - 1) {
       openNextMobileCard();
@@ -1240,6 +1398,8 @@ export default function CoursePlayer({
   }
 
   function handleMobileCardTouchStart(event: ReactTouchEvent<HTMLElement>) {
+    extendMobileBottomNavCondensedState();
+
     if (mobileLessonCards.length === 0 || currentLessonLocked) {
       mobileGestureRef.current = null;
       return;
@@ -1660,11 +1820,12 @@ export default function CoursePlayer({
             lesson={currentLesson}
             nextLesson={nextLesson}
             pendingLessonId={pendingLessonId}
+            secondaryActionLabel="Дальше"
             showChecklistOptions={false}
             onCompletedToggle={handleCompletedToggle}
             onHomeworkOptionToggle={handleHomeworkOptionToggle}
             onHomeworkTextChange={handleHomeworkTextChange}
-            onOpenNextLesson={openNextLesson}
+            onOpenNextLesson={handleMobileCardForwardIntent}
             onPersistProgress={persistProgress}
           />
         </>
@@ -1691,7 +1852,11 @@ export default function CoursePlayer({
   }
 
   return (
-    <main className="page-shell course-player-page">
+    <main
+      className={`page-shell course-player-page ${
+        currentLesson ? 'course-player-page--lesson-active' : ''
+      }`.trim()}
+    >
       <div className="top-nav">
         <Link href="/" className="brand">
           <span className="brand-mark" />
@@ -1707,7 +1872,7 @@ export default function CoursePlayer({
         </div>
       </div>
 
-      <section className="stack-grid">
+      <section className={`stack-grid ${currentLesson ? 'stack-grid--lesson-active' : ''}`.trim()}>
         <div className="section-header">
           <span className="title-main">Обучение</span>
           <span className="title-divider">/</span>
@@ -1940,8 +2105,12 @@ export default function CoursePlayer({
           </div>
         </details>
 
-        <div className="lms-wrapper">
-          <article className="glass-panel lms-main glow-target">
+        <div className={`lms-wrapper ${currentLesson ? 'lms-wrapper--lesson-active' : ''}`.trim()}>
+          <article
+            className={`glass-panel lms-main glow-target ${
+              currentLesson ? 'lms-main--lesson-active' : ''
+            }`.trim()}
+          >
             {courseFinished && !successOpen ? (
               <button
                 className="success-mini-badge"
@@ -1979,12 +2148,18 @@ export default function CoursePlayer({
             ) : null}
 
             <div
-              className="lms-scroll-area"
+              className={`lms-scroll-area ${
+                currentLesson ? 'lms-scroll-area--lesson-active' : ''
+              }`.trim()}
               style={{ display: successOpen ? 'none' : undefined }}
             >
               {currentLesson ? (
                 <>
-                  <div className="course-player-lesson-mobile">
+                  <div
+                    className={`course-player-lesson-mobile ${
+                      currentLesson ? 'course-player-lesson-mobile--active' : ''
+                    }`.trim()}
+                  >
                     {currentLessonLocked ? (
                       <article className="lesson-mobile-card lesson-mobile-card--locked">
                         <div className="lesson-mobile-card__status">
@@ -1994,27 +2169,35 @@ export default function CoursePlayer({
                           ) : null}
                         </div>
 
-                        <div className="lesson-mobile-card__hero">
-                          <span className="lesson-mobile-card__eyebrow">
-                            Урок {currentLesson.position} из {lessons.length}
-                          </span>
-                          <h2 className="lesson-mobile-card__title">{currentLesson.title}</h2>
-                          <p className="lesson-mobile-card__summary">{mobileHintText}</p>
-                        </div>
+                        <div className="lesson-mobile-card__body lesson-mobile-card__body--locked">
+                          <div className="lesson-mobile-card__hero">
+                            <span className="lesson-mobile-card__eyebrow">
+                              Урок {currentLesson.position} из {lessons.length}
+                            </span>
+                            <h2 className="lesson-mobile-card__title">{currentLesson.title}</h2>
+                            <p className="lesson-mobile-card__summary">{mobileHintText}</p>
+                          </div>
 
-                        <div className="lesson-mobile-card__section lesson-mobile-card__section--paywall">
-                          <PaywallBlock
-                            course={courseState}
-                            lesson={currentLesson}
-                            onCreateOrder={handleCreateOrder}
-                            purchasePending={purchasePending}
-                          />
+                          <div className="lesson-mobile-card__section lesson-mobile-card__section--paywall">
+                            <PaywallBlock
+                              course={courseState}
+                              lesson={currentLesson}
+                              onCreateOrder={handleCreateOrder}
+                              purchasePending={purchasePending}
+                            />
+                          </div>
                         </div>
                       </article>
                     ) : activeMobileCard ? (
                       <>
                         <article
-                          className="lesson-mobile-card lesson-mobile-card--feed"
+                          className={`lesson-mobile-card lesson-mobile-card--feed ${
+                            mobileCardMotion === 'forward'
+                              ? 'lesson-mobile-card--motion-forward'
+                              : mobileCardMotion === 'backward'
+                                ? 'lesson-mobile-card--motion-backward'
+                                : ''
+                          }`.trim()}
                           onTouchCancel={() => {
                             mobileGestureRef.current = null;
                           }}
@@ -2057,7 +2240,7 @@ export default function CoursePlayer({
                             ) : activeMobileCardIndex > 0 ? (
                               <button
                                 className="ghost-button"
-                                onClick={openPreviousMobileCard}
+                                onClick={() => handleMobileCardBackwardIntent(false)}
                                 type="button"
                               >
                                 Назад
@@ -2069,18 +2252,18 @@ export default function CoursePlayer({
                             {activeMobileCardIndex < mobileLessonCards.length - 1 ? (
                               <button
                                 className="primary-button"
-                                onClick={openNextMobileCard}
+                                onClick={handleMobileCardForwardIntent}
                                 type="button"
                               >
-                                Дальше
+                                {activeMobileCardIsFullyRead ? 'Дальше' : 'Дочитать'}
                               </button>
                             ) : nextLesson ? (
                               <button
                                 className="primary-button"
-                                onClick={openNextLesson}
+                                onClick={handleMobileCardForwardIntent}
                                 type="button"
                               >
-                                Следующий урок
+                                {activeMobileCardIsFullyRead ? 'Следующий урок' : 'Дочитать'}
                               </button>
                             ) : (
                               <Link className="primary-button" href="/lk">
@@ -2092,14 +2275,14 @@ export default function CoursePlayer({
 
                         {(nextMobileCard || nextLesson) && (
                           <button
-                            className="lesson-mobile-next-card"
-                            onClick={
-                              nextMobileCard
-                                ? openNextMobileCard
-                                : nextLesson
-                                  ? openNextLesson
-                                  : undefined
-                            }
+                            className={`lesson-mobile-next-card ${
+                              mobileCardMotion === 'forward'
+                                ? 'lesson-mobile-next-card--motion-forward'
+                                : mobileCardMotion === 'backward'
+                                  ? 'lesson-mobile-next-card--motion-backward'
+                                  : ''
+                            }`.trim()}
+                            onClick={handleMobileCardForwardIntent}
                             type="button"
                           >
                             <div className="lesson-mobile-next-card__ghost">
