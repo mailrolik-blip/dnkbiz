@@ -440,6 +440,19 @@ function UserAvatarIcon() {
   );
 }
 
+function ChecklistIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
+      <path d="M9 7.5h9" />
+      <path d="M9 12h9" />
+      <path d="M9 16.5h9" />
+      <path d="m5.5 7.5 1.2 1.2 2-2.4" />
+      <path d="m5.5 12 1.2 1.2 2-2.4" />
+      <path d="m5.5 16.5 1.2 1.2 2-2.4" />
+    </svg>
+  );
+}
+
 function LessonContentBlocks({ blocks }: { blocks: ContentBlock[] }) {
   return (
     <>
@@ -831,6 +844,7 @@ export default function CoursePlayer({
   const chatBodyRef = useRef<HTMLDivElement | null>(null);
   const completionRef = useRef(initialCourseComplete);
   const mobileCardBodyRef = useRef<HTMLDivElement | null>(null);
+  const mobileNavPeekTimeoutRef = useRef<number | null>(null);
   const mobileGestureRef = useRef<{
     bodyClientHeight: number;
     bodyScrollHeight: number;
@@ -926,21 +940,83 @@ export default function CoursePlayer({
     setMobileCardDetailsOpen(false);
     setMobileCardMotion(null);
     setMobileCardReadProgress(0);
+    setMobileHeaderCollapsed(false);
   }, [currentLessonId]);
 
   useEffect(() => {
-    if (typeof document === 'undefined') {
+    if (typeof document === 'undefined' || typeof window === 'undefined') {
       return;
     }
 
-    const shouldLockLessonViewport = lessons.some((lesson) => lesson.id === currentLessonId);
+    const syncMobileLessonViewport = () => {
+      const shouldLockLessonViewport =
+        window.matchMedia('(max-width: 960px)').matches &&
+        lessons.some((lesson) => lesson.id === currentLessonId);
 
-    document.body.classList.toggle('mobile-lesson-screen', shouldLockLessonViewport);
-    document.body.classList.toggle('mobile-lesson-nav-condensed', shouldLockLessonViewport);
+      document.body.classList.toggle('mobile-lesson-screen', shouldLockLessonViewport);
+      document.body.classList.toggle('mobile-lesson-nav-condensed', shouldLockLessonViewport);
+
+      if (!shouldLockLessonViewport) {
+        document.body.classList.remove('mobile-lesson-nav-peek');
+      }
+    };
+
+    syncMobileLessonViewport();
+    window.addEventListener('resize', syncMobileLessonViewport);
 
     return () => {
+      window.removeEventListener('resize', syncMobileLessonViewport);
       document.body.classList.remove('mobile-lesson-screen');
       document.body.classList.remove('mobile-lesson-nav-condensed');
+      document.body.classList.remove('mobile-lesson-nav-peek');
+    };
+  }, [currentLessonId, lessons]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined' || typeof window === 'undefined') {
+      return;
+    }
+
+    const lessonOpenOnMobile =
+      window.matchMedia('(max-width: 960px)').matches &&
+      lessons.some((lesson) => lesson.id === currentLessonId);
+
+    if (!lessonOpenOnMobile) {
+      return;
+    }
+
+    const navElement = document.querySelector('.mobile-bottom-nav');
+
+    if (!navElement) {
+      return;
+    }
+
+    const revealNavLabels = () => {
+      document.body.classList.add('mobile-lesson-nav-peek');
+
+      if (mobileNavPeekTimeoutRef.current) {
+        window.clearTimeout(mobileNavPeekTimeoutRef.current);
+      }
+
+      mobileNavPeekTimeoutRef.current = window.setTimeout(() => {
+        document.body.classList.remove('mobile-lesson-nav-peek');
+        mobileNavPeekTimeoutRef.current = null;
+      }, 1400);
+    };
+
+    navElement.addEventListener('pointerdown', revealNavLabels);
+    navElement.addEventListener('focusin', revealNavLabels);
+
+    return () => {
+      navElement.removeEventListener('pointerdown', revealNavLabels);
+      navElement.removeEventListener('focusin', revealNavLabels);
+
+      if (mobileNavPeekTimeoutRef.current) {
+        window.clearTimeout(mobileNavPeekTimeoutRef.current);
+        mobileNavPeekTimeoutRef.current = null;
+      }
+
+      document.body.classList.remove('mobile-lesson-nav-peek');
     };
   }, [currentLessonId, lessons]);
 
@@ -1178,6 +1254,34 @@ export default function CoursePlayer({
       : nextLesson
         ? 'К уроку'
         : 'В ЛК';
+  const mobileStatusItems = currentLesson
+    ? [
+        {
+          icon: <CheckIcon />,
+          key: 'completion',
+          label: currentLesson.progress?.completed
+            ? 'Урок завершен'
+            : 'Урок в процессе',
+          tone: currentLesson.progress?.completed ? 'complete' : 'active',
+        },
+        ...(currentLesson.isPreview
+          ? [
+              {
+                icon: <PlayIcon />,
+                key: 'preview',
+                label: 'Превью',
+                tone: 'preview',
+              },
+            ]
+          : []),
+        {
+          icon: <ChecklistIcon />,
+          key: 'homework',
+          label: getHomeworkTypeLabel(currentHomeworkType),
+          tone: 'homework',
+        },
+      ]
+    : [];
 
   useEffect(() => {
     if (currentLessonLocked || mobileLessonCards.length === 0) {
@@ -1196,7 +1300,10 @@ export default function CoursePlayer({
 
     const handleScroll = () => {
       syncMobileCardReadProgress();
-      setMobileHeaderCollapsed(body.scrollTop > 18);
+
+      if (body.scrollTop > 18) {
+        setMobileHeaderCollapsed(true);
+      }
     };
 
     handleScroll();
@@ -2194,23 +2301,23 @@ export default function CoursePlayer({
                           onTouchStart={handleMobileCardTouchStart}
                         >
                           <div className="lesson-mobile-card__status">
-                            <span
-                              className={
-                                currentLesson.progress?.completed
-                                  ? 'badge badge-complete'
-                                  : 'badge badge-pending'
-                              }
-                            >
-                              {currentLesson.progress?.completed
-                                ? 'Урок завершен'
-                                : 'Урок в процессе'}
-                            </span>
-                            {currentLesson.isPreview ? (
-                              <span className="badge badge-pending">Превью</span>
-                            ) : null}
-                            <span className="badge badge-complete">
-                              {getHomeworkTypeLabel(currentHomeworkType)}
-                            </span>
+                            {mobileStatusItems.map((item) => (
+                              <button
+                                key={item.key}
+                                aria-label={item.label}
+                                className={`lesson-mobile-status-chip lesson-mobile-status-chip--${item.tone}`}
+                                data-label={item.label}
+                                type="button"
+                              >
+                                <span
+                                  aria-hidden="true"
+                                  className="lesson-mobile-status-chip__icon"
+                                >
+                                  {item.icon}
+                                </span>
+                                <span className="sr-only">{item.label}</span>
+                              </button>
+                            ))}
                           </div>
 
                           <div className="lesson-mobile-card__body" ref={mobileCardBodyRef}>
