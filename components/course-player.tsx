@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type TouchEvent as ReactTouchEvent } from 'react';
 
 import type { CourseViewerData, CourseViewerLesson } from '@/lib/course-access';
 import { dnkFeaturedPrograms } from '@/lib/dnk-content';
@@ -423,11 +423,26 @@ function LockIcon() {
   );
 }
 
-function LessonContent({ content }: { content: string }) {
-  const blocks = parseContentBlocks(content);
-
+function HeartIcon() {
   return (
-    <div className="lesson-content lesson-content--lms lesson-rich-content">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
+      <path d="M12 20.5 4.8 13.6A4.9 4.9 0 0 1 11.8 6.8L12 7l.2-.2a4.9 4.9 0 0 1 7 6.8L12 20.5Z" />
+    </svg>
+  );
+}
+
+function UserAvatarIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
+      <circle cx="12" cy="8.2" r="3.2" />
+      <path d="M5.5 19c1.4-3.1 4-4.7 6.5-4.7s5.1 1.6 6.5 4.7" />
+    </svg>
+  );
+}
+
+function LessonContentBlocks({ blocks }: { blocks: ContentBlock[] }) {
+  return (
+    <>
       {blocks.map((block, index) => {
         if (block.type === 'heading') {
           return (
@@ -471,6 +486,16 @@ function LessonContent({ content }: { content: string }) {
           </p>
         );
       })}
+    </>
+  );
+}
+
+function LessonContent({ content }: { content: string }) {
+  const blocks = parseContentBlocks(content);
+
+  return (
+    <div className="lesson-content lesson-content--lms lesson-rich-content">
+      <LessonContentBlocks blocks={blocks} />
     </div>
   );
 }
@@ -612,6 +637,156 @@ function PaywallBlock({
   );
 }
 
+function LessonHomeworkPanel({
+  className,
+  compact = false,
+  showChecklistOptions = true,
+  homeworkDraft,
+  homeworkOptions,
+  homeworkType,
+  lesson,
+  nextLesson,
+  pendingLessonId,
+  onCompletedToggle,
+  onHomeworkOptionToggle,
+  onHomeworkTextChange,
+  onOpenNextLesson,
+  onPersistProgress,
+}: {
+  className?: string;
+  compact?: boolean;
+  showChecklistOptions?: boolean;
+  homeworkDraft: HomeworkDraft;
+  homeworkOptions: string[];
+  homeworkType: HomeworkType;
+  lesson: CourseViewerLesson;
+  nextLesson: CourseViewerLesson | null;
+  pendingLessonId: number | null;
+  onCompletedToggle: (completed: boolean) => void;
+  onHomeworkOptionToggle: (option: string) => void;
+  onHomeworkTextChange: (text: string) => void;
+  onOpenNextLesson: () => void;
+  onPersistProgress: () => void;
+}) {
+  return (
+    <div className={['homework-box', className].filter(Boolean).join(' ')}>
+      <div className="hw-header">
+        <div className="hw-header__copy">
+          <span className="hw-label">Домашняя практика</span>
+          <h3 className="hw-title">
+            {lesson.homeworkTitle || 'Закрепление материала'}
+          </h3>
+        </div>
+        <span className="muted-text">
+          Последнее сохранение:{' '}
+          {formatDateTime(lesson.progress?.updatedAt ?? lesson.progress?.lastViewedAt ?? null)}
+        </span>
+      </div>
+
+      <div className="badge-row">
+        <span className="badge badge-complete">{getHomeworkTypeLabel(homeworkType)}</span>
+        {homeworkOptions.length > 0 ? (
+          <span className="badge badge-pending">
+            {homeworkOptions.length} пунктов практики
+          </span>
+        ) : null}
+      </div>
+
+      <div className="hw-task">
+        {lesson.homeworkPrompt ||
+          'Зафиксируйте ключевую мысль урока и сохраните рабочий вывод в прогрессе.'}
+      </div>
+
+      {showChecklistOptions && homeworkOptions.length > 0 ? (
+        <div className="hw-options-grid hw-options-grid--checklist">
+          {homeworkOptions.map((option) => {
+            const checked = homeworkDraft.selectedOptions.includes(option);
+
+            return (
+              <label
+                key={option}
+                className={`hw-checkbox ${checked ? 'hw-checkbox--checked' : ''}`}
+              >
+                <input
+                  checked={checked}
+                  onChange={() => onHomeworkOptionToggle(option)}
+                  type="checkbox"
+                />
+                <span className="checkmark">
+                  <CheckIcon />
+                </span>
+                <span className="hw-checkbox__copy">{option}</span>
+              </label>
+            );
+          })}
+        </div>
+      ) : null}
+
+      {compact ? (
+        <details className="hw-mobile-notes">
+          <summary className="hw-mobile-notes__summary">Заметки по уроку</summary>
+          <label className="field" style={{ gap: '0.55rem' }}>
+            <span className="hw-textarea-label">Ответ по уроку</span>
+            <textarea
+              className="hw-input"
+              onChange={(event) => onHomeworkTextChange(event.target.value)}
+              placeholder={getHomeworkPlaceholder(homeworkType)}
+              rows={4}
+              value={homeworkDraft.text}
+            />
+          </label>
+        </details>
+      ) : (
+        <label className="field" style={{ gap: '0.55rem' }}>
+          <span className="hw-textarea-label">Ответ по уроку</span>
+          <textarea
+            className="hw-input"
+            onChange={(event) => onHomeworkTextChange(event.target.value)}
+            placeholder={getHomeworkPlaceholder(homeworkType)}
+            rows={6}
+            value={homeworkDraft.text}
+          />
+        </label>
+      )}
+
+      <div className="hw-options-grid hw-options-grid--single">
+        <label className="hw-checkbox">
+          <input
+            checked={lesson.progress?.completed ?? false}
+            disabled={pendingLessonId === lesson.id}
+            onChange={(event) => onCompletedToggle(event.target.checked)}
+            type="checkbox"
+          />
+          <span className="checkmark">
+            <CheckIcon />
+          </span>
+          <span>Отметить урок завершенным</span>
+        </label>
+      </div>
+
+      <div className="row-actions" style={{ marginTop: '1rem' }}>
+        <button
+          className="primary-button"
+          disabled={pendingLessonId === lesson.id}
+          onClick={onPersistProgress}
+          type="button"
+        >
+          {pendingLessonId === lesson.id ? 'Сохраняем...' : 'Сохранить прогресс'}
+        </button>
+        {nextLesson ? (
+          <button className="secondary-button" onClick={onOpenNextLesson} type="button">
+            Следующий урок
+          </button>
+        ) : (
+          <Link className="secondary-button" href="/lk">
+            Вернуться в кабинет
+          </Link>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function CoursePlayer({
   course,
   initialLessonSlug = null,
@@ -638,6 +813,9 @@ export default function CoursePlayer({
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [successOpen, setSuccessOpen] = useState(initialCourseComplete);
   const [chatDraft, setChatDraft] = useState('');
+  const [activeMobileCardIndex, setActiveMobileCardIndex] = useState(0);
+  const [mobileCardDetailsOpen, setMobileCardDetailsOpen] = useState(false);
+  const [showLessonTip, setShowLessonTip] = useState(true);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
       id: 1,
@@ -647,6 +825,15 @@ export default function CoursePlayer({
   ]);
   const chatBodyRef = useRef<HTMLDivElement | null>(null);
   const completionRef = useRef(initialCourseComplete);
+  const mobileCardBodyRef = useRef<HTMLDivElement | null>(null);
+  const mobileGestureRef = useRef<{
+    bodyClientHeight: number;
+    bodyScrollHeight: number;
+    bodyScrollTop: number;
+    startedInBody: boolean;
+    startX: number;
+    startY: number;
+  } | null>(null);
 
   useEffect(() => {
     setCourseState(course);
@@ -730,6 +917,11 @@ export default function CoursePlayer({
   }, [lessons]);
 
   useEffect(() => {
+    setActiveMobileCardIndex(0);
+    setMobileCardDetailsOpen(false);
+  }, [currentLessonId]);
+
+  useEffect(() => {
     const currentLesson = lessons.find((lesson) => lesson.id === currentLessonId);
 
     if (!pathname || !currentLesson || requestedLessonSlug === currentLesson.slug) {
@@ -806,7 +998,156 @@ export default function CoursePlayer({
   const assistantUiEnabled = false;
   const relatedCatalogRailEnabled = false;
   const courseCatalogHref = getCourseCatalogHref(courseState.slug);
-  const hasPreviewBar = courseState.access.accessMode === 'PREVIEW';
+  const showPreviewCourseBar = courseState.access.accessMode === 'PREVIEW' && !currentLesson;
+  const courseShortTitle = courseState.title.split(' — ')[0]?.trim() || courseState.title;
+  const currentContentBlocks = currentLesson?.content ? parseContentBlocks(currentLesson.content) : [];
+  const summarySourceBlock =
+    currentContentBlocks.find(
+      (block) => block.type === 'paragraph' || block.type === 'quote'
+    ) ?? null;
+  const summarySourceIndex = summarySourceBlock
+    ? currentContentBlocks.indexOf(summarySourceBlock)
+    : -1;
+  const exampleBlockIndex = currentContentBlocks.findIndex(
+    (block) => block.type === 'list' || block.type === 'ordered-list'
+  );
+  const hintBlockIndex = currentContentBlocks.findIndex((block) => block.type === 'quote');
+  const mobileSummaryText =
+    currentLesson?.description?.trim() ||
+    (summarySourceBlock && 'text' in summarySourceBlock ? summarySourceBlock.text : '') ||
+    'Короткий конспект и практика по текущему уроку.';
+  const mobileExampleBlock =
+    exampleBlockIndex >= 0 ? currentContentBlocks[exampleBlockIndex] : null;
+  const mobileHintText =
+    hintBlockIndex >= 0 && currentContentBlocks[hintBlockIndex]?.type === 'quote'
+      ? currentContentBlocks[hintBlockIndex].text
+      : currentLessonLocked
+        ? 'Урок откроется после подтверждения оплаты. Превью-уроки и прогресс сохраняются.'
+        : currentLesson?.homeworkPrompt ||
+          'Зафиксируйте ключевой вывод и сразу сохраните прогресс, чтобы вернуться к нему без потерь.';
+  const mobileDetailBlocks = currentContentBlocks.filter((_, index) => {
+    if (!currentLesson?.description && index === summarySourceIndex) {
+      return false;
+    }
+
+    if (index === hintBlockIndex) {
+      return false;
+    }
+
+    if (index === exampleBlockIndex) {
+      return false;
+    }
+
+    return true;
+  });
+  const nextStepTitle = nextLesson
+    ? `${nextLesson.position}. ${nextLesson.title}`
+    : 'Курс идет к финалу';
+  const nextStepCopy = nextLesson
+    ? nextLesson.isLocked
+      ? 'Следующий урок откроется после полного доступа.'
+      : nextLesson.description ||
+        'Переходите дальше, чтобы сохранить темп обучения.'
+    : 'После этого шага можно вернуться в кабинет и пересмотреть пройденные материалы.';
+  const lessonProgressLabel = currentLesson
+    ? `Урок ${currentLesson.position} из ${lessons.length}`
+    : `${lessons.length} уроков`;
+  const checklistSourceBlock = currentContentBlocks.find(
+    (block, index) =>
+      index !== exampleBlockIndex &&
+      (block.type === 'list' || block.type === 'ordered-list')
+  );
+  const introDetailBlocks = mobileDetailBlocks.slice(0, 2);
+  const selectedChecklistCount = currentHomeworkDraft.selectedOptions.length;
+  const checklistItems =
+    currentHomeworkOptions.length > 0
+      ? currentHomeworkOptions
+      : checklistSourceBlock && 'items' in checklistSourceBlock
+        ? checklistSourceBlock.items
+        : [];
+  const visualSupportBlocks =
+    mobileExampleBlock || currentLesson?.videoUrl ? [] : mobileDetailBlocks.slice(0, 2);
+  const mobileLessonCards =
+    currentLesson && !currentLessonLocked
+      ? [
+          {
+            id: 'intro',
+            eyebrow: 'Карточка смысла',
+            title: 'Что важно понять',
+            summary: mobileSummaryText,
+            detailBlocks: introDetailBlocks,
+            teaserTitle: 'Пример из урока',
+            teaserCopy: currentLesson.videoUrl
+              ? 'Ниже карточка с материалом урока и рабочим примером.'
+              : 'Ниже карточка с существующим фрагментом урока.',
+          },
+          {
+            id: 'example',
+            eyebrow: 'Карточка примера',
+            title: currentLesson.videoUrl
+              ? 'Материал урока'
+              : 'Фрагмент из материалов урока',
+            summary: currentLesson.videoUrl
+              ? 'Смотрите пример и соотносите его с текущим уроком.'
+              : 'Используем существующий материал урока как функциональный ориентир.',
+            detailBlocks: [],
+            teaserTitle: 'Чек-лист понимания',
+            teaserCopy:
+              checklistItems.length > 0
+                ? 'Следом короткая карточка для проверки ключевых пунктов.'
+                : 'Следом короткая карточка с опорными пунктами урока.',
+          },
+          {
+            id: 'checklist',
+            eyebrow: 'Карточка проверки',
+            title: 'Проверьте ключевые пункты',
+            summary:
+              checklistItems.length > 0
+                ? 'Отмечайте пункты по мере прохождения материала.'
+                : 'Соберите опорные пункты урока перед практикой.',
+            detailBlocks:
+              checklistItems.length === 0 && checklistSourceBlock ? [checklistSourceBlock] : [],
+            teaserTitle: currentLesson.homeworkTitle || 'Задание по уроку',
+            teaserCopy:
+              'Следующая карточка нужна, чтобы зафиксировать выводы и сохранить прогресс.',
+          },
+          {
+            id: 'assignment',
+            eyebrow: 'Карточка задания',
+            title: currentLesson.homeworkTitle || 'Закрепление материала',
+            summary:
+              currentLesson.homeworkPrompt ||
+              'Зафиксируйте рабочий вывод по уроку и сохраните прогресс.',
+            detailBlocks: [],
+            teaserTitle: nextLesson ? 'Финальная карточка урока' : 'Финал урока',
+            teaserCopy: nextLesson
+              ? 'Последняя карточка подведет итог и направит к следующему уроку.'
+              : 'Последняя карточка подведет итог и вернет вас к курсу.',
+          },
+          {
+            id: 'finish',
+            eyebrow: 'Финальная карточка',
+            title: nextLesson ? 'Следующий шаг в курсе' : 'Урок завершен',
+            summary: nextStepCopy,
+            detailBlocks: [],
+            teaserTitle: nextLesson ? `Дальше: ${nextStepTitle}` : 'Курс продолжается',
+            teaserCopy: nextLesson
+              ? 'Следующий урок уже готов к открытию.'
+              : 'Можно вернуться к курсу и пересмотреть материалы.',
+          },
+        ]
+      : [];
+  const activeMobileCard =
+    mobileLessonCards[Math.min(activeMobileCardIndex, mobileLessonCards.length - 1)] ?? null;
+  const nextMobileCard =
+    activeMobileCardIndex < mobileLessonCards.length - 1
+      ? mobileLessonCards[activeMobileCardIndex + 1]
+      : null;
+  const mobileCardProgressPercent =
+    mobileLessonCards.length > 0
+      ? Math.round(((activeMobileCardIndex + 1) / mobileLessonCards.length) * 100)
+      : 0;
+  const mobileCardHasDetails = (activeMobileCard?.detailBlocks?.length ?? 0) > 0;
 
   function updateLesson(
     lessonId: number,
@@ -847,6 +1188,145 @@ export default function CoursePlayer({
     }
 
     openLesson(nextLesson.id);
+  }
+
+  function openPreviousMobileCard() {
+    setMobileCardDetailsOpen(false);
+    setActiveMobileCardIndex((current) => Math.max(current - 1, 0));
+  }
+
+  function openNextMobileCard() {
+    setShowLessonTip(false);
+    setMobileCardDetailsOpen(false);
+    setActiveMobileCardIndex((current) =>
+      Math.min(current + 1, Math.max(mobileLessonCards.length - 1, 0))
+    );
+  }
+
+  function toggleMobileCardDetails() {
+    setShowLessonTip(false);
+    setMobileCardDetailsOpen((current) => !current);
+  }
+
+  function handleMobileCardBackwardIntent(preferDetails: boolean) {
+    setShowLessonTip(false);
+
+    if (preferDetails && mobileCardHasDetails) {
+      setMobileCardDetailsOpen((current) => !current);
+      return;
+    }
+
+    if (activeMobileCardIndex > 0) {
+      openPreviousMobileCard();
+      return;
+    }
+
+    if (mobileCardHasDetails) {
+      setMobileCardDetailsOpen((current) => !current);
+    }
+  }
+
+  function handleMobileCardForwardIntent() {
+    setShowLessonTip(false);
+
+    if (activeMobileCardIndex < mobileLessonCards.length - 1) {
+      openNextMobileCard();
+      return;
+    }
+
+    if (nextLesson) {
+      openNextLesson();
+    }
+  }
+
+  function handleMobileCardTouchStart(event: ReactTouchEvent<HTMLElement>) {
+    if (mobileLessonCards.length === 0 || currentLessonLocked) {
+      mobileGestureRef.current = null;
+      return;
+    }
+
+    if (!(event.target instanceof Element)) {
+      mobileGestureRef.current = null;
+      return;
+    }
+
+    if (event.target.closest('button, a, input, textarea, label, summary')) {
+      mobileGestureRef.current = null;
+      return;
+    }
+
+    const touch = event.touches[0];
+    const bodyElement = event.target.closest('.lesson-mobile-card__body') as HTMLDivElement | null;
+
+    mobileGestureRef.current = {
+      bodyClientHeight: bodyElement?.clientHeight ?? 0,
+      bodyScrollHeight: bodyElement?.scrollHeight ?? 0,
+      bodyScrollTop: bodyElement?.scrollTop ?? 0,
+      startedInBody: Boolean(bodyElement),
+      startX: touch.clientX,
+      startY: touch.clientY,
+    };
+  }
+
+  function handleMobileCardTouchEnd(event: ReactTouchEvent<HTMLElement>) {
+    const gesture = mobileGestureRef.current;
+    mobileGestureRef.current = null;
+
+    if (!gesture || mobileLessonCards.length === 0 || currentLessonLocked) {
+      return;
+    }
+
+    if (event.target instanceof Element) {
+      if (event.target.closest('button, a, input, textarea, label, summary')) {
+        return;
+      }
+    }
+
+    const touch = event.changedTouches[0];
+    const deltaX = touch.clientX - gesture.startX;
+    const deltaY = touch.clientY - gesture.startY;
+    const absX = Math.abs(deltaX);
+    const absY = Math.abs(deltaY);
+    const threshold = 44;
+
+    if (absX < threshold && absY < threshold) {
+      return;
+    }
+
+    const verticalGesture = absY > absX;
+
+    if (verticalGesture) {
+      if (gesture.startedInBody) {
+        const canScrollDown =
+          gesture.bodyScrollTop + gesture.bodyClientHeight < gesture.bodyScrollHeight - 16;
+        const canScrollUp = gesture.bodyScrollTop > 16;
+
+        if (deltaY < -threshold && canScrollDown) {
+          return;
+        }
+
+        if (deltaY > threshold && canScrollUp) {
+          return;
+        }
+      }
+
+      if (deltaY < -threshold) {
+        handleMobileCardForwardIntent();
+      } else if (deltaY > threshold) {
+        handleMobileCardBackwardIntent(true);
+      }
+
+      return;
+    }
+
+    if (deltaX > threshold) {
+      handleMobileCardForwardIntent();
+      return;
+    }
+
+    if (deltaX < -threshold) {
+      handleMobileCardBackwardIntent(false);
+    }
   }
 
   function handleHomeworkTextChange(text: string) {
@@ -1030,10 +1510,188 @@ export default function CoursePlayer({
     }, 550);
   }
 
+  function renderActiveMobileCardBody() {
+    if (!currentLesson || currentLessonLocked || !activeMobileCard) {
+      return null;
+    }
+
+    if (activeMobileCard.id === 'intro') {
+      return (
+        <>
+          <div className="lesson-mobile-card__copy">
+            <span className="lesson-mobile-card__eyebrow">{activeMobileCard.eyebrow}</span>
+            <h2 className="lesson-mobile-card__title">{currentLesson.title}</h2>
+            <p className="lesson-mobile-card__summary">{activeMobileCard.summary}</p>
+          </div>
+
+          <div className="lesson-mobile-card__hint-panel">
+            <span className="eyebrow">Важная подсказка</span>
+            <p>{mobileHintText}</p>
+          </div>
+
+          {mobileCardDetailsOpen && activeMobileCard.detailBlocks.length > 0 ? (
+            <div className="lesson-mobile-card__detail-panel">
+              <LessonContentBlocks blocks={activeMobileCard.detailBlocks} />
+            </div>
+          ) : null}
+        </>
+      );
+    }
+
+    if (activeMobileCard.id === 'example') {
+      return (
+        <>
+          <div className="lesson-mobile-card__copy">
+            <span className="lesson-mobile-card__eyebrow">{activeMobileCard.eyebrow}</span>
+            <h2 className="lesson-mobile-card__title">{activeMobileCard.title}</h2>
+            <p className="lesson-mobile-card__summary">{activeMobileCard.summary}</p>
+          </div>
+
+          <div className="lesson-mobile-card__visual-shell">
+            {currentLesson.videoUrl ? (
+              <VideoBlock lesson={currentLesson} />
+            ) : mobileExampleBlock ? (
+              <div className="lesson-rich-content lesson-rich-content--embedded">
+                <LessonContentBlocks blocks={[mobileExampleBlock]} />
+              </div>
+            ) : visualSupportBlocks.length > 0 ? (
+              <div className="lesson-rich-content lesson-rich-content--embedded">
+                <LessonContentBlocks blocks={visualSupportBlocks} />
+              </div>
+            ) : (
+              <div className="video-placeholder lesson-video lesson-video--fallback">
+                <div className="video-placeholder__icon">
+                  <PlayIcon />
+                </div>
+                <div className="lesson-video__meta">
+                  <strong>Рабочий фрагмент урока</strong>
+                  <p>Опирайтесь на текущий материал урока и переходите к чек-листу ниже.</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </>
+      );
+    }
+
+    if (activeMobileCard.id === 'checklist') {
+      return (
+        <>
+          <div className="lesson-mobile-card__copy">
+            <span className="lesson-mobile-card__eyebrow">{activeMobileCard.eyebrow}</span>
+            <h2 className="lesson-mobile-card__title">{activeMobileCard.title}</h2>
+            <p className="lesson-mobile-card__summary">{activeMobileCard.summary}</p>
+          </div>
+
+          <div className="lesson-mobile-card__checklist-summary">
+            <strong>
+              {currentHomeworkOptions.length > 0
+                ? `${selectedChecklistCount}/${checklistItems.length} пунктов отмечено`
+                : 'Опорные пункты урока'}
+            </strong>
+            <span>{currentHomeworkType === 'CHECKLIST' ? 'Практика по уроку' : 'Подготовка к заданию'}</span>
+          </div>
+
+          {currentHomeworkOptions.length > 0 ? (
+            <div className="lesson-mobile-checklist">
+              {checklistItems.map((item) => {
+                const checked = currentHomeworkDraft.selectedOptions.includes(item);
+
+                return (
+                  <label
+                    key={item}
+                    className={`lesson-mobile-checklist__item ${
+                      checked ? 'lesson-mobile-checklist__item--checked' : ''
+                    }`}
+                  >
+                    <input
+                      checked={checked}
+                      onChange={() => handleHomeworkOptionToggle(item)}
+                      type="checkbox"
+                    />
+                    <span className="checkmark">
+                      <CheckIcon />
+                    </span>
+                    <span>{item}</span>
+                  </label>
+                );
+              })}
+            </div>
+          ) : checklistItems.length > 0 ? (
+            <div className="lesson-mobile-checklist">
+              {checklistItems.map((item) => (
+                <div key={item} className="lesson-mobile-checklist__item lesson-mobile-checklist__item--static">
+                  <span className="checkmark">
+                    <CheckIcon />
+                  </span>
+                  <span>{item}</span>
+                </div>
+              ))}
+            </div>
+          ) : activeMobileCard.detailBlocks.length > 0 ? (
+            <div className="lesson-mobile-card__detail-panel">
+              <LessonContentBlocks blocks={activeMobileCard.detailBlocks} />
+            </div>
+          ) : (
+            <div className="lesson-mobile-card__hint-panel">
+              <span className="eyebrow">Практика</span>
+              <p>Следующая карточка откроет задание и сохранение прогресса по уроку.</p>
+            </div>
+          )}
+        </>
+      );
+    }
+
+    if (activeMobileCard.id === 'assignment') {
+      return (
+        <>
+          <div className="lesson-mobile-card__copy">
+            <span className="lesson-mobile-card__eyebrow">{activeMobileCard.eyebrow}</span>
+            <h2 className="lesson-mobile-card__title">{activeMobileCard.title}</h2>
+            <p className="lesson-mobile-card__summary">{activeMobileCard.summary}</p>
+          </div>
+
+          <LessonHomeworkPanel
+            className="homework-box--mobile-card"
+            compact
+            homeworkDraft={currentHomeworkDraft}
+            homeworkOptions={currentHomeworkOptions}
+            homeworkType={currentHomeworkType}
+            lesson={currentLesson}
+            nextLesson={nextLesson}
+            pendingLessonId={pendingLessonId}
+            showChecklistOptions={false}
+            onCompletedToggle={handleCompletedToggle}
+            onHomeworkOptionToggle={handleHomeworkOptionToggle}
+            onHomeworkTextChange={handleHomeworkTextChange}
+            onOpenNextLesson={openNextLesson}
+            onPersistProgress={persistProgress}
+          />
+        </>
+      );
+    }
+
+    return (
+      <>
+        <div className="lesson-mobile-card__copy">
+          <span className="lesson-mobile-card__eyebrow">{activeMobileCard.eyebrow}</span>
+          <h2 className="lesson-mobile-card__title">{activeMobileCard.title}</h2>
+          <p className="lesson-mobile-card__summary">{activeMobileCard.summary}</p>
+        </div>
+
+        <div className="lesson-mobile-card__finish-panel">
+          <div>
+            <span className="eyebrow">Следом в курсе</span>
+            <strong>{nextStepTitle}</strong>
+          </div>
+          <p>{nextStepCopy}</p>
+        </div>
+      </>
+    );
+  }
+
   return (
-    <main
-      className={`page-shell ${hasPreviewBar ? 'page-shell--with-sticky-mobile-bar' : ''}`.trim()}
-    >
+    <main className="page-shell course-player-page">
       <div className="top-nav">
         <Link href="/" className="brand">
           <span className="brand-mark" />
@@ -1084,6 +1742,94 @@ export default function CoursePlayer({
             <span className="badge badge-complete">{progressPercent}% прогресса</span>
           </div>
         </div>
+
+        {currentLesson ? (
+          <section className="course-player-mobile-header">
+            <div className="course-player-mobile-header__top">
+              <div className="course-player-mobile-header__context">
+                <span className="eyebrow">{lessonProgressLabel}</span>
+                <strong>{courseShortTitle}</strong>
+              </div>
+              <div className="course-player-mobile-header__actions">
+                <button
+                  aria-label="Избранное появится позже"
+                  className="course-player-mobile-header__icon-button"
+                  disabled
+                  type="button"
+                >
+                  <HeartIcon />
+                </button>
+                <Link
+                  aria-label="Открыть профиль"
+                  className="course-player-mobile-header__avatar"
+                  href="/profile"
+                >
+                  <UserAvatarIcon />
+                </Link>
+              </div>
+            </div>
+
+            <div className="course-player-mobile-header__track" aria-label="Лента уроков">
+              {lessons.map((lesson) => (
+                <button
+                  key={lesson.id}
+                  aria-current={lesson.id === currentLessonId ? 'step' : undefined}
+                  className={`course-player-mobile-header__step ${
+                    lesson.id === currentLessonId
+                      ? 'course-player-mobile-header__step--active'
+                      : ''
+                  } ${
+                    lesson.progress?.completed
+                      ? 'course-player-mobile-header__step--completed'
+                      : ''
+                  } ${
+                    lesson.isLocked ? 'course-player-mobile-header__step--locked' : ''
+                  }`}
+                  onClick={() => openLesson(lesson.id)}
+                  type="button"
+                >
+                  <span>{lesson.position}</span>
+                </button>
+              ))}
+            </div>
+
+            <details className="course-player-mobile-header__meta">
+              <summary className="course-player-mobile-header__meta-summary">
+                <span>{progressPercent}% прогресса</span>
+                <span>{lessonProgressLabel}</span>
+              </summary>
+              <div className="course-player-mobile-header__meta-body">
+                <p>
+                  {nextLesson
+                    ? `Следом: ${nextLesson.position}. ${nextLesson.title}.`
+                    : 'Это финальный шаг курса.'}
+                </p>
+                {courseState.access.accessMode === 'PREVIEW' ? (
+                  <span className="badge badge-pending">
+                    {previewCompletedCount}/{courseState.access.previewLessonsCount} урока открыто в превью
+                  </span>
+                ) : null}
+                <div className="course-player-mobile-header__meta-links">
+                  <Link className="ghost-button" href={courseCatalogHref}>
+                    К курсу
+                  </Link>
+                  <Link className="ghost-button" href="/lk">
+                    В ЛК
+                  </Link>
+                </div>
+              </div>
+            </details>
+
+            {showLessonTip && currentLesson.position === 1 && !currentLessonLocked ? (
+              <div className="course-player-mobile-tip" role="note">
+                <p>Свайп вверх или вправо — следующая карточка. Вниз или влево — назад или подробнее.</p>
+                <button onClick={() => setShowLessonTip(false)} type="button">
+                  Понятно
+                </button>
+              </div>
+            ) : null}
+          </section>
+        ) : null}
 
         {currentLesson ? (
           <div className="course-player-mobile-toolbar">
@@ -1238,6 +1984,157 @@ export default function CoursePlayer({
             >
               {currentLesson ? (
                 <>
+                  <div className="course-player-lesson-mobile">
+                    {currentLessonLocked ? (
+                      <article className="lesson-mobile-card lesson-mobile-card--locked">
+                        <div className="lesson-mobile-card__status">
+                          <span className="badge badge-paid">Закрыто до оплаты</span>
+                          {currentLesson.isPreview ? (
+                            <span className="badge badge-pending">Превью</span>
+                          ) : null}
+                        </div>
+
+                        <div className="lesson-mobile-card__hero">
+                          <span className="lesson-mobile-card__eyebrow">
+                            Урок {currentLesson.position} из {lessons.length}
+                          </span>
+                          <h2 className="lesson-mobile-card__title">{currentLesson.title}</h2>
+                          <p className="lesson-mobile-card__summary">{mobileHintText}</p>
+                        </div>
+
+                        <div className="lesson-mobile-card__section lesson-mobile-card__section--paywall">
+                          <PaywallBlock
+                            course={courseState}
+                            lesson={currentLesson}
+                            onCreateOrder={handleCreateOrder}
+                            purchasePending={purchasePending}
+                          />
+                        </div>
+                      </article>
+                    ) : activeMobileCard ? (
+                      <>
+                        <article
+                          className="lesson-mobile-card lesson-mobile-card--feed"
+                          onTouchCancel={() => {
+                            mobileGestureRef.current = null;
+                          }}
+                          onTouchEnd={handleMobileCardTouchEnd}
+                          onTouchStart={handleMobileCardTouchStart}
+                        >
+                          <div className="lesson-mobile-card__status">
+                            <span
+                              className={
+                                currentLesson.progress?.completed
+                                  ? 'badge badge-complete'
+                                  : 'badge badge-pending'
+                              }
+                            >
+                              {currentLesson.progress?.completed
+                                ? 'Урок завершен'
+                                : 'Урок в процессе'}
+                            </span>
+                            {currentLesson.isPreview ? (
+                              <span className="badge badge-pending">Превью</span>
+                            ) : null}
+                            <span className="badge badge-complete">
+                              {getHomeworkTypeLabel(currentHomeworkType)}
+                            </span>
+                          </div>
+
+                          <div className="lesson-mobile-card__body" ref={mobileCardBodyRef}>
+                            {renderActiveMobileCardBody()}
+                          </div>
+
+                          <div className="lesson-mobile-card__nav">
+                            {mobileCardHasDetails ? (
+                              <button
+                                className="ghost-button"
+                                onClick={toggleMobileCardDetails}
+                                type="button"
+                              >
+                                {mobileCardDetailsOpen ? 'Свернуть' : 'Подробнее'}
+                              </button>
+                            ) : activeMobileCardIndex > 0 ? (
+                              <button
+                                className="ghost-button"
+                                onClick={openPreviousMobileCard}
+                                type="button"
+                              >
+                                Назад
+                              </button>
+                            ) : (
+                              <span className="lesson-mobile-card__nav-spacer" />
+                            )}
+
+                            {activeMobileCardIndex < mobileLessonCards.length - 1 ? (
+                              <button
+                                className="primary-button"
+                                onClick={openNextMobileCard}
+                                type="button"
+                              >
+                                Дальше
+                              </button>
+                            ) : nextLesson ? (
+                              <button
+                                className="primary-button"
+                                onClick={openNextLesson}
+                                type="button"
+                              >
+                                Следующий урок
+                              </button>
+                            ) : (
+                              <Link className="primary-button" href="/lk">
+                                В кабинет
+                              </Link>
+                            )}
+                          </div>
+                        </article>
+
+                        {(nextMobileCard || nextLesson) && (
+                          <button
+                            className="lesson-mobile-next-card"
+                            onClick={
+                              nextMobileCard
+                                ? openNextMobileCard
+                                : nextLesson
+                                  ? openNextLesson
+                                  : undefined
+                            }
+                            type="button"
+                          >
+                            <div className="lesson-mobile-next-card__ghost">
+                              <span className="eyebrow">
+                                {nextMobileCard ? 'Следующая карточка' : 'Следующий урок'}
+                              </span>
+                              <strong>
+                                {nextMobileCard ? nextMobileCard.teaserTitle : nextStepTitle}
+                              </strong>
+                              <p>
+                                {nextMobileCard ? nextMobileCard.teaserCopy : nextStepCopy}
+                              </p>
+                            </div>
+                          </button>
+                        )}
+
+                        <div
+                          aria-label={`Карточка ${activeMobileCardIndex + 1} из ${mobileLessonCards.length}`}
+                          className="lesson-mobile-progress-rail"
+                        >
+                          <span className="sr-only">
+                            Карточка {activeMobileCardIndex + 1} из {mobileLessonCards.length}
+                          </span>
+                          <div className="lesson-mobile-progress-rail__track" aria-hidden="true">
+                            <span
+                              className="lesson-mobile-progress-rail__fill"
+                              style={{ width: `${mobileCardProgressPercent}%` }}
+                            />
+                          </div>
+                        </div>
+                      </>
+                    ) : null}
+                  </div>
+
+                  <div className="course-player-lesson-desktop">
                   <div className="lms-tag">
                     Урок <span>{currentLesson.position}</span>
                   </div>
@@ -1390,6 +2287,8 @@ export default function CoursePlayer({
                     </>
                   )}
 
+                  </div>
+
                   {message ? (
                     <p
                       className={`feedback ${
@@ -1511,7 +2410,7 @@ export default function CoursePlayer({
           </aside>
         </div>
 
-        {courseState.access.accessMode === 'PREVIEW' ? (
+        {showPreviewCourseBar ? (
           <div className="course-mobile-bar">
             <div className="course-mobile-bar__copy">
               <span>
