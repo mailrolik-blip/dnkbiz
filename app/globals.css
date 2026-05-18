@@ -2126,6 +2126,24 @@ main {
   gap: 0.65rem;
 }
 
+.course-player-mobile-header__compact-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--foreground);
+  text-align: left;
+}
+
+.course-player-mobile-header__compact-toggle strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .course-player-mobile-header__context {
   min-width: 0;
   gap: 0.35rem;
@@ -2152,6 +2170,15 @@ main {
   grid-auto-flow: column;
   align-items: center;
   gap: 0.55rem;
+}
+
+.course-player-mobile-header__compact-meta {
+  flex-shrink: 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .course-player-mobile-header__icon-button,
@@ -2674,7 +2701,20 @@ main {
     gap: 0.35rem;
   }
 
-  .course-player-page--lesson-active .course-player-mobile-header__meta,
+  .course-player-page--lesson-active .course-player-mobile-header--compact {
+    gap: 0;
+  }
+
+  .course-player-page--lesson-active .course-player-mobile-header--compact .course-player-mobile-header__top {
+    padding: 0.72rem 0.85rem;
+  }
+
+  .course-player-page--lesson-active .course-player-mobile-header--compact .course-player-mobile-header__track,
+  .course-player-page--lesson-active .course-player-mobile-header--compact .course-player-mobile-header__meta,
+  .course-player-page--lesson-active .course-player-mobile-header--compact .course-player-mobile-tip {
+    display: none;
+  }
+
   .course-player-page--lesson-active .course-player-mobile-tip {
     display: none;
   }
@@ -2716,7 +2756,7 @@ main {
   .course-player-page--lesson-active .course-player-lesson-mobile,
   .course-player-page--lesson-active .course-player-lesson-mobile--active {
     display: grid;
-    grid-template-rows: minmax(0, 1fr) auto auto;
+    grid-template-rows: minmax(0, 1fr) auto;
     gap: 0.65rem;
     align-content: stretch;
     padding-bottom: 0;
@@ -2738,12 +2778,6 @@ main {
 
   .course-player-page--lesson-active .lesson-mobile-card__body {
     padding-bottom: calc(1.2rem + env(safe-area-inset-bottom));
-  }
-
-  .course-player-page--lesson-active .lesson-mobile-next-card {
-    min-height: 7.25rem;
-    max-height: 7.25rem;
-    margin-top: 0;
   }
 
   .course-player-page--lesson-active .lesson-mobile-progress-rail {
@@ -5397,7 +5431,14 @@ a.bento-card:hover {
   }
 
   .checkout-actions {
-    display: none;
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .checkout-actions .primary-button,
+  .checkout-actions .secondary-button,
+  .checkout-actions .ghost-button {
+    width: 100%;
   }
 
   .checkout-mobile-bar,
@@ -5412,13 +5453,7 @@ a.bento-card:hover {
   }
 
   .checkout-mobile-bar {
-    gap: 0.7rem;
-    margin-top: 1rem;
-    padding: 1rem 1.05rem calc(1rem + env(safe-area-inset-bottom));
-    border-radius: 1.25rem;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    background: rgba(10, 18, 28, 0.96);
-    box-shadow: 0 -18px 40px -30px rgba(0, 0, 0, 0.85);
+    display: none;
   }
 
   .checkout-mobile-bar .primary-button,

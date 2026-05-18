@@ -319,7 +319,7 @@ export default function TestCheckoutClient({
           onClick={handleTbankCheckout}
           type="button"
         >
-          {pending ? 'Открываем T-Bank...' : 'Оплатить через T-Bank'}
+          {pending ? 'Открываем оплату...' : 'Оплатить'}
         </button>
       );
     }
@@ -375,7 +375,7 @@ export default function TestCheckoutClient({
   }
 
   return (
-    <main className="page-shell page-shell--with-sticky-mobile-bar">
+    <main className="page-shell">
       <div className="top-nav">
         <Link href="/" className="brand">
           <span className="brand-mark" />
@@ -536,13 +536,6 @@ export default function TestCheckoutClient({
                 {courseBackLabel}
               </Link>
               {renderManualFallbackToggle()}
-            </div>
-
-            <div className="checkout-mobile-bar">
-              {renderPrimaryAction()}
-              <Link href={courseBackHref} className="secondary-button">
-                {courseBackLabel}
-              </Link>
             </div>
 
             {showManualFallbackToggle ? (

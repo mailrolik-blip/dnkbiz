@@ -41,16 +41,6 @@ function LearnIcon() {
   );
 }
 
-function PaymentIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
-      <rect x="3.5" y="6" width="17" height="12" rx="2" />
-      <path d="M3.5 10h17" />
-      <path d="M7.5 14.5h4" />
-    </svg>
-  );
-}
-
 function TeacherIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
@@ -81,75 +71,43 @@ export default function MobileBottomNav() {
     return null;
   }
 
-  const isLessonPath = pathname.startsWith('/courses/');
-  const paymentHref = pathname === '/checkout' ? '/checkout' : '/lk#pending-payments';
-
-  const items: MobileNavItem[] = isLessonPath
-    ? [
-        {
-          href: '/',
-          icon: <HomeIcon />,
-          isActive: pathname === '/',
-          label: 'Главная',
-        },
-        {
-          href: '/catalog',
-          icon: <CoursesIcon />,
-          isActive: pathname === '/catalog' || pathname.startsWith('/catalog/'),
-          label: 'Курсы',
-        },
-        {
-          href: '/lk',
-          icon: <LearnIcon />,
-          isActive: pathname === '/lk' || pathname.startsWith('/courses/'),
-          label: 'Мои курсы',
-        },
-        {
-          disabled: true,
-          href: '#',
-          icon: <TeacherIcon />,
-          isActive: false,
-          label: 'AI учитель',
-        },
-        {
-          href: '/profile',
-          icon: <ProfileIcon />,
-          isActive: pathname === '/profile',
-          label: 'Настройки',
-        },
-      ]
-    : [
-        {
-          href: '/',
-          icon: <HomeIcon />,
-          isActive: pathname === '/',
-          label: 'Главная',
-        },
-        {
-          href: '/catalog',
-          icon: <CoursesIcon />,
-          isActive: pathname === '/catalog' || pathname.startsWith('/catalog/'),
-          label: 'Курсы',
-        },
-        {
-          href: '/lk',
-          icon: <LearnIcon />,
-          isActive: pathname === '/lk' || pathname.startsWith('/courses/'),
-          label: 'Мои курсы',
-        },
-        {
-          href: paymentHref,
-          icon: <PaymentIcon />,
-          isActive: pathname === '/checkout',
-          label: 'Оплата',
-        },
-        {
-          href: '/profile',
-          icon: <ProfileIcon />,
-          isActive: pathname === '/profile',
-          label: 'Профиль',
-        },
-      ];
+  const items: MobileNavItem[] = [
+    {
+      href: '/',
+      icon: <HomeIcon />,
+      isActive: pathname === '/',
+      label: 'Главная',
+    },
+    {
+      href: '/catalog',
+      icon: <CoursesIcon />,
+      isActive:
+        pathname === '/catalog' ||
+        pathname.startsWith('/catalog/') ||
+        pathname === '/checkout' ||
+        pathname.startsWith('/checkout/'),
+      label: 'Курсы',
+    },
+    {
+      href: '/lk',
+      icon: <LearnIcon />,
+      isActive: pathname === '/lk' || pathname.startsWith('/courses/'),
+      label: 'Мои курсы',
+    },
+    {
+      disabled: true,
+      href: '#',
+      icon: <TeacherIcon />,
+      isActive: false,
+      label: 'AI учитель',
+    },
+    {
+      href: '/profile',
+      icon: <ProfileIcon />,
+      isActive: pathname === '/profile',
+      label: 'Настройки',
+    },
+  ];
 
   return (
     <nav aria-label="Нижняя мобильная навигация" className="mobile-bottom-nav">

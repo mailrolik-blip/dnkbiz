@@ -820,6 +820,7 @@ export default function CoursePlayer({
   const [mobileCardMotion, setMobileCardMotion] = useState<'forward' | 'backward' | null>(null);
   const [mobileCardReadProgress, setMobileCardReadProgress] = useState(0);
   const [mobileBottomNavCondensed, setMobileBottomNavCondensed] = useState(false);
+  const [mobileHeaderCollapsed, setMobileHeaderCollapsed] = useState(false);
   const [showLessonTip, setShowLessonTip] = useState(true);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
@@ -1176,16 +1177,15 @@ export default function CoursePlayer({
       : [];
   const activeMobileCard =
     mobileLessonCards[Math.min(activeMobileCardIndex, mobileLessonCards.length - 1)] ?? null;
-  const nextMobileCard =
-    activeMobileCardIndex < mobileLessonCards.length - 1
-      ? mobileLessonCards[activeMobileCardIndex + 1]
-      : null;
   const mobileCardProgressPercent =
     mobileLessonCards.length > 0
       ? Math.round(((activeMobileCardIndex + 1) / mobileLessonCards.length) * 100)
       : 0;
   const mobileCardHasDetails = (activeMobileCard?.detailBlocks?.length ?? 0) > 0;
   const activeMobileCardIsFullyRead = mobileCardReadProgress >= 0.985;
+  const mobileHeaderCompactLabel = currentLesson
+    ? `Урок ${currentLesson.position}/${lessons.length}`
+    : lessonProgressLabel;
 
   useEffect(() => {
     if (currentLessonLocked || mobileLessonCards.length === 0) {
@@ -1205,6 +1205,7 @@ export default function CoursePlayer({
     const handleScroll = () => {
       syncMobileCardReadProgress();
       extendMobileBottomNavCondensedState();
+      setMobileHeaderCollapsed(body.scrollTop > 24);
     };
 
     handleScroll();
@@ -1909,12 +1910,29 @@ export default function CoursePlayer({
         </div>
 
         {currentLesson ? (
-          <section className="course-player-mobile-header">
+          <section
+            className={`course-player-mobile-header ${
+              mobileHeaderCollapsed ? 'course-player-mobile-header--compact' : ''
+            }`.trim()}
+          >
             <div className="course-player-mobile-header__top">
-              <div className="course-player-mobile-header__context">
-                <span className="eyebrow">{lessonProgressLabel}</span>
-                <strong>{courseShortTitle}</strong>
-              </div>
+              {mobileHeaderCollapsed ? (
+                <button
+                  className="course-player-mobile-header__compact-toggle"
+                  onClick={() => setMobileHeaderCollapsed(false)}
+                  type="button"
+                >
+                  <strong>{courseShortTitle}</strong>
+                  <span className="course-player-mobile-header__compact-meta">
+                    {mobileHeaderCompactLabel}
+                  </span>
+                </button>
+              ) : (
+                <div className="course-player-mobile-header__context">
+                  <span className="eyebrow">{lessonProgressLabel}</span>
+                  <strong>{courseShortTitle}</strong>
+                </div>
+              )}
               <div className="course-player-mobile-header__actions">
                 <button
                   aria-label="Избранное появится позже"
@@ -2272,32 +2290,6 @@ export default function CoursePlayer({
                             )}
                           </div>
                         </article>
-
-                        {(nextMobileCard || nextLesson) && (
-                          <button
-                            className={`lesson-mobile-next-card ${
-                              mobileCardMotion === 'forward'
-                                ? 'lesson-mobile-next-card--motion-forward'
-                                : mobileCardMotion === 'backward'
-                                  ? 'lesson-mobile-next-card--motion-backward'
-                                  : ''
-                            }`.trim()}
-                            onClick={handleMobileCardForwardIntent}
-                            type="button"
-                          >
-                            <div className="lesson-mobile-next-card__ghost">
-                              <span className="eyebrow">
-                                {nextMobileCard ? 'Следующая карточка' : 'Следующий урок'}
-                              </span>
-                              <strong>
-                                {nextMobileCard ? nextMobileCard.teaserTitle : nextStepTitle}
-                              </strong>
-                              <p>
-                                {nextMobileCard ? nextMobileCard.teaserCopy : nextStepCopy}
-                              </p>
-                            </div>
-                          </button>
-                        )}
 
                         <div
                           aria-label={`Карточка ${activeMobileCardIndex + 1} из ${mobileLessonCards.length}`}
