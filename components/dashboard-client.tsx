@@ -750,6 +750,20 @@ export default function DashboardClient({
     : mobileContinueCourse?.nextLessonTitle
       ? `Следующий урок: ${mobileContinueCourse.nextLessonTitle}.`
       : quickActionsNote;
+  const mobileImplementationStats = [
+    {
+      label: 'Завершено',
+      value: `${activity.totalCompletedLessons}`,
+    },
+    {
+      label: 'Серия',
+      value: activity.currentStreak > 0 ? `${activity.currentStreak} дн.` : '0 дн.',
+    },
+    {
+      label: 'В работе',
+      value: `${activity.startedCourses}`,
+    },
+  ];
 
   return (
     <main className="page-shell dashboard-page">
@@ -789,6 +803,10 @@ export default function DashboardClient({
         <header className="dashboard-page__heading">
           <h1 className="dashboard-page__title">Личный кабинет</h1>
         </header>
+
+        <section className="dashboard-mobile-only dashboard-mobile-profile-shell">
+          <DashboardProfileCard feedback={feedback} user={user} />
+        </section>
 
         <section className="dashboard-mobile-only dashboard-mobile-priority">
           <DashboardPriorityCard
@@ -851,7 +869,70 @@ export default function DashboardClient({
           ) : null}
         </section>
 
-        <section className="dashboard-overview">
+        <section className="panel dashboard-section dashboard-mobile-only dashboard-mobile-my-courses">
+          <SectionIntro
+            description={
+              myCourses.length > 0
+                ? 'Здесь собраны курсы, где уже сохранен прогресс или открыт доступ.'
+                : 'После первого урока или подтвержденной покупки курсы появятся здесь первым рабочим списком.'
+            }
+            eyebrow="Мои курсы"
+            title="Мои курсы"
+          />
+
+          <div className="course-grid dashboard-grid dashboard-grid--mobile-single">
+            {myCourses.length === 0 ? (
+              <EmptyCard>
+                Пока здесь нет начатых курсов. Начните с бесплатного курса или откройте preview-уроки из каталога.
+              </EmptyCard>
+            ) : (
+              myCourses.map((course) => (
+                <DashboardCourseCard
+                  course={course}
+                  key={course.slug}
+                  mode="my"
+                  renderBuyAction={renderBuyAction}
+                />
+              ))
+            )}
+          </div>
+        </section>
+
+        <section className="dashboard-mobile-only dashboard-activity-shell dashboard-activity-shell--mobile">
+          <LearnerActivity
+            activity={activity}
+            emptyStateActionHref={emptyStateAction.href}
+            emptyStateActionLabel={emptyStateAction.label}
+          />
+        </section>
+
+        <section className="panel dashboard-section dashboard-mobile-only dashboard-mobile-implementation">
+          <SectionIntro
+            description="Короткий блок показывает, как обучение переносится в регулярную практику без длинных отчетов."
+            eyebrow="Внедрение навыков"
+            title="Внедрение навыков"
+          />
+
+          <div className="dashboard-mobile-skills">
+            {mobileImplementationStats.map((stat) => (
+              <article className="dashboard-mobile-skill-card" key={stat.label}>
+                <span>{stat.label}</span>
+                <strong>{stat.value}</strong>
+              </article>
+            ))}
+          </div>
+
+          <div className="row-actions dashboard-mobile-skills__actions">
+            <Link className="primary-button" href={activityPrimaryAction.href}>
+              {activityPrimaryAction.label}
+            </Link>
+            <Link className="secondary-button" href="/catalog">
+              Каталог
+            </Link>
+          </div>
+        </section>
+
+        <section className="dashboard-overview dashboard-desktop-only">
           <DashboardProfileCard feedback={feedback} user={user} />
           <div className="dashboard-desktop-only">
             <DashboardQuickActions
@@ -868,7 +949,7 @@ export default function DashboardClient({
           </div>
         </section>
 
-        <section className="dashboard-activity-shell">
+        <section className="dashboard-activity-shell dashboard-desktop-only">
           <LearnerActivity
             activity={activity}
             emptyStateActionHref={emptyStateAction.href}
@@ -897,7 +978,7 @@ export default function DashboardClient({
           </section>
         ) : null}
 
-        <section className="panel dashboard-section">
+        <section className="panel dashboard-section dashboard-desktop-only">
           <SectionIntro
             description={
               isNewUser
@@ -927,7 +1008,7 @@ export default function DashboardClient({
           </div>
         </section>
 
-        <section className="panel dashboard-section">
+        <section className="panel dashboard-section dashboard-desktop-only">
           <SectionIntro
             description="Эти курсы доступны сразу после входа без оплаты и без ожидания подтверждения."
             eyebrow="Бесплатные курсы"
@@ -952,7 +1033,7 @@ export default function DashboardClient({
           </div>
         </section>
 
-        <section className="panel dashboard-section">
+        <section className="panel dashboard-section dashboard-desktop-only">
           <SectionIntro
             description="У платных программ доступны бесплатные уроки. Полный доступ открывается после подтверждения оплаты."
             eyebrow="Платные курсы"

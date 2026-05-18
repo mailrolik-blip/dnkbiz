@@ -17,6 +17,7 @@
   --warning: #ffc94f;
   --danger: #ff6f7d;
   --shadow: 0 22px 70px -34px rgba(0, 0, 0, 0.68);
+  --mobile-bottom-nav-height: 4.35rem;
 }
 
 @theme inline {
@@ -2217,6 +2218,14 @@ main {
 .course-player-mobile-header__track {
   grid-template-columns: repeat(10, minmax(0, 1fr));
   gap: 0.42rem;
+  overflow: hidden;
+  max-height: 4rem;
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    max-height 180ms ease,
+    opacity 180ms ease,
+    transform 180ms ease;
 }
 
 .course-player-mobile-header__step {
@@ -2252,6 +2261,16 @@ main {
 
 .course-player-mobile-header__meta {
   overflow: hidden;
+  max-height: 16rem;
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    max-height 180ms ease,
+    opacity 180ms ease,
+    transform 180ms ease,
+    margin 180ms ease,
+    border-width 180ms ease,
+    padding 180ms ease;
 }
 
 .course-player-mobile-header__meta-summary,
@@ -2305,6 +2324,16 @@ main {
   gap: 0.75rem;
   background: rgba(1, 247, 246, 0.06);
   border-color: rgba(1, 247, 246, 0.16);
+  max-height: 4.5rem;
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    max-height 180ms ease,
+    opacity 180ms ease,
+    transform 180ms ease,
+    padding 180ms ease,
+    margin 180ms ease,
+    border-width 180ms ease;
 }
 
 .course-player-mobile-tip p {
@@ -2327,11 +2356,15 @@ main {
   display: grid;
   gap: 0.72rem;
   padding-bottom: calc(var(--mobile-bottom-nav-height) + 1.2rem + env(safe-area-inset-bottom));
+  min-height: 0;
 }
 
 .lesson-mobile-card {
   gap: 1rem;
   padding: 1.05rem;
+  min-height: 0;
+  will-change: transform, opacity;
+  contain: layout paint;
 }
 
 .lesson-mobile-card--feed {
@@ -2356,6 +2389,7 @@ main {
 .lesson-mobile-card__copy {
   display: grid;
   gap: 0.55rem;
+  scroll-snap-align: start;
 }
 
 .lesson-mobile-card__eyebrow {
@@ -2386,9 +2420,10 @@ main {
   overflow: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
-  padding-bottom: 1.1rem;
+  padding-bottom: calc(1.6rem + env(safe-area-inset-bottom));
   padding-right: 0.1rem;
-  scroll-padding-bottom: 1rem;
+  scroll-padding-bottom: 1.6rem;
+  scroll-snap-type: y proximity;
   scrollbar-width: none;
   touch-action: pan-y;
 }
@@ -2398,11 +2433,11 @@ main {
 }
 
 .lesson-mobile-card--motion-forward {
-  animation: lesson-card-slide-forward 220ms ease;
+  animation: lesson-card-slide-forward 180ms cubic-bezier(0.24, 0.84, 0.22, 1);
 }
 
 .lesson-mobile-card--motion-backward {
-  animation: lesson-card-slide-backward 220ms ease;
+  animation: lesson-card-slide-backward 180ms cubic-bezier(0.24, 0.84, 0.22, 1);
 }
 
 .lesson-mobile-card__body::-webkit-scrollbar {
@@ -2413,6 +2448,7 @@ main {
   padding: 1rem;
   border-radius: 1.15rem;
   background: rgba(255, 255, 255, 0.03);
+  scroll-snap-align: start;
 }
 
 .lesson-mobile-card__section--paywall {
@@ -2497,61 +2533,23 @@ main {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.75rem;
+  align-items: stretch;
+  min-height: 3.35rem;
 }
 
 .lesson-mobile-card__nav-spacer {
   display: block;
 }
 
+.lesson-mobile-card__nav .primary-button,
+.lesson-mobile-card__nav .secondary-button,
+.lesson-mobile-card__nav .ghost-button {
+  min-height: 3.35rem;
+  align-content: center;
+}
+
 .lesson-mobile-next-card {
-  position: relative;
-  display: grid;
-  width: 100%;
-  min-height: 8.2rem;
-  max-height: 8.2rem;
-  margin-top: -0.9rem;
-  padding: 1.6rem 1rem 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 1.25rem;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.025), rgba(255, 255, 255, 0.008)),
-    rgba(9, 16, 26, 0.84);
-  color: var(--foreground);
-  cursor: pointer;
-  appearance: none;
-  text-align: left;
-}
-
-.lesson-mobile-next-card::before {
-  content: '';
-  position: absolute;
-  top: 0.72rem;
-  left: 50%;
-  width: 3.4rem;
-  height: 0.28rem;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.14);
-  transform: translateX(-50%);
-}
-
-.lesson-mobile-next-card::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgba(5, 10, 16, 0) 10%, rgba(5, 10, 16, 0.68) 100%);
-  pointer-events: none;
-}
-
-.lesson-mobile-next-card__ghost {
-  position: relative;
-  z-index: 1;
-  filter: blur(0.9px) saturate(0.92);
-  opacity: 0.92;
-}
-
-.lesson-mobile-next-card--motion-forward,
-.lesson-mobile-next-card--motion-backward {
-  animation: lesson-card-fade-in 220ms ease;
+  display: none !important;
 }
 
 .lesson-mobile-progress-rail {
@@ -2695,10 +2693,13 @@ main {
   .course-player-page--lesson-active .course-player-mobile-header__top {
     gap: 0.55rem;
     padding: 0.8rem 0.85rem;
+    min-height: 3.6rem;
+    transition: padding 180ms ease, min-height 180ms ease;
   }
 
   .course-player-page--lesson-active .course-player-mobile-header__track {
     gap: 0.35rem;
+    margin: 0;
   }
 
   .course-player-page--lesson-active .course-player-mobile-header--compact {
@@ -2712,16 +2713,34 @@ main {
   .course-player-page--lesson-active .course-player-mobile-header--compact .course-player-mobile-header__track,
   .course-player-page--lesson-active .course-player-mobile-header--compact .course-player-mobile-header__meta,
   .course-player-page--lesson-active .course-player-mobile-header--compact .course-player-mobile-tip {
-    display: none;
+    max-height: 0;
+    opacity: 0;
+    margin: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-width: 0;
+    pointer-events: none;
+    transform: translateY(-0.3rem);
   }
 
   .course-player-page--lesson-active .course-player-mobile-tip {
-    display: none;
+    max-height: 0;
+    opacity: 0;
+    margin: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-width: 0;
+    pointer-events: none;
+    transform: translateY(-0.3rem);
   }
 
   .course-player-page--lesson-active .course-player-mobile-header__context .eyebrow,
   .course-player-page--lesson-active .course-player-mobile-header__context strong {
     max-width: 100%;
+  }
+
+  .course-player-page--lesson-active .course-player-mobile-header--compact .course-player-mobile-header__context .eyebrow {
+    display: none;
   }
 
   .course-player-page .lms-scroll-area {
@@ -2777,13 +2796,14 @@ main {
   }
 
   .course-player-page--lesson-active .lesson-mobile-card__body {
-    padding-bottom: calc(1.2rem + env(safe-area-inset-bottom));
+    padding-bottom: calc(1.85rem + env(safe-area-inset-bottom));
   }
 
   .course-player-page--lesson-active .lesson-mobile-progress-rail {
     position: relative;
     bottom: auto;
     margin-top: 0;
+    margin-bottom: 0.15rem;
   }
 
   .lms-sidebar {
@@ -2871,6 +2891,21 @@ main {
   to {
     opacity: 1;
     transform: translate3d(0, 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lesson-mobile-card--motion-forward,
+  .lesson-mobile-card--motion-backward,
+  .mobile-bottom-nav__list,
+  .mobile-bottom-nav__item,
+  .mobile-bottom-nav__label,
+  .course-player-mobile-header__track,
+  .course-player-mobile-header__meta,
+  .course-player-mobile-tip,
+  .course-player-mobile-header__top {
+    animation: none !important;
+    transition: none !important;
   }
 }
 
@@ -5275,11 +5310,11 @@ a.bento-card:hover {
 
 @media (max-width: 959px) {
   .page-shell {
-    padding-bottom: calc(var(--mobile-bottom-nav-height) + 2rem + env(safe-area-inset-bottom));
+    padding-bottom: calc(var(--mobile-bottom-nav-height) + 1.35rem + env(safe-area-inset-bottom));
   }
 
   .page-shell--with-sticky-mobile-bar {
-    padding-bottom: calc(var(--mobile-bottom-nav-height) + 8rem + env(safe-area-inset-bottom));
+    padding-bottom: calc(var(--mobile-bottom-nav-height) + 6.4rem + env(safe-area-inset-bottom));
   }
 
   .dashboard-mobile-only {
@@ -5342,8 +5377,8 @@ a.bento-card:hover {
 
   .mobile-bottom-nav {
     position: fixed;
-    left: 0.75rem;
-    right: 0.75rem;
+    left: 0.6rem;
+    right: 0.6rem;
     bottom: 0;
     z-index: 18;
     display: block;
@@ -5352,8 +5387,9 @@ a.bento-card:hover {
   .mobile-bottom-nav__list {
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 0.5rem;
-    padding: 0.65rem 0.7rem calc(0.65rem + env(safe-area-inset-bottom));
+    gap: 0.2rem;
+    min-height: calc(var(--mobile-bottom-nav-height) + env(safe-area-inset-bottom));
+    padding: 0.42rem 0.5rem calc(0.38rem + env(safe-area-inset-bottom));
     border-radius: 1.35rem 1.35rem 0 0;
     border: 1px solid rgba(255, 255, 255, 0.08);
     background:
@@ -5366,8 +5402,9 @@ a.bento-card:hover {
   .mobile-bottom-nav__item {
     display: grid;
     justify-items: center;
-    gap: 0.24rem;
-    padding: 0.45rem 0.25rem;
+    gap: 0;
+    min-height: 3rem;
+    padding: 0.25rem;
     border-radius: 0.95rem;
     color: rgba(214, 225, 235, 0.68);
     transition: background-color 160ms ease, color 160ms ease, transform 160ms ease;
@@ -5399,9 +5436,13 @@ a.bento-card:hover {
   }
 
   .mobile-bottom-nav__label {
-    font-size: 0.68rem;
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(0.2rem);
+    font-size: 0;
     font-weight: 700;
-    line-height: 1.2;
+    line-height: 1;
     text-align: center;
   }
 
@@ -5433,6 +5474,16 @@ a.bento-card:hover {
   .checkout-actions {
     display: grid;
     gap: 0.75rem;
+    position: sticky;
+    bottom: calc(var(--mobile-bottom-nav-height) + 0.7rem + env(safe-area-inset-bottom));
+    z-index: 10;
+    padding: 0.9rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 1.2rem;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.015)),
+      rgba(8, 14, 23, 0.96);
+    backdrop-filter: blur(18px);
   }
 
   .checkout-actions .primary-button,
@@ -7695,7 +7746,7 @@ a.bento-card:hover {
   --warning: #ffc94f;
   --danger: #ff6f7d;
   --shadow: 0 22px 70px -34px rgba(0, 0, 0, 0.68);
-  --mobile-bottom-nav-height: 5rem;
+  --mobile-bottom-nav-height: 4.35rem;
 }
 
 .dashboard-page__heading {
@@ -8642,6 +8693,56 @@ a.bento-card:hover {
 }
 
 @media (max-width: 959px) {
+  .dashboard-page > .top-nav,
+  .dashboard-page__heading {
+    display: none;
+  }
+
+  .dashboard-mobile-profile-shell,
+  .dashboard-mobile-my-courses,
+  .dashboard-mobile-implementation {
+    display: grid;
+    gap: 0.85rem;
+  }
+
+  .dashboard-grid--mobile-single {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dashboard-mobile-skills {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  .dashboard-mobile-skill-card {
+    display: grid;
+    gap: 0.28rem;
+    padding: 0.85rem 0.9rem;
+    border: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent);
+    border-radius: 1rem;
+    background: color-mix(in srgb, var(--foreground) 3%, transparent);
+  }
+
+  .dashboard-mobile-skill-card span {
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .dashboard-mobile-skill-card strong {
+    color: var(--foreground);
+    font-size: 1.1rem;
+    line-height: 1.15;
+  }
+
+  .dashboard-mobile-skills__actions .primary-button,
+  .dashboard-mobile-skills__actions .secondary-button {
+    width: 100%;
+  }
+
   .dashboard-quick-actions__actions .primary-button,
   .dashboard-quick-actions__actions .secondary-button,
   .dashboard-quick-actions__actions .ghost-button {
@@ -8707,6 +8808,10 @@ a.bento-card:hover {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .dashboard-mobile-skills {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .dashboard-activity__tooltip {
     display: none;
   }
@@ -8731,28 +8836,63 @@ a.bento-card:hover {
 
 @media (max-width: 959px) {
   .public-page-shell {
-    padding-bottom: calc(var(--mobile-bottom-nav-height) + 1rem + env(safe-area-inset-bottom));
+    padding-bottom: calc(var(--mobile-bottom-nav-height) + 1.15rem + env(safe-area-inset-bottom));
   }
 
   .public-page-shell.page-shell--with-sticky-mobile-bar {
-    padding-bottom: calc(var(--mobile-bottom-nav-height) + 8rem + env(safe-area-inset-bottom));
+    padding-bottom: calc(var(--mobile-bottom-nav-height) + 6.4rem + env(safe-area-inset-bottom));
   }
 
   .home-hero__panel {
     min-height: auto;
+    padding: 1rem;
+    gap: 0.85rem;
   }
 
   .home-hero__title {
     max-width: none;
-    font-size: clamp(2.3rem, 10vw, 3.4rem);
+    font-size: clamp(2rem, 9vw, 2.8rem);
+    line-height: 0.96;
+  }
+
+  .home-hero__lead,
+  .catalog-directory__copy > .panel-copy,
+  .program-page__lead {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
   }
 
   .home-hero__proof {
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .home-hero__proof li:nth-child(n + 3) {
+    display: none;
+  }
+
+  .public-section-head {
+    gap: 0.55rem;
+  }
+
+  .public-section-head h2 {
+    font-size: clamp(1.6rem, 7vw, 2.2rem);
+    line-height: 1.02;
+  }
+
+  .public-section-head > .panel-copy,
+  .home-catalog-shelf__head .panel-copy,
+  .public-course-card__body .panel-copy {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+
   .public-top-nav {
-    gap: 0.85rem;
+    gap: 0.65rem;
+    padding-bottom: 0.2rem;
   }
 
   .public-top-nav__cluster {
@@ -8777,6 +8917,7 @@ a.bento-card:hover {
     width: 100%;
     flex-direction: column;
     align-items: stretch;
+    gap: 0.5rem;
   }
 
   .public-top-nav__actions .primary-button,

@@ -819,9 +819,8 @@ export default function CoursePlayer({
   const [mobileCardDetailsOpen, setMobileCardDetailsOpen] = useState(false);
   const [mobileCardMotion, setMobileCardMotion] = useState<'forward' | 'backward' | null>(null);
   const [mobileCardReadProgress, setMobileCardReadProgress] = useState(0);
-  const [mobileBottomNavCondensed, setMobileBottomNavCondensed] = useState(false);
   const [mobileHeaderCollapsed, setMobileHeaderCollapsed] = useState(false);
-  const [showLessonTip, setShowLessonTip] = useState(true);
+  const [showLessonTip, setShowLessonTip] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
       id: 1,
@@ -832,7 +831,6 @@ export default function CoursePlayer({
   const chatBodyRef = useRef<HTMLDivElement | null>(null);
   const completionRef = useRef(initialCourseComplete);
   const mobileCardBodyRef = useRef<HTMLDivElement | null>(null);
-  const mobileBottomNavTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mobileGestureRef = useRef<{
     bodyClientHeight: number;
     bodyScrollHeight: number;
@@ -936,28 +934,15 @@ export default function CoursePlayer({
     }
 
     const shouldLockLessonViewport = lessons.some((lesson) => lesson.id === currentLessonId);
-    const shouldUseCompactLessonNav = shouldLockLessonViewport || mobileBottomNavCondensed;
 
     document.body.classList.toggle('mobile-lesson-screen', shouldLockLessonViewport);
-    document.body.classList.toggle('mobile-lesson-nav-condensed', shouldUseCompactLessonNav);
+    document.body.classList.toggle('mobile-lesson-nav-condensed', shouldLockLessonViewport);
 
     return () => {
       document.body.classList.remove('mobile-lesson-screen');
       document.body.classList.remove('mobile-lesson-nav-condensed');
     };
-  }, [currentLessonId, lessons, mobileBottomNavCondensed]);
-
-  useEffect(() => {
-    return () => {
-      if (mobileBottomNavTimeoutRef.current) {
-        clearTimeout(mobileBottomNavTimeoutRef.current);
-      }
-
-      if (typeof document !== 'undefined') {
-        document.body.classList.remove('mobile-lesson-nav-condensed');
-      }
-    };
-  }, []);
+  }, [currentLessonId, lessons]);
 
   useEffect(() => {
     const currentLesson = lessons.find((lesson) => lesson.id === currentLessonId);
@@ -1186,6 +1171,13 @@ export default function CoursePlayer({
   const mobileHeaderCompactLabel = currentLesson
     ? `Урок ${currentLesson.position}/${lessons.length}`
     : lessonProgressLabel;
+  const mobileCardForwardLabel = !activeMobileCardIsFullyRead
+    ? 'Дочитать'
+    : activeMobileCardIndex < mobileLessonCards.length - 1
+      ? 'Дальше'
+      : nextLesson
+        ? 'К уроку'
+        : 'В ЛК';
 
   useEffect(() => {
     if (currentLessonLocked || mobileLessonCards.length === 0) {
@@ -1204,8 +1196,7 @@ export default function CoursePlayer({
 
     const handleScroll = () => {
       syncMobileCardReadProgress();
-      extendMobileBottomNavCondensedState();
-      setMobileHeaderCollapsed(body.scrollTop > 24);
+      setMobileHeaderCollapsed(body.scrollTop > 18);
     };
 
     handleScroll();
@@ -1281,22 +1272,6 @@ export default function CoursePlayer({
     openLesson(nextLesson.id);
   }
 
-  function extendMobileBottomNavCondensedState() {
-    if (typeof window === 'undefined' || window.innerWidth > 960) {
-      return;
-    }
-
-    setMobileBottomNavCondensed(true);
-
-    if (mobileBottomNavTimeoutRef.current) {
-      clearTimeout(mobileBottomNavTimeoutRef.current);
-    }
-
-    mobileBottomNavTimeoutRef.current = setTimeout(() => {
-      setMobileBottomNavCondensed(false);
-    }, 1400);
-  }
-
   function syncMobileCardReadProgress() {
     const body = mobileCardBodyRef.current;
 
@@ -1357,13 +1332,11 @@ export default function CoursePlayer({
 
   function toggleMobileCardDetails() {
     setShowLessonTip(false);
-    extendMobileBottomNavCondensedState();
     setMobileCardDetailsOpen((current) => !current);
   }
 
   function handleMobileCardBackwardIntent(preferDetails: boolean) {
     setShowLessonTip(false);
-    extendMobileBottomNavCondensedState();
 
     if (preferDetails && mobileCardHasDetails) {
       setMobileCardDetailsOpen((current) => !current);
@@ -1382,7 +1355,6 @@ export default function CoursePlayer({
 
   function handleMobileCardForwardIntent() {
     setShowLessonTip(false);
-    extendMobileBottomNavCondensedState();
 
     if (!syncMobileCardReadProgress() && nudgeMobileCardBodyForward()) {
       return;
@@ -1399,8 +1371,6 @@ export default function CoursePlayer({
   }
 
   function handleMobileCardTouchStart(event: ReactTouchEvent<HTMLElement>) {
-    extendMobileBottomNavCondensedState();
-
     if (mobileLessonCards.length === 0 || currentLessonLocked) {
       mobileGestureRef.current = null;
       return;
@@ -2209,6 +2179,7 @@ export default function CoursePlayer({
                     ) : activeMobileCard ? (
                       <>
                         <article
+                          key={`${currentLesson.id}-${activeMobileCard.id}`}
                           className={`lesson-mobile-card lesson-mobile-card--feed ${
                             mobileCardMotion === 'forward'
                               ? 'lesson-mobile-card--motion-forward'
@@ -2273,7 +2244,7 @@ export default function CoursePlayer({
                                 onClick={handleMobileCardForwardIntent}
                                 type="button"
                               >
-                                {activeMobileCardIsFullyRead ? 'Дальше' : 'Дочитать'}
+                                {mobileCardForwardLabel}
                               </button>
                             ) : nextLesson ? (
                               <button
@@ -2281,7 +2252,7 @@ export default function CoursePlayer({
                                 onClick={handleMobileCardForwardIntent}
                                 type="button"
                               >
-                                {activeMobileCardIsFullyRead ? 'Следующий урок' : 'Дочитать'}
+                                {mobileCardForwardLabel}
                               </button>
                             ) : (
                               <Link className="primary-button" href="/lk">
