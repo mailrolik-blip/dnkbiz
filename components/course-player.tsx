@@ -833,6 +833,7 @@ export default function CoursePlayer({
   const [mobileCardMotion, setMobileCardMotion] = useState<'forward' | 'backward' | null>(null);
   const [mobileCardReadProgress, setMobileCardReadProgress] = useState(0);
   const [mobileHeaderCollapsed, setMobileHeaderCollapsed] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [showLessonTip, setShowLessonTip] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
@@ -944,13 +945,40 @@ export default function CoursePlayer({
   }, [currentLessonId]);
 
   useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const media = window.matchMedia('(max-width: 960px)');
+    const syncViewport = () => {
+      setIsMobileViewport(media.matches);
+    };
+
+    syncViewport();
+
+    if (typeof media.addEventListener === 'function') {
+      media.addEventListener('change', syncViewport);
+
+      return () => {
+        media.removeEventListener('change', syncViewport);
+      };
+    }
+
+    media.addListener(syncViewport);
+
+    return () => {
+      media.removeListener(syncViewport);
+    };
+  }, []);
+
+  useEffect(() => {
     if (typeof document === 'undefined' || typeof window === 'undefined') {
       return;
     }
 
     const syncMobileLessonViewport = () => {
       const shouldLockLessonViewport =
-        window.matchMedia('(max-width: 960px)').matches &&
+        isMobileViewport &&
         lessons.some((lesson) => lesson.id === currentLessonId);
 
       document.body.classList.toggle('mobile-lesson-screen', shouldLockLessonViewport);
@@ -970,7 +998,7 @@ export default function CoursePlayer({
       document.body.classList.remove('mobile-lesson-nav-condensed');
       document.body.classList.remove('mobile-lesson-nav-peek');
     };
-  }, [currentLessonId, lessons]);
+  }, [currentLessonId, isMobileViewport, lessons]);
 
   useEffect(() => {
     if (typeof document === 'undefined' || typeof window === 'undefined') {
@@ -978,7 +1006,7 @@ export default function CoursePlayer({
     }
 
     const lessonOpenOnMobile =
-      window.matchMedia('(max-width: 960px)').matches &&
+      isMobileViewport &&
       lessons.some((lesson) => lesson.id === currentLessonId);
 
     if (!lessonOpenOnMobile) {
@@ -1018,7 +1046,7 @@ export default function CoursePlayer({
 
       document.body.classList.remove('mobile-lesson-nav-peek');
     };
-  }, [currentLessonId, lessons]);
+  }, [currentLessonId, isMobileViewport, lessons]);
 
   useEffect(() => {
     const currentLesson = lessons.find((lesson) => lesson.id === currentLessonId);
@@ -2254,6 +2282,7 @@ export default function CoursePlayer({
                     className={`course-player-lesson-mobile ${
                       currentLesson ? 'course-player-lesson-mobile--active' : ''
                     }`.trim()}
+                    hidden={!isMobileViewport}
                   >
                     {currentLessonLocked ? (
                       <article className="lesson-mobile-card lesson-mobile-card--locked">
@@ -2387,7 +2416,7 @@ export default function CoursePlayer({
                     ) : null}
                   </div>
 
-                  <div className="course-player-lesson-desktop">
+                  <div className="course-player-lesson-desktop" hidden={isMobileViewport}>
                   <div className="lms-tag">
                     Урок <span>{currentLesson.position}</span>
                   </div>

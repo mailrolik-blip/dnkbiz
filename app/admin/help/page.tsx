@@ -26,8 +26,8 @@ export default async function AdminHelpPage() {
   }
 
   return (
-    <main className="page-shell">
-      <header className="top-nav">
+    <main className="page-shell admin-page-shell">
+      <header className="top-nav admin-top-nav">
         <Link href="/" className="brand">
           <span className="brand-mark" />
           <span>Бизнес школа ДНК</span>
@@ -84,17 +84,17 @@ export default async function AdminHelpPage() {
           <div className="utility-list">
             <div className="status-card">
               <strong>Очередь оплаты</strong>
-              <p>Заказ исчез из блока PROCESSING и больше не висит как ожидающий проверки.</p>
+              <p>Заказ уходит из блока PROCESSING и больше не висит как ожидающий проверки.</p>
             </div>
             <div className="status-card">
               <strong>Доступы</strong>
-              <p>В блоке «Доступы» появился нужный курс у нужного пользователя.</p>
+              <p>В блоке «Доступы» появляется нужный курс у нужного пользователя.</p>
             </div>
             <div className="status-card">
               <strong>Публичная часть</strong>
               <p>
-                При необходимости откройте страницу курса и убедитесь, что описание, уроки и
-                тариф соответствуют текущему запуску.
+                При необходимости откройте страницу курса и убедитесь, что описание,
+                уроки и тариф соответствуют текущему запуску.
               </p>
             </div>
           </div>

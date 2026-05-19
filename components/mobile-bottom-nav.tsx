@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 
 type MobileNavItem = {
   disabled?: boolean;
@@ -60,57 +61,166 @@ function ProfileIcon() {
   );
 }
 
+function OrdersIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
+      <path d="M6 7.5h12l-1.1 9.2A2 2 0 0 1 14.91 18H9.09a2 2 0 0 1-1.99-1.3L6 7.5Z" />
+      <path d="M9 7.5V6a3 3 0 0 1 6 0v1.5" />
+    </svg>
+  );
+}
+
+function AccessIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
+      <rect x="5" y="11" width="14" height="9" rx="2" />
+      <path d="M8 11V8a4 4 0 1 1 8 0v3" />
+    </svg>
+  );
+}
+
+function MoreIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
+      <circle cx="5" cy="12" r="1.5" />
+      <circle cx="12" cy="12" r="1.5" />
+      <circle cx="19" cy="12" r="1.5" />
+    </svg>
+  );
+}
+
 function shouldHideMobileBottomNav(pathname: string) {
-  return pathname.startsWith('/admin') || pathname === '/login' || pathname === '/register';
+  return pathname === '/login' || pathname === '/register';
+}
+
+function isAdminHashActive(hash: string, section: 'overview' | 'courses' | 'orders' | 'accesses') {
+  if (section === 'overview') {
+    return hash === '' || hash === '#admin-overview';
+  }
+
+  if (section === 'courses') {
+    return (
+      hash === '#admin-courses' ||
+      hash.startsWith('#admin-course') ||
+      hash === '#admin-lessons' ||
+      hash === '#admin-tariffs'
+    );
+  }
+
+  if (section === 'orders') {
+    return hash === '#manual-review' || hash === '#admin-orders';
+  }
+
+  return hash === '#admin-accesses' || hash === '#admin-users';
 }
 
 export default function MobileBottomNav() {
   const pathname = usePathname() ?? '/';
+  const [hash, setHash] = useState('');
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const syncHash = () => {
+      setHash(window.location.hash);
+    };
+
+    syncHash();
+    window.addEventListener('hashchange', syncHash);
+
+    return () => {
+      window.removeEventListener('hashchange', syncHash);
+    };
+  }, [pathname]);
 
   if (shouldHideMobileBottomNav(pathname)) {
     return null;
   }
 
-  const items: MobileNavItem[] = [
-    {
-      href: '/',
-      icon: <HomeIcon />,
-      isActive: pathname === '/',
-      label: 'Главная',
-    },
-    {
-      href: '/catalog',
-      icon: <CoursesIcon />,
-      isActive:
-        pathname === '/catalog' ||
-        pathname.startsWith('/catalog/') ||
-        pathname === '/checkout' ||
-        pathname.startsWith('/checkout/'),
-      label: 'Курсы',
-    },
-    {
-      href: '/lk',
-      icon: <LearnIcon />,
-      isActive: pathname === '/lk' || pathname.startsWith('/courses/'),
-      label: 'Мои курсы',
-    },
-    {
-      disabled: true,
-      href: '#',
-      icon: <TeacherIcon />,
-      isActive: false,
-      label: 'AI учитель',
-    },
-    {
-      href: '/profile',
-      icon: <ProfileIcon />,
-      isActive: pathname === '/profile',
-      label: 'Настройки',
-    },
-  ];
+  const isAdminRoute = pathname.startsWith('/admin');
+
+  const items: MobileNavItem[] = isAdminRoute
+    ? [
+        {
+          href: '/admin#admin-overview',
+          icon: <HomeIcon />,
+          isActive: pathname === '/admin' && isAdminHashActive(hash, 'overview'),
+          label: 'Обзор',
+        },
+        {
+          href: '/admin#admin-courses',
+          icon: <CoursesIcon />,
+          isActive: pathname === '/admin' && isAdminHashActive(hash, 'courses'),
+          label: 'Курсы',
+        },
+        {
+          href: '/admin#manual-review',
+          icon: <OrdersIcon />,
+          isActive: pathname === '/admin' && isAdminHashActive(hash, 'orders'),
+          label: 'Заказы',
+        },
+        {
+          href: '/admin#admin-accesses',
+          icon: <AccessIcon />,
+          isActive: pathname === '/admin' && isAdminHashActive(hash, 'accesses'),
+          label: 'Доступы',
+        },
+        {
+          href: '/admin/help',
+          icon: <MoreIcon />,
+          isActive: pathname === '/admin/help',
+          label: 'Ещё',
+        },
+      ]
+    : [
+        {
+          href: '/',
+          icon: <HomeIcon />,
+          isActive: pathname === '/',
+          label: 'Главная',
+        },
+        {
+          href: '/catalog',
+          icon: <CoursesIcon />,
+          isActive:
+            pathname === '/catalog' ||
+            pathname.startsWith('/catalog/') ||
+            pathname === '/checkout' ||
+            pathname.startsWith('/checkout/'),
+          label: 'Курсы',
+        },
+        {
+          href: '/lk',
+          icon: <LearnIcon />,
+          isActive: pathname === '/lk' || pathname.startsWith('/courses/'),
+          label: 'Мои курсы',
+        },
+        {
+          disabled: true,
+          href: '#',
+          icon: <TeacherIcon />,
+          isActive: false,
+          label: 'AI учитель',
+        },
+        {
+          href: '/profile',
+          icon: <ProfileIcon />,
+          isActive: pathname === '/profile',
+          label: 'Настройки',
+        },
+      ];
 
   return (
-    <nav aria-label="Нижняя мобильная навигация" className="mobile-bottom-nav">
+    <nav
+      aria-label={
+        isAdminRoute
+          ? 'Нижняя навигация админки'
+          : 'Нижняя мобильная навигация'
+      }
+      className={`mobile-bottom-nav ${isAdminRoute ? 'mobile-bottom-nav--admin' : ''}`}
+    >
       <div className="mobile-bottom-nav__list">
         {items.map((item) =>
           item.disabled ? (

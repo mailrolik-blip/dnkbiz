@@ -639,6 +639,7 @@ export async function getLearnerActivitySnapshot(
   const years = [...activityYears]
     .sort((left, right) => right - left)
     .map((year) => buildActivityYear(year, resolvedBuckets, today, todayKey));
+  const defaultYear = years.find((year) => year.hasActivity)?.year ?? currentYear;
 
   let currentStreak = 0;
   let streakDate = today;
@@ -652,7 +653,7 @@ export async function getLearnerActivitySnapshot(
     availableCourses,
     currentStreak,
     currentYear,
-    defaultYear: currentYear,
+    defaultYear,
     hasActivity: years.some((year) => year.hasActivity),
     lastActiveCourse: lastActiveLesson
       ? {

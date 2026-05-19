@@ -59,6 +59,7 @@ type DashboardFeedback = {
 } | null;
 
 type DashboardProfileCardProps = {
+  adminActions?: ReactNode;
   feedback: DashboardFeedback;
   user: DashboardUser;
 };
@@ -253,7 +254,7 @@ function getUserInitials(user: DashboardUser) {
   return `${words[0][0] ?? ''}${words[1][0] ?? ''}`.toUpperCase();
 }
 
-function DashboardProfileCard({ feedback, user }: DashboardProfileCardProps) {
+function DashboardProfileCard({ adminActions, feedback, user }: DashboardProfileCardProps) {
   const displayName = user.name?.trim() || user.email;
   const showEmail = Boolean(user.name?.trim()) && user.email !== displayName;
 
@@ -272,6 +273,8 @@ function DashboardProfileCard({ feedback, user }: DashboardProfileCardProps) {
           {showEmail ? <p className="dashboard-profile__email">{user.email}</p> : null}
         </div>
       </div>
+
+      {adminActions ? <div className="row-actions">{adminActions}</div> : null}
 
       {feedback ? (
         <p
@@ -632,6 +635,15 @@ export default function DashboardClient({
     );
   }
 
+  const continueCourse =
+    activePreviewCourse ??
+    activeFreeCourse ??
+    activeOwnedCourse ??
+    activityFallbackCourse ??
+    freeStarterCourse ??
+    previewStarterCourse ??
+    null;
+
   let quickActionsTitle = activity.hasActivity
     ? 'Продолжить обучение'
     : 'Открыть стартовый курс';
@@ -730,8 +742,16 @@ export default function DashboardClient({
     quickActionsNote = 'Выберите стартовый курс и начните с первого урока.';
   }
 
-  const mobileContinueCourse =
-    activityFallbackCourse ?? freeStarterCourse ?? previewStarterCourse ?? pendingPriorityCourse ?? null;
+  const mobileContinueCourse = continueCourse;
+  const mobileMyCourses = mobileContinueCourse
+    ? myCourses.filter((course) => course.slug !== mobileContinueCourse.slug)
+    : myCourses;
+  const desktopPendingCourses = pendingPriorityCourse
+    ? pendingCourses.filter((course) => course.slug !== pendingPriorityCourse.slug)
+    : pendingCourses;
+  const desktopMyCourses = continueCourse
+    ? myCourses.filter((course) => course.slug !== continueCourse.slug)
+    : myCourses;
   const mobileContinueBadges = mobileContinueCourse ? (
     <>
       <span className={getCatalogCourseStatusClass(mobileContinueCourse)}>
@@ -744,12 +764,14 @@ export default function DashboardClient({
       ) : null}
     </>
   ) : null;
-  const mobileContinueTitle = mobileContinueCourse?.title ?? quickActionsTitle;
+  const mobileContinueTitle = mobileContinueCourse?.title ?? 'Продолжить обучение';
   const mobileContinueNote = activity.lastActiveLesson
     ? `Последний урок: «${activity.lastActiveLesson.lessonTitle}».`
     : mobileContinueCourse?.nextLessonTitle
       ? `Следующий урок: ${mobileContinueCourse.nextLessonTitle}.`
-      : quickActionsNote;
+      : pendingCourses.length > 0
+        ? 'Заказы на оплату вынесены в отдельный блок ниже, а здесь остаётся главный учебный вход.'
+        : quickActionsNote;
   const mobileImplementationStats = [
     {
       label: 'Завершено',
@@ -806,6 +828,16 @@ export default function DashboardClient({
 
         <section className="dashboard-mobile-only dashboard-mobile-profile-shell">
           <DashboardProfileCard feedback={feedback} user={user} />
+          {user.role === 'ADMIN' ? (
+            <div className="row-actions dashboard-mobile-profile-actions">
+              <Link className="ghost-button" href="/admin">
+                Админка
+              </Link>
+              <Link className="ghost-button" href="/admin/help">
+                Инструкция
+              </Link>
+            </div>
+          ) : null}
         </section>
 
         <section className="dashboard-mobile-only dashboard-mobile-priority">
@@ -885,8 +917,13 @@ export default function DashboardClient({
               <EmptyCard>
                 Пока здесь нет начатых курсов. Начните с бесплатного курса или откройте preview-уроки из каталога.
               </EmptyCard>
+            ) : mobileMyCourses.length === 0 ? (
+              <EmptyCard>
+                Текущий курс уже вынесен в блок «Продолжить обучение». Остальные начатые
+                программы появятся здесь автоматически.
+              </EmptyCard>
             ) : (
-              myCourses.map((course) => (
+              mobileMyCourses.map((course) => (
                 <DashboardCourseCard
                   course={course}
                   key={course.slug}
@@ -933,7 +970,22 @@ export default function DashboardClient({
         </section>
 
         <section className="dashboard-overview dashboard-desktop-only">
-          <DashboardProfileCard feedback={feedback} user={user} />
+          <DashboardProfileCard
+            adminActions={
+              user.role === 'ADMIN' ? (
+                <>
+                  <Link className="ghost-button" href="/admin">
+                    Админка
+                  </Link>
+                  <Link className="ghost-button" href="/admin/help">
+                    Инструкция
+                  </Link>
+                </>
+              ) : undefined
+            }
+            feedback={feedback}
+            user={user}
+          />
           <div className="dashboard-desktop-only">
             <DashboardQuickActions
               note={quickActionsNote}
@@ -949,15 +1001,7 @@ export default function DashboardClient({
           </div>
         </section>
 
-        <section className="dashboard-activity-shell dashboard-desktop-only">
-          <LearnerActivity
-            activity={activity}
-            emptyStateActionHref={emptyStateAction.href}
-            emptyStateActionLabel={emptyStateAction.label}
-          />
-        </section>
-
-        {pendingCourses.length > 0 ? (
+        {desktopPendingCourses.length > 0 ? (
           <section className="panel dashboard-section dashboard-desktop-only">
             <SectionIntro
               description="Здесь лежат заказы, которые еще не оплачены по QR СБП или уже отправлены на ручную проверку."
@@ -966,7 +1010,7 @@ export default function DashboardClient({
             />
 
             <div className="course-grid dashboard-grid">
-              {pendingCourses.map((course) => (
+              {desktopPendingCourses.map((course) => (
                 <DashboardCourseCard
                   course={course}
                   key={course.slug}
@@ -995,8 +1039,13 @@ export default function DashboardClient({
                 Пока здесь нет начатых курсов. После первого урока этот блок станет вашим
                 основным хабом обучения.
               </EmptyCard>
+            ) : desktopMyCourses.length === 0 ? (
+              <EmptyCard>
+                Текущий курс уже вынесен в верхний блок продолжения обучения. Остальные начатые
+                программы появятся здесь автоматически.
+              </EmptyCard>
             ) : (
-              myCourses.map((course) => (
+              desktopMyCourses.map((course) => (
                 <DashboardCourseCard
                   course={course}
                   key={course.slug}
@@ -1006,6 +1055,14 @@ export default function DashboardClient({
               ))
             )}
           </div>
+        </section>
+
+        <section className="dashboard-activity-shell dashboard-desktop-only">
+          <LearnerActivity
+            activity={activity}
+            emptyStateActionHref={emptyStateAction.href}
+            emptyStateActionLabel={emptyStateAction.label}
+          />
         </section>
 
         <section className="panel dashboard-section dashboard-desktop-only">

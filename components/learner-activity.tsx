@@ -713,7 +713,7 @@ export default function LearnerActivity({
                     ))}
                   {tooltipDay!.entries.length > 3 ? (
                     <li className="dashboard-activity__tooltip-more">
-                      Р РµС‰Рµ {tooltipDay!.entries.length - 3}
+                      И ещё {tooltipDay!.entries.length - 3}
                     </li>
                   ) : null}
                   </ul>
@@ -850,7 +850,7 @@ export default function LearnerActivity({
                   ))}
                   {tooltipDay!.entries.length > 3 ? (
                     <li className="dashboard-activity__tooltip-more">
-                      И еще {tooltipDay!.entries.length - 3}
+                      И ещё {tooltipDay!.entries.length - 3}
                     </li>
                   ) : null}
                 </ul>

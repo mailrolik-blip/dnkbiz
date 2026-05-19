@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
 import AdminDashboardClient from '@/components/admin-dashboard-client';
@@ -29,27 +28,8 @@ export default async function AdminPage() {
   const data = await getAdminDashboardData();
 
   return (
-    <main className="page-shell">
-      <header className="top-nav">
-        <Link href="/" className="brand">
-          <span className="brand-mark" />
-          <span>Бизнес школа ДНК</span>
-        </Link>
-
-        <div className="row-actions" style={{ marginTop: 0 }}>
-          <Link href="/admin/help" className="ghost-button">
-            Инструкция
-          </Link>
-          <Link href="/lk" className="ghost-button">
-            Личный кабинет
-          </Link>
-          <Link href="/catalog" className="secondary-button">
-            Каталог
-          </Link>
-        </div>
-      </header>
-
-      <AdminDashboardClient initialData={data} />
+    <main className="page-shell admin-page-shell">
+      <AdminDashboardClient initialData={data} adminEmail={user.email} />
     </main>
   );
 }
