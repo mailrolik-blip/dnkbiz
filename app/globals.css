@@ -5002,6 +5002,11 @@ a.bento-card:hover {
   align-content: start;
 }
 
+.admin-editor-grid {
+  grid-template-columns: minmax(15.5rem, 20rem) minmax(0, 1fr);
+  align-items: start;
+}
+
 .admin-editor-sidebar__head,
 .admin-editor-card__head,
 .admin-subeditor__head,
@@ -5906,6 +5911,7 @@ a.bento-card:hover {
 .admin-activity-list__date {
   color: var(--muted);
   font-size: 0.68rem;
+  text-align: right;
   white-space: nowrap;
 }
 
@@ -5920,9 +5926,9 @@ a.bento-card:hover {
 }
 
 .admin-editor-context-strip {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
-  justify-content: space-between;
   gap: 0.55rem;
   padding: 0.58rem 0.68rem;
   border-radius: 1rem;
@@ -5953,17 +5959,25 @@ a.bento-card:hover {
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 0.35rem;
+  min-width: 0;
 }
 
 .admin-editor-context-strip__tools {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 0.35rem;
+  min-width: 0;
 }
 
 .admin-inline-select {
   display: inline-flex;
   align-items: center;
+}
+
+.admin-inline-select--wide {
+  display: grid;
+  min-width: 0;
 }
 
 .admin-inline-select select {
@@ -5975,6 +5989,12 @@ a.bento-card:hover {
   border-radius: 0.82rem;
   background: rgba(255, 255, 255, 0.03);
   color: var(--foreground);
+}
+
+.admin-inline-select--wide select {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
 }
 
 .admin-drawer--content .admin-course-list,
@@ -5992,6 +6012,15 @@ a.bento-card:hover {
   overflow: auto;
 }
 
+.admin-drawer--content .admin-tariff-list {
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  align-items: stretch;
+}
+
+.admin-editor-card > .panel-copy {
+  display: none;
+}
+
 .admin-page-shell .ghost-button,
 .admin-page-shell .secondary-button,
 .admin-drawer .ghost-button,
@@ -6001,15 +6030,15 @@ a.bento-card:hover {
 
 .admin-page-shell .ghost-button,
 .admin-drawer .ghost-button {
-  border-color: transparent;
-  background: rgba(255, 255, 255, 0.018);
+  border-color: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.01);
   color: var(--muted-strong);
 }
 
 .admin-page-shell .secondary-button,
 .admin-drawer .secondary-button {
   border-color: rgba(255, 255, 255, 0.04);
-  background: rgba(255, 255, 255, 0.022);
+  background: rgba(255, 255, 255, 0.014);
 }
 
 .admin-shell--saas {
@@ -6018,7 +6047,7 @@ a.bento-card:hover {
 
 .admin-app-layout {
   display: grid;
-  grid-template-columns: 14.4rem minmax(0, 1fr);
+  grid-template-columns: 13.6rem minmax(0, 1fr);
   gap: 0.45rem;
   align-items: start;
   min-width: 0;
@@ -6028,10 +6057,12 @@ a.bento-card:hover {
   position: sticky;
   top: 0.6rem;
   display: grid;
-  gap: 0.7rem;
+  gap: 0.52rem;
+  align-content: start;
   align-self: start;
+  grid-auto-rows: max-content;
   min-height: calc(100vh - 1.2rem);
-  padding: 0.72rem;
+  padding: 0.62rem;
   border-radius: 1.35rem;
 }
 
@@ -6045,19 +6076,35 @@ a.bento-card:hover {
 .admin-sidebar__brand {
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  gap: 0.55rem;
+  gap: 0.48rem;
   min-width: 0;
+  padding: 0.3rem 0.18rem 0.58rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0;
+  background: none;
+  color: inherit;
+  text-decoration: none;
+}
+
+.admin-sidebar__brand .brand-mark {
+  width: 0.8rem;
+  height: 0.8rem;
+  box-shadow: 0 0 0 0.28rem rgba(1, 247, 246, 0.1);
 }
 
 .admin-sidebar__brand strong {
   display: block;
   color: var(--foreground);
+  font-size: 0.94rem;
 }
 
 .admin-sidebar__brand p {
-  margin: 0.08rem 0 0;
+  margin: 0.06rem 0 0;
   color: var(--muted);
-  font-size: 0.74rem;
+  font-size: 0.68rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .admin-sidebar__nav {
@@ -6113,6 +6160,8 @@ a.bento-card:hover {
 
 .admin-sidebar__footer {
   margin-top: auto;
+  padding-top: 0.4rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .admin-workspace {
@@ -6124,13 +6173,18 @@ a.bento-card:hover {
 .admin-toolbar {
   position: sticky;
   top: 0.6rem;
-  z-index: 5;
+  z-index: 12;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.6rem;
   padding: 0.5rem 0.62rem;
   border-radius: 1.2rem;
+  overflow: visible;
+}
+
+.panel.admin-toolbar {
+  overflow: visible !important;
 }
 
 .admin-toolbar__primary,
@@ -6139,6 +6193,11 @@ a.bento-card:hover {
   align-items: center;
   gap: 0.55rem;
   min-width: 0;
+  overflow: visible;
+}
+
+.admin-toolbar__primary {
+  flex: 1 1 auto;
 }
 
 .admin-toolbar__site-link {
@@ -6173,6 +6232,11 @@ a.bento-card:hover {
   text-decoration: none;
 }
 
+.admin-toolbar__notifications {
+  position: relative;
+  z-index: 16;
+}
+
 .admin-toolbar__bell {
   position: relative;
   display: inline-flex;
@@ -6205,6 +6269,120 @@ a.bento-card:hover {
   font-size: 0.64rem;
   font-weight: 800;
   line-height: 1.15rem;
+}
+
+.admin-toolbar__dropdown {
+  position: absolute;
+  top: calc(100% + 0.45rem);
+  right: 0;
+  z-index: 20;
+  width: min(23.5rem, calc(100vw - 1.5rem));
+  max-height: min(70vh, 26rem);
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.7rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1rem;
+  background:
+    radial-gradient(circle at top right, rgba(1, 247, 246, 0.08), transparent 18rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0)),
+    rgba(9, 16, 26, 0.98);
+  box-shadow: 0 24px 48px -34px rgba(0, 0, 0, 0.9);
+}
+
+.admin-toolbar__dropdown-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.admin-toolbar__dropdown-head--secondary {
+  padding-top: 0.25rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.admin-toolbar__dropdown-list {
+  display: grid;
+  gap: 0.28rem;
+  max-height: 10.5rem;
+  overflow: auto;
+}
+
+.admin-toolbar__dropdown-item {
+  display: grid;
+  grid-template-columns: 1.85rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.42rem;
+  width: 100%;
+  min-width: 0;
+  padding: 0.38rem 0.42rem;
+  border-radius: 0.9rem;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+  text-align: left;
+  cursor: pointer;
+}
+
+.admin-toolbar__dropdown-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 0.7rem;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.admin-toolbar__dropdown-icon svg {
+  width: 0.92rem;
+  height: 0.92rem;
+}
+
+.admin-toolbar__dropdown-icon--warning {
+  color: var(--warning);
+  background: rgba(255, 201, 79, 0.12);
+}
+
+.admin-toolbar__dropdown-icon--accent {
+  color: var(--accent);
+  background: rgba(1, 247, 246, 0.12);
+}
+
+.admin-toolbar__dropdown-icon--success {
+  color: #35f0a8;
+  background: rgba(0, 255, 136, 0.12);
+}
+
+.admin-toolbar__dropdown-copy,
+.admin-toolbar__dropdown-meta {
+  display: grid;
+  gap: 0.12rem;
+  min-width: 0;
+}
+
+.admin-toolbar__dropdown-copy strong,
+.admin-toolbar__dropdown-copy span,
+.admin-toolbar__dropdown-meta .mono {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-toolbar__dropdown-copy span {
+  color: var(--muted-strong);
+  font-size: 0.72rem;
+}
+
+.admin-toolbar__dropdown-meta {
+  justify-items: end;
+}
+
+.admin-toolbar__dropdown-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
 }
 
 .admin-toolbar__profile {
@@ -6261,7 +6439,7 @@ a.bento-card:hover {
 }
 
 .admin-dashboard-surface__header h1 {
-  margin: 0.08rem 0 0;
+  margin: 0;
   font-size: clamp(1.35rem, 1.9vw, 1.95rem);
 }
 
@@ -6272,7 +6450,7 @@ a.bento-card:hover {
   line-height: 1.35;
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 1;
+  -webkit-line-clamp: 2;
   overflow: hidden;
 }
 
@@ -6286,9 +6464,28 @@ a.bento-card:hover {
 .admin-dashboard-toolbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 0.5rem;
   flex-wrap: wrap;
+}
+
+.admin-dashboard-toolbar__summary {
+  display: grid;
+  gap: 0.12rem;
+  min-width: 0;
+}
+
+.admin-dashboard-toolbar__summary strong,
+.admin-dashboard-toolbar__summary span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-dashboard-toolbar__summary span {
+  color: var(--muted-strong);
+  font-size: 0.72rem;
 }
 
 .admin-dashboard-tabs {
@@ -6435,7 +6632,9 @@ a.bento-card:hover {
 
 .admin-saas-grid--overview {
   grid-template-columns: repeat(12, minmax(0, 1fr));
-  grid-template-areas: "orders orders orders orders orders actions actions actions activity activity activity activity";
+  grid-template-areas:
+    "orders orders orders orders users users users users revenue revenue revenue revenue"
+    "actions actions actions actions activity activity activity activity activity activity activity activity";
 }
 
 .admin-surface-card {
@@ -6469,7 +6668,8 @@ a.bento-card:hover {
 
 .admin-surface-card--chart,
 .admin-surface-card--list,
-.admin-surface-card--section {
+.admin-surface-card--section,
+.admin-surface-card--management {
   min-height: 100%;
 }
 
@@ -6483,6 +6683,13 @@ a.bento-card:hover {
 .admin-surface-card__head h2 {
   margin: 0.08rem 0 0;
   font-size: 1rem;
+}
+
+.admin-surface-card__head-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.3rem;
 }
 
 .admin-surface-card__link {
@@ -6529,13 +6736,42 @@ a.bento-card:hover {
 
 .admin-section-workspace {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: 0.32rem;
-  align-items: stretch;
+  align-items: start;
+}
+
+.admin-section-workspace--with-chart .admin-surface-card--chart {
+  grid-column: span 5;
+}
+
+.admin-section-workspace--with-chart .admin-surface-card--section {
+  grid-column: span 7;
+}
+
+.admin-section-workspace--with-chart .admin-surface-card--list,
+.admin-section-workspace--with-chart .admin-surface-card--management,
+.admin-section-workspace--summary .admin-surface-card--list {
+  grid-column: 1 / -1;
+}
+
+.admin-section-workspace--summary .admin-surface-card--section {
+  grid-column: span 12;
 }
 
 .admin-surface-card--chart {
   gap: 0.42rem;
+}
+
+.admin-surface-card--section {
+  align-self: start;
+  gap: 0.28rem;
+  height: auto;
+  min-height: 0;
+}
+
+.admin-surface-card--section .admin-metric-cluster {
+  gap: 0.22rem;
 }
 
 .admin-surface-card--list .admin-workbench-list {
@@ -6567,7 +6803,29 @@ a.bento-card:hover {
 
 .admin-line-chart__svg {
   width: 100%;
-  height: 6.1rem;
+  height: 7rem;
+}
+
+.admin-line-chart__grid {
+  stroke: rgba(255, 255, 255, 0.1);
+  stroke-dasharray: 4 4;
+  stroke-width: 1;
+}
+
+.admin-line-chart__guide {
+  stroke: rgba(255, 255, 255, 0.05);
+  stroke-width: 1;
+}
+
+.admin-line-chart__empty {
+  display: grid;
+  place-items: center;
+  min-height: 7rem;
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 1rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-align: center;
 }
 
 .admin-line-chart__area {
@@ -6577,13 +6835,22 @@ a.bento-card:hover {
 .admin-line-chart__line {
   fill: none;
   stroke: rgba(1, 247, 246, 0.9);
-  stroke-width: 2.1;
+  stroke-width: 2.4;
   stroke-linecap: round;
   stroke-linejoin: round;
+  filter: drop-shadow(0 0 10px rgba(1, 247, 246, 0.18));
 }
 
 .admin-line-chart__point {
   fill: rgba(1, 247, 246, 0.98);
+  stroke: rgba(8, 14, 23, 0.86);
+  stroke-width: 1.2;
+}
+
+.admin-line-chart__scale {
+  fill: rgba(229, 244, 255, 0.62);
+  font-size: 9px;
+  text-anchor: end;
 }
 
 .admin-line-chart--warning .admin-line-chart__area {
@@ -6665,6 +6932,56 @@ a.bento-card:hover {
   gap: 0.3rem;
 }
 
+.admin-queue-list {
+  display: grid;
+  gap: 0.32rem;
+}
+
+.admin-queue-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.42rem;
+  padding: 0.44rem 0.5rem;
+  border-radius: 0.95rem;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.admin-queue-item__copy,
+.admin-queue-item__meta {
+  display: grid;
+  gap: 0.12rem;
+  min-width: 0;
+}
+
+.admin-queue-item__copy strong,
+.admin-queue-item__copy p,
+.admin-queue-item__meta strong {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-queue-item__copy p {
+  color: var(--muted-strong);
+  font-size: 0.72rem;
+}
+
+.admin-queue-item__meta {
+  grid-auto-flow: column;
+  align-items: center;
+  gap: 0.35rem;
+  justify-content: end;
+}
+
+.admin-queue-item__meta .ghost-button {
+  min-height: 1.65rem;
+  padding: 0.2rem 0.46rem;
+}
+
 .admin-status-summary,
 .admin-metric-pill {
   display: inline-flex;
@@ -6732,6 +7049,13 @@ a.bento-card:hover {
   cursor: pointer;
 }
 
+.admin-workbench-row--active {
+  border-color: rgba(1, 247, 246, 0.24);
+  background:
+    linear-gradient(180deg, rgba(1, 247, 246, 0.08), rgba(1, 247, 246, 0.02)),
+    rgba(255, 255, 255, 0.03);
+}
+
 .admin-workbench-row__copy,
 .admin-workbench-row__meta {
   display: grid;
@@ -6759,7 +7083,7 @@ a.bento-card:hover {
 }
 
 .admin-quick-grid--saas {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(8.75rem, 1fr));
   gap: 0.24rem;
 }
 
@@ -6768,25 +7092,81 @@ a.bento-card:hover {
 }
 
 .admin-surface-card--actions .admin-quick-action {
-  padding: 0.4rem 0.36rem;
-  gap: 0.22rem;
+  grid-template-columns: auto minmax(0, 1fr);
+  justify-items: start;
+  align-items: center;
+  min-height: 2.65rem;
+  padding: 0.38rem 0.44rem;
+  gap: 0.38rem;
 }
 
 .admin-surface-card--actions .admin-quick-action__icon {
-  width: 1.7rem;
-  height: 1.7rem;
+  width: 1.45rem;
+  height: 1.45rem;
+}
+
+.admin-surface-card--actions .admin-quick-action span:last-child {
+  text-align: left;
 }
 
 .admin-activity-list {
   gap: 0.28rem;
 }
 
+.admin-activity-list--timeline {
+  gap: 0.24rem;
+}
+
+.admin-activity-list__item--timeline {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1.95rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.42rem;
+  padding: 0.44rem 0.48rem;
+  border-radius: 0.95rem;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+  text-align: left;
+  cursor: pointer;
+}
+
+.admin-activity-list__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.95rem;
+  height: 1.95rem;
+  border-radius: 0.74rem;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.admin-activity-list__icon svg {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+.admin-activity-list__icon--warning {
+  color: var(--warning);
+  background: rgba(255, 201, 79, 0.12);
+}
+
+.admin-activity-list__icon--accent {
+  color: var(--accent);
+  background: rgba(1, 247, 246, 0.12);
+}
+
+.admin-activity-list__icon--success {
+  color: #35f0a8;
+  background: rgba(0, 255, 136, 0.12);
+}
+
 .admin-shell--saas .admin-drawer__window {
-  width: min(1320px, calc(100vw - 2rem));
+  width: min(1440px, calc(100vw - 1.5rem));
 }
 
 .admin-shell--saas .admin-drawer__window--content-focused {
-  width: min(1060px, calc(100vw - 2rem));
+  width: min(1480px, calc(100vw - 1.5rem));
 }
 
 .admin-shell--saas .admin-drawer__chrome {
@@ -6798,7 +7178,7 @@ a.bento-card:hover {
 }
 
 .admin-shell--saas .admin-drawer__controls .field {
-  flex: 1 1 12rem;
+  flex: 1 1 15rem;
 }
 
 .admin-shell--saas .admin-drawer__controls .field input {
@@ -6838,23 +7218,187 @@ a.bento-card:hover {
 .admin-shell--saas .admin-drawer--content .admin-course-list,
 .admin-shell--saas .admin-drawer--content .admin-lesson-order,
 .admin-shell--saas .admin-drawer--content .admin-tariff-list {
-  max-height: 11rem;
+  max-height: 10rem;
 }
 
 .admin-shell--saas .admin-drawer--content .admin-editor-sidebar {
-  max-height: calc(100vh - 12.5rem);
+  max-height: calc(100vh - 12rem);
+  min-width: 0;
 }
 
 .admin-shell--saas .admin-drawer__window--content-focused .admin-editor-main {
   gap: 0.46rem;
-  width: min(100%, 74rem);
-  margin-inline: auto;
+  width: 100%;
+  margin-inline: 0;
+}
+
+.admin-shell--saas .admin-drawer--content .admin-editor-grid {
+  grid-template-columns: minmax(16rem, 21rem) minmax(0, 1fr);
+  gap: 0.55rem;
+}
+
+.admin-shell--saas .admin-drawer__window--content-focused .admin-editor-grid {
+  grid-template-columns: minmax(16rem, 21rem) minmax(0, 1fr);
+}
+
+.admin-shell--saas .admin-drawer__window--content-focused .admin-editor-grid--focused {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .admin-shell--saas .admin-drawer__window--content-focused .admin-editor-card,
 .admin-shell--saas .admin-drawer__window--content-focused .admin-subeditor,
 .admin-shell--saas .admin-drawer__window--content-focused .admin-note {
   width: 100%;
+}
+
+.admin-shell--saas .admin-drawer__window--content-focused .admin-editor-main > * {
+  min-width: 0;
+}
+
+.admin-shell--saas .admin-drawer__window--content-focused .admin-editor-card__stats {
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+}
+
+.admin-management-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.35rem;
+}
+
+.admin-management-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.32rem;
+}
+
+.admin-management-controls .field {
+  flex: 1 1 18rem;
+  min-width: 0;
+}
+
+.admin-management-split {
+  display: grid;
+  grid-template-columns: minmax(19rem, 0.8fr) minmax(0, 1.2fr);
+  gap: 0.45rem;
+  align-items: start;
+}
+
+.admin-management-list,
+.admin-management-list--full {
+  display: grid;
+  gap: 0.28rem;
+  min-width: 0;
+  max-height: 28rem;
+  overflow: auto;
+  padding-right: 0.14rem;
+}
+
+.admin-management-detail {
+  min-width: 0;
+}
+
+.admin-management-empty {
+  display: grid;
+  gap: 0.35rem;
+  align-content: start;
+  padding: 0.82rem;
+  border-radius: 1rem;
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.018);
+}
+
+.admin-management-empty strong {
+  color: var(--foreground);
+}
+
+.admin-management-disabled-row {
+  display: none;
+}
+
+.admin-management-disabled-row .ghost-button:disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
+}
+
+.admin-management-disabled-row + .admin-management-note:not(.admin-management-note--access) {
+  display: none;
+}
+
+.admin-management-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.74rem;
+  line-height: 1.42;
+}
+
+.admin-management-note--access {
+  margin-top: -0.1rem;
+}
+
+.admin-user-detail > .admin-management-note,
+.admin-section-workspace .admin-management-note,
+.admin-section-workspace .admin-management-note--access {
+  display: none;
+}
+
+.admin-access-grant {
+  display: grid;
+  gap: 0.42rem;
+  padding: 0.54rem;
+  border-radius: 1rem;
+}
+
+.admin-access-grant__controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.admin-access-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) auto auto;
+  align-items: center;
+  gap: 0.46rem;
+  min-width: 0;
+  padding: 0.42rem 0.5rem;
+  border-radius: 0.92rem;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.admin-access-row__copy,
+.admin-access-row__meta {
+  display: grid;
+  gap: 0.16rem;
+  min-width: 0;
+}
+
+.admin-access-row__copy strong,
+.admin-access-row__copy p,
+.admin-access-row__meta .mono {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-access-row__copy p {
+  color: var(--muted-strong);
+  font-size: 0.72rem;
+}
+
+.admin-access-row__meta {
+  justify-items: end;
+}
+
+.admin-access-row__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.28rem;
 }
 
 .admin-user-detail {
@@ -6874,7 +7418,6 @@ a.bento-card:hover {
 }
 
 .admin-user-detail__copy,
-.admin-user-detail__actions,
 .admin-user-detail__chips,
 .admin-user-detail__orders {
   display: grid;
@@ -6891,7 +7434,10 @@ a.bento-card:hover {
 }
 
 .admin-user-detail__actions {
-  justify-items: end;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.3rem;
 }
 
 .admin-user-detail__stats,
@@ -6901,7 +7447,7 @@ a.bento-card:hover {
 }
 
 .admin-user-detail__stats {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
 }
 
 .admin-user-detail__grid {
@@ -6939,12 +7485,24 @@ a.bento-card:hover {
 
   .admin-saas-grid--overview {
     grid-template-areas:
-      "orders orders orders orders orders orders orders orders orders orders orders orders"
+      "orders orders orders orders orders orders users users users users revenue revenue"
+      "orders orders orders orders orders orders users users users users revenue revenue"
       "actions actions actions actions actions actions activity activity activity activity activity activity";
   }
 
-  .admin-section-workspace {
+  .admin-section-workspace,
+  .admin-section-workspace--with-chart,
+  .admin-section-workspace--summary {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-section-workspace--with-chart .admin-surface-card--chart,
+  .admin-section-workspace--with-chart .admin-surface-card--section,
+  .admin-section-workspace--with-chart .admin-surface-card--management,
+  .admin-section-workspace--with-chart .admin-surface-card--list,
+  .admin-section-workspace--summary .admin-surface-card--section,
+  .admin-section-workspace--summary .admin-surface-card--list {
+    grid-column: 1 / -1;
   }
 }
 
@@ -6977,6 +7535,8 @@ a.bento-card:hover {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
       "orders"
+      "users"
+      "revenue"
       "actions"
       "activity";
   }
@@ -6988,6 +7548,10 @@ a.bento-card:hover {
   .admin-user-detail__stats,
   .admin-user-detail__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-management-split {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -7005,8 +7569,8 @@ a.bento-card:hover {
 
   .admin-saas-grid {
     grid-template-areas:
-      "users"
       "orders"
+      "users"
       "revenue"
       "actions"
       "activity";
@@ -7041,6 +7605,16 @@ a.bento-card:hover {
   .admin-user-detail__stats,
   .admin-user-detail__grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-access-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-access-row__meta,
+  .admin-access-row__actions {
+    justify-items: start;
+    justify-content: flex-start;
   }
 }
 
