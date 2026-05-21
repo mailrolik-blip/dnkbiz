@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, useTransition } from 'react';
 
 import type {
   AdminCourseRow,
@@ -128,6 +128,15 @@ type AdminSectionPanel = {
   rows: AdminWorkbenchRow[];
   emptyText: string;
   chart?: AdminSectionChart | null;
+};
+
+type AdminCompactSelectOption = {
+  value: number | string;
+  label: string;
+  meta?: string;
+  badge?: string;
+  badgeClass?: string;
+  searchText?: string;
 };
 
 function formatDate(value: string) {
@@ -700,6 +709,169 @@ function MiniTrendChart({
   );
 }
 
+function AdminCompactSelect({
+  value,
+  options,
+  onChange,
+  placeholder,
+  searchPlaceholder,
+  emptyText,
+  ariaLabel,
+  disabled = false,
+}: {
+  value: number | string | null;
+  options: AdminCompactSelectOption[];
+  onChange: (value: number | string) => void;
+  placeholder: string;
+  searchPlaceholder: string;
+  emptyText: string;
+  ariaLabel: string;
+  disabled?: boolean;
+}) {
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const inputId = `admin-compact-select-${useId().replace(/:/g, '')}`;
+  const [isOpen, setIsOpen] = useState(false);
+  const [query, setQuery] = useState('');
+
+  const normalizedQuery = query.trim().toLowerCase();
+  const selectedOption =
+    options.find((option) => String(option.value) === String(value ?? '')) ?? null;
+  const filteredOptions = options.filter((option) =>
+    (option.searchText ?? `${option.label} ${option.meta ?? ''}`.trim())
+      .toLowerCase()
+      .includes(normalizedQuery)
+  );
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target;
+
+      if (!(target instanceof Node)) {
+        return;
+      }
+
+      if (rootRef.current?.contains(target)) {
+        return;
+      }
+
+      setIsOpen(false);
+      setQuery('');
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== 'Escape' || event.defaultPrevented || event.isComposing) {
+        return;
+      }
+
+      event.preventDefault();
+      setIsOpen(false);
+      setQuery('');
+    }
+
+    window.addEventListener('pointerdown', handlePointerDown);
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('pointerdown', handlePointerDown);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen]);
+
+  return (
+    <div className="admin-compact-select" ref={rootRef}>
+      <button
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
+        aria-label={ariaLabel}
+        className={`admin-compact-select__trigger ${
+          isOpen ? 'admin-compact-select__trigger--open' : ''
+        }`}
+        disabled={disabled}
+        onClick={() => {
+          setIsOpen((current) => !current);
+          setQuery('');
+        }}
+        type="button"
+      >
+        <span className="admin-compact-select__trigger-copy">
+          <strong>{selectedOption?.label ?? placeholder}</strong>
+          {selectedOption?.meta ? (
+            <span className="mono">{selectedOption.meta}</span>
+          ) : (
+            <span>{placeholder}</span>
+          )}
+        </span>
+        {selectedOption?.badge ? (
+          <span className={selectedOption.badgeClass}>{selectedOption.badge}</span>
+        ) : null}
+        <span className="admin-compact-select__trigger-icon" aria-hidden="true">
+          v
+        </span>
+      </button>
+
+      {isOpen ? (
+        <div className="admin-compact-select__popover">
+          <div className="field">
+            <label className="sr-only" htmlFor={inputId}>
+              {searchPlaceholder}
+            </label>
+            <input
+              autoFocus
+              id={inputId}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={searchPlaceholder}
+              value={query}
+            />
+          </div>
+
+          <div className="admin-compact-select__list" role="listbox">
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map((option) => {
+                const isActive = String(option.value) === String(value ?? '');
+
+                return (
+                  <button
+                    aria-selected={isActive}
+                    className={`admin-compact-select__option ${
+                      isActive ? 'admin-compact-select__option--active' : ''
+                    }`}
+                    key={String(option.value)}
+                    onClick={() => {
+                      onChange(option.value);
+                      setIsOpen(false);
+                      setQuery('');
+                    }}
+                    role="option"
+                    type="button"
+                  >
+                    <span className="admin-compact-select__option-copy">
+                      <strong title={option.label}>{option.label}</strong>
+                      {option.meta ? (
+                        <span className="mono" title={option.meta}>
+                          {option.meta}
+                        </span>
+                      ) : null}
+                    </span>
+                    {option.badge ? (
+                      <span className={option.badgeClass}>{option.badge}</span>
+                    ) : null}
+                  </button>
+                );
+              })
+            ) : (
+              <div className="admin-compact-select__empty">{emptyText}</div>
+            )}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export default function AdminDashboardClient({
   adminActions,
   initialData,
@@ -972,30 +1144,6 @@ export default function AdminDashboardClient({
     : null;
   const selectedOrderNeedsManualReview =
     selectedOrder?.paymentMethod === 'MANUAL' && selectedOrder.status === 'PROCESSING';
-
-  const featuredCourse = selectedCourse ?? initialData.courses[0] ?? null;
-  const featuredTariff =
-    featuredCourse?.tariffs.find((tariff) => tariff.isActive) ?? featuredCourse?.tariffs[0] ?? null;
-
-  const featuredLessons = useMemo(() => {
-    if (!featuredCourse) {
-      return [];
-    }
-
-    return [...featuredCourse.lessons]
-      .sort((left, right) => left.position - right.position)
-      .slice(0, 4);
-  }, [featuredCourse]);
-
-  const dashboardTariffs = useMemo(() => {
-    if (!featuredCourse) {
-      return [];
-    }
-
-    return [...featuredCourse.tariffs]
-      .sort((left, right) => Number(right.isActive) - Number(left.isActive))
-      .slice(0, 2);
-  }, [featuredCourse]);
 
   const dashboardManualReviewOrders = useMemo(
     () => manualReviewOrders.slice(0, 3),
@@ -1582,8 +1730,12 @@ export default function AdminDashboardClient({
   ]);
   const isDashboardHome = activeDashboardTab === 'dashboard';
   const showTrendPeriodSwitch = isDashboardHome || Boolean(activeSectionPanel?.chart);
-  const pageTitle = isDashboardHome ? 'Обзор' : activeSectionPanel?.title ?? 'Обзор';
+  const pageTitle =
+    isDashboardHome ? 'Управление платформой' : activeSectionPanel?.title ?? 'Управление платформой';
   const surfaceTitle = pageTitle;
+  const surfaceDescription = isDashboardHome
+    ? 'Единый центр управления курсами, уроками, тарифами, заказами и доступами без лишних экранов.'
+    : activeSectionPanel?.subtitle ?? 'Рабочая область администратора.';
   const isContentDrawerFocused =
     activeAdminDrawer === 'content' &&
     Boolean(selectedCourse) &&
@@ -2093,6 +2245,25 @@ export default function AdminDashboardClient({
       });
     });
   }
+
+  useEffect(() => {
+    function handleHashNavigation() {
+      const sectionId = window.location.hash.replace(/^#/, '');
+
+      if (!sectionId || sectionId === 'admin-overview') {
+        return;
+      }
+
+      scrollToAdminSection(sectionId);
+    }
+
+    handleHashNavigation();
+    window.addEventListener('hashchange', handleHashNavigation);
+
+    return () => {
+      window.removeEventListener('hashchange', handleHashNavigation);
+    };
+  }, []);
 
   async function handleCreateCourse() {
     setPendingKey('create-course');
@@ -2708,23 +2879,23 @@ export default function AdminDashboardClient({
             {selectedUserGrantableCourses.length > 0 ? 'Можно открыть курс вручную' : 'Новых курсов для выдачи нет'}
           </span>
         </div>
-        <div className="admin-inline-select admin-inline-select--wide">
-          <select
-            disabled={selectedUserGrantableCourses.length === 0}
-            onChange={(event) => setSelectedGrantCourseId(Number(event.target.value))}
-            value={selectedGrantCourseId ?? ''}
-          >
-            {selectedUserGrantableCourses.length > 0 ? (
-              selectedUserGrantableCourses.map((course) => (
-                <option key={course.id} value={course.id}>
-                  {course.title}
-                </option>
-              ))
-            ) : (
-              <option value="">Нет доступных курсов</option>
-            )}
-          </select>
-        </div>
+        <AdminCompactSelect
+          ariaLabel="Выбрать курс для ручного доступа"
+          disabled={selectedUserGrantableCourses.length === 0}
+          emptyText="Нет доступных курсов"
+          onChange={(nextValue) => setSelectedGrantCourseId(Number(nextValue))}
+          options={selectedUserGrantableCourses.map((course) => ({
+            value: course.id,
+            label: course.title,
+            meta: course.slug,
+            badge: getCourseStateLabel(course.state),
+            badgeClass: getBadgeClass(course.state),
+            searchText: `${course.title} ${course.slug} ${course.groupTitle}`,
+          }))}
+          placeholder="Выберите курс"
+          searchPlaceholder="Найти курс"
+          value={selectedGrantCourseId}
+        />
         <div className="admin-management-actions">
           <button
             className="ghost-button"
@@ -3011,8 +3182,8 @@ export default function AdminDashboardClient({
           <Link className="admin-sidebar__brand" href="/">
             <span className="brand-mark" />
             <div>
-              <strong>ДНК Админ</strong>
-              <p>Рабочее пространство платформы</p>
+              <strong>Админ-панель</strong>
+              <p>Рабочее пространство платформы DNK</p>
             </div>
           </Link>
 
@@ -3161,6 +3332,7 @@ export default function AdminDashboardClient({
             <div className="admin-dashboard-surface__header">
               <div>
                 <h1>{surfaceTitle}</h1>
+                <p className="panel-copy">{surfaceDescription}</p>
               </div>
               {isDashboardHome ? <div className="admin-dashboard-surface__header-actions">
                 <button className="ghost-button" onClick={handleOpenReviewWorkspace} type="button">
@@ -3627,32 +3799,44 @@ export default function AdminDashboardClient({
                           </span>
                         </div>
                         <div className="admin-access-grant__controls">
-                          <label className="admin-inline-select admin-inline-select--wide">
-                            <span className="sr-only">Выбрать пользователя</span>
-                            <select
-                              onChange={(event) => setAccessGrantUserId(Number(event.target.value))}
-                              value={accessGrantUserId ?? ''}
-                            >
-                              {initialData.users.map((user) => (
-                                <option key={user.id} value={user.id}>
-                                  {user.email}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                          <label className="admin-inline-select admin-inline-select--wide">
-                            <span className="sr-only">Выбрать курс</span>
-                            <select
-                              onChange={(event) => setAccessGrantCourseId(Number(event.target.value))}
-                              value={accessGrantCourseId ?? ''}
-                            >
-                              {initialData.courses.map((course) => (
-                                <option key={course.id} value={course.id}>
-                                  {course.title}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
+                          <div className="field admin-compact-select-field">
+                            <label>Пользователь</label>
+                            <AdminCompactSelect
+                              ariaLabel="Выбрать пользователя для выдачи доступа"
+                              emptyText="Пользователи не найдены"
+                              onChange={(nextValue) => setAccessGrantUserId(Number(nextValue))}
+                              options={initialData.users.map((user) => ({
+                                value: user.id,
+                                label: user.email,
+                                meta: `${getRoleLabel(user.role)} · ${user.accessibleCoursesCount} доступа`,
+                                badge: getRoleLabel(user.role),
+                                badgeClass: getBadgeClass(user.role),
+                                searchText: `${user.email} ${getRoleLabel(user.role)}`,
+                              }))}
+                              placeholder="Выберите пользователя"
+                              searchPlaceholder="Найти пользователя"
+                              value={accessGrantUserId}
+                            />
+                          </div>
+                          <div className="field admin-compact-select-field">
+                            <label>Курс</label>
+                            <AdminCompactSelect
+                              ariaLabel="Выбрать курс для выдачи доступа"
+                              emptyText="Курсы не найдены"
+                              onChange={(nextValue) => setAccessGrantCourseId(Number(nextValue))}
+                              options={initialData.courses.map((course) => ({
+                                value: course.id,
+                                label: course.title,
+                                meta: course.slug,
+                                badge: getCourseStateLabel(course.state),
+                                badgeClass: getBadgeClass(course.state),
+                                searchText: `${course.title} ${course.slug} ${course.groupTitle}`,
+                              }))}
+                              placeholder="Выберите курс"
+                              searchPlaceholder="Найти курс"
+                              value={accessGrantCourseId}
+                            />
+                          </div>
                           <button
                             className="ghost-button"
                             disabled={!accessGrantUserId || !accessGrantCourseId || isManagementPending}
@@ -4111,15 +4295,18 @@ export default function AdminDashboardClient({
                   type="button"
                 >
                   <div className="admin-course-list__top">
-                    <strong>{course.title}</strong>
+                    <strong title={course.title}>{course.title}</strong>
                     <span className={getBadgeClass(course.state)}>
                       {getCourseStateLabel(course.state)}
                     </span>
                   </div>
-                  <div className="admin-course-list__meta mono">{course.slug}</div>
-                  <div className="admin-course-list__meta">
-                    {course.lessonsCount} уроков, {course.previewLessonsCount} ознакомительных
+                  <div className="admin-course-list__meta-row">
+                    <span className="mono" title={course.slug}>{course.slug}</span>
+                    <span title={course.groupTitle}>{course.groupTitle}</span>
+                    <span>{course.lessonsCount} уроков</span>
+                    <span>{course.previewLessonsCount} ознакомительных</span>
                   </div>
+                  <span className="admin-course-list__action">Открыть редактор</span>
                 </button>
               ))}
             </div>
@@ -4214,19 +4401,22 @@ export default function AdminDashboardClient({
                   </div>
                   <div className="admin-editor-context-strip__tools">
                     {initialData.courses.length > 1 ? (
-                      <label className="admin-inline-select">
-                        <span className="sr-only">Выбрать курс</span>
-                        <select
-                          onChange={(event) => handleSelectCourse(Number(event.target.value))}
-                          value={selectedCourse.id}
-                        >
-                          {initialData.courses.map((course) => (
-                            <option key={course.id} value={course.id}>
-                              {course.title}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
+                      <AdminCompactSelect
+                        ariaLabel="Выбрать курс"
+                        emptyText="Курсы не найдены"
+                        onChange={(nextValue) => handleSelectCourse(Number(nextValue))}
+                        options={initialData.courses.map((course) => ({
+                          value: course.id,
+                          label: course.title,
+                          meta: course.slug,
+                          badge: getCourseStateLabel(course.state),
+                          badgeClass: getBadgeClass(course.state),
+                          searchText: `${course.title} ${course.slug} ${course.groupTitle} ${course.state}`,
+                        }))}
+                        placeholder="Выберите курс"
+                        searchPlaceholder="Найти курс"
+                        value={selectedCourse.id}
+                      />
                     ) : null}
                   </div>
                   <div className="admin-editor-context-strip__actions">
@@ -4673,15 +4863,17 @@ export default function AdminDashboardClient({
                           type="button"
                         >
                           <div className="admin-tariff-list__top">
-                            <strong>{tariff.title}</strong>
+                            <strong title={tariff.title}>{tariff.title}</strong>
                             <span className={getBadgeClass(tariff.isActive ? 'paid' : 'hidden')}>
                               {tariff.isActive ? 'Активен' : 'Выключен'}
                             </span>
                           </div>
-                          <div className="admin-tariff-list__meta mono">{tariff.slug}</div>
-                          <div className="admin-tariff-list__meta">
-                            {formatMoney(tariff.price)} / заказов: {tariff.ordersCount}
+                          <div className="admin-tariff-list__meta-row">
+                            <span className="mono" title={tariff.slug}>{tariff.slug}</span>
+                            <span>{formatMoney(tariff.price)}</span>
+                            <span>{tariff.ordersCount} заказов</span>
                           </div>
+                          <span className="admin-tariff-list__action">Открыть тариф</span>
                         </button>
                       ))
                     ) : (
