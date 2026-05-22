@@ -3,7 +3,7 @@ import { accountingCoursePublicProfile } from '@/lib/course-content/1c-accountin
 export const publicBrandName = 'Бизнес школа ДНК';
 
 export const publicBrandLead =
-  'DNK Academy MVP: бесплатная регистрация, каталог курсов, бесплатные и ознакомительные уроки, обучение и прогресс в личном кабинете.';
+  'Онлайн-курсы DNK: бесплатная регистрация, каталог курсов, бесплатные и ознакомительные уроки, обучение и прогресс в личном кабинете.';
 
 export const publicPrimaryNav = [
   { href: '/catalog', label: 'Каталог' },
@@ -87,7 +87,7 @@ export const publicLearningFlow = [
 
 export const publicWhatIsNow = [
   {
-    title: 'Сейчас DNK — это DNK Academy MVP',
+    title: 'Сейчас DNK — это онлайн-курсы с личным кабинетом',
     body: 'На текущем этапе DNK — это рабочая образовательная платформа с каталогом курсов, регистрацией, личным кабинетом и доступом к урокам в одном месте.',
   },
   {

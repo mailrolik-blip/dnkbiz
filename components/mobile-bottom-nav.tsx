@@ -198,11 +198,10 @@ export default function MobileBottomNav() {
           label: 'Мои курсы',
         },
         {
-          disabled: true,
-          href: '#',
+          href: '/help',
           icon: <TeacherIcon />,
-          isActive: false,
-          label: 'AI учитель',
+          isActive: pathname === '/help' || pathname.startsWith('/help/'),
+          label: 'Помощь',
         },
         {
           href: '/profile',

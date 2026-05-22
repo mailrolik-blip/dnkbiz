@@ -2691,10 +2691,67 @@ main {
   width: 100%;
 }
 
+.course-player-lesson-mobile-feed {
+  display: grid;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.lesson-mobile-card--feed-block {
+  gap: 0.78rem;
+  min-height: auto;
+  height: auto;
+}
+
+.lesson-mobile-card__body--feed {
+  overflow: visible;
+  padding-right: 0;
+  padding-bottom: 0;
+  scroll-padding-bottom: 0;
+  scroll-snap-type: none;
+  touch-action: auto;
+}
+
+.lesson-mobile-card--feed-progress .progress-box,
+.lesson-mobile-card--feed-progress .lesson-mobile-card__hint-panel,
+.lesson-mobile-card--feed-actions .lesson-mobile-card__hint-panel {
+  margin-top: 0;
+}
+
+.lesson-mobile-feed-actions {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.course-mobile-outline--lesson-feed .lessons-list {
+  overflow: visible;
+}
+
+.lesson-btn:disabled,
+.course-player-mobile-header__step:disabled {
+  cursor: not-allowed;
+}
+
+.lesson-btn:disabled:hover {
+  transform: none;
+}
+
+.course-player-mobile-header__track {
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(2.2rem, 1fr);
+  grid-template-columns: none;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.course-player-mobile-header__track::-webkit-scrollbar {
+  display: none;
+}
+
 @media (max-width: 960px) {
   body.mobile-lesson-screen {
-    overflow: hidden;
-    overscroll-behavior: none;
+    overflow: auto;
+    overscroll-behavior: auto;
   }
 
   .section-header {
@@ -2728,6 +2785,10 @@ main {
     display: none !important;
   }
 
+  .course-player-page .course-player-lesson-mobile .course-mobile-outline--lesson-feed {
+    display: block !important;
+  }
+
   .course-player-page .stack-grid {
     gap: 1rem;
   }
@@ -2735,22 +2796,22 @@ main {
   .course-player-page--lesson-active {
     --lesson-mobile-bottom-reserve: calc(var(--mobile-bottom-nav-height) + env(safe-area-inset-bottom));
     min-height: 100svh;
-    height: 100dvh;
+    height: auto;
     padding:
       max(0.6rem, env(safe-area-inset-top))
       0.75rem
-      calc(var(--lesson-mobile-bottom-reserve) + 0.35rem);
-    overflow: hidden;
-    overscroll-behavior: none;
+      calc(var(--lesson-mobile-bottom-reserve) + 1rem);
+    overflow: visible;
+    overscroll-behavior: auto;
   }
 
   .course-player-page--lesson-active > .stack-grid,
   .course-player-page .stack-grid--lesson-active {
-    height: 100%;
+    height: auto;
     min-height: 0;
-    grid-template-rows: auto minmax(0, 1fr);
-    gap: 0.45rem;
-    overflow: hidden;
+    grid-template-rows: auto;
+    gap: 0.85rem;
+    overflow: visible;
   }
 
   .course-player-page .lms-main {
@@ -2848,27 +2909,28 @@ main {
   .course-player-page--lesson-active .lms-scroll-area,
   .course-player-page--lesson-active .lms-scroll-area--lesson-active {
     display: block;
-    padding: 0;
-    overflow: hidden;
+    padding: 0 0 calc(var(--mobile-bottom-nav-height) + 1rem + env(safe-area-inset-bottom));
+    overflow: visible;
   }
 
   .course-player-page--lesson-active .course-player-lesson-mobile,
   .course-player-page--lesson-active .course-player-lesson-mobile--active {
     display: grid;
-    grid-template-rows: minmax(0, 1fr) auto;
-    gap: 0.16rem;
-    align-content: stretch;
-    padding-bottom: 0;
+    grid-template-rows: auto;
+    gap: 0.85rem;
+    align-content: start;
+    padding-bottom: 0.25rem;
+    height: auto;
   }
 
   .course-player-page--lesson-active .lesson-mobile-card {
-    padding: 0.7rem;
+    padding: 0.82rem;
   }
 
   .course-player-page--lesson-active .lesson-mobile-card--feed,
   .course-player-page--lesson-active .lesson-mobile-card--locked {
     min-height: 0;
-    height: 100%;
+    height: auto;
   }
 
   .course-player-page--lesson-active .lesson-mobile-card__status {
@@ -2876,14 +2938,12 @@ main {
   }
 
   .course-player-page--lesson-active .lesson-mobile-card__body {
-    padding-bottom: calc(0.95rem + env(safe-area-inset-bottom));
+    overflow: visible;
+    padding-bottom: 0;
   }
 
   .course-player-page--lesson-active .lesson-mobile-progress-rail {
-    position: relative;
-    bottom: auto;
-    margin-top: 0;
-    margin: 0 0 0.05rem;
+    display: none;
   }
 
   .lms-sidebar {

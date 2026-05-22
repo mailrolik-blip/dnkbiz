@@ -4,7 +4,7 @@ import PublicHome from '@/components/public-home';
 import { getLandingPageData } from '@/lib/landing';
 
 export const metadata: Metadata = {
-  title: 'DNK Academy MVP | Бизнес школа ДНК',
+  title: 'Онлайн-курсы DNK | Бизнес школа ДНК',
   description:
     'Зарегистрируйтесь бесплатно, посмотрите доступные курсы DNK Academy, откройте бесплатные уроки и продолжайте обучение в личном кабинете.',
 };

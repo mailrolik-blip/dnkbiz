@@ -19,7 +19,7 @@ const mono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: 'Бизнес школа ДНК',
   description:
-    'DNK Academy MVP: бесплатная регистрация, каталог курсов, бесплатные уроки и обучение в личном кабинете Бизнес школы ДНК.',
+    'Онлайн-курсы DNK: бесплатная регистрация, каталог курсов, бесплатные уроки и обучение в личном кабинете Бизнес школы ДНК.',
 };
 
 export default function RootLayout({
