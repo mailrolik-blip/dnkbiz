@@ -2,7 +2,18 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useId, useMemo, useRef, useState, useTransition } from 'react';
+import { createPortal } from 'react-dom';
+import {
+  type ReactNode,
+  useEffect,
+  useEffectEvent,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from 'react';
 
 import type {
   AdminCourseRow,
@@ -15,6 +26,7 @@ import type {
 } from '@/lib/admin-dashboard';
 import { adminManualQueueHints, adminSafetyHints } from '@/lib/admin-help';
 import AdminManualReviewActions from '@/components/admin-manual-review-actions';
+import InlineInfo from '@/components/inline-info';
 
 const dateTimeFormatter = new Intl.DateTimeFormat('ru-RU', {
   dateStyle: 'medium',
@@ -78,6 +90,7 @@ type UserListFilter = 'ALL' | 'ADMIN' | 'USER' | 'ACTIVE_ORDER' | 'HAS_ACCESS';
 type AccessSourceFilter = 'ALL' | AdminEnrollmentRow['source'];
 type TrendPoint = {
   label: string;
+  detailLabel?: string;
   value: number;
 };
 
@@ -114,6 +127,7 @@ type AdminSectionChart = {
   note: string;
   points: TrendPoint[];
   hint: string;
+  metricLabel?: string;
   tone?: 'accent' | 'warning' | 'success';
   formatValue?: (value: number) => string;
 };
@@ -160,41 +174,6 @@ function getAdminInitials(email: string) {
   return name.slice(0, 2).toUpperCase();
 }
 
-function buildLastDaysSeries<T>(
-  items: T[],
-  getDate: (item: T) => string,
-  getValue: (item: T) => number = () => 1,
-  days = 7
-) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const buckets = Array.from({ length: days }, (_, index) => {
-    const date = new Date(today);
-    date.setDate(today.getDate() - (days - index - 1));
-    return {
-      key: date.toISOString().slice(0, 10),
-      label: shortDateFormatter.format(date),
-      value: 0,
-    };
-  });
-
-  const map = new Map(buckets.map((bucket) => [bucket.key, bucket]));
-
-  for (const item of items) {
-    const date = new Date(getDate(item));
-    date.setHours(0, 0, 0, 0);
-    const key = date.toISOString().slice(0, 10);
-    const bucket = map.get(key);
-
-    if (bucket) {
-      bucket.value += getValue(item);
-    }
-  }
-
-  return buckets;
-}
-
 function buildTrendSeries<T>(
   items: T[],
   getDate: (item: T) => string,
@@ -205,6 +184,7 @@ function buildTrendSeries<T>(
   const buckets: Array<{
     key: string;
     label: string;
+    detailLabel: string;
     value: number;
     start: number;
     end: number;
@@ -222,6 +202,10 @@ function buildTrendSeries<T>(
       buckets.push({
         key: bucketStart.toISOString(),
         label: bucketEnd.toLocaleTimeString('ru-RU', { hour: '2-digit' }),
+        detailLabel: `${shortDateFormatter.format(bucketStart)}, ${bucketStart.toLocaleTimeString('ru-RU', {
+          hour: '2-digit',
+          minute: '2-digit',
+        })} – ${bucketEnd.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`,
         value: 0,
         start: bucketStart.getTime(),
         end: bucketEnd.getTime(),
@@ -239,6 +223,10 @@ function buildTrendSeries<T>(
       buckets.push({
         key: bucketStart.toISOString().slice(0, 10),
         label: shortDateFormatter.format(bucketStart),
+        detailLabel: bucketStart.toLocaleDateString('ru-RU', {
+          day: 'numeric',
+          month: 'long',
+        }),
         value: 0,
         start: bucketStart.getTime(),
         end: bucketEnd.getTime(),
@@ -256,6 +244,13 @@ function buildTrendSeries<T>(
       buckets.push({
         key: bucketStart.toISOString().slice(0, 10),
         label: shortDateFormatter.format(bucketStart),
+        detailLabel: `${bucketStart.toLocaleDateString('ru-RU', {
+          day: 'numeric',
+          month: 'short',
+        })} – ${new Date(bucketEnd.getTime() - 1).toLocaleDateString('ru-RU', {
+          day: 'numeric',
+          month: 'short',
+        })}`,
         value: 0,
         start: bucketStart.getTime(),
         end: bucketEnd.getTime(),
@@ -270,6 +265,10 @@ function buildTrendSeries<T>(
       buckets.push({
         key: `${bucketStart.getFullYear()}-${bucketStart.getMonth() + 1}`,
         label: bucketStart.toLocaleDateString('ru-RU', { month: 'short' }),
+        detailLabel: bucketStart.toLocaleDateString('ru-RU', {
+          month: 'long',
+          year: 'numeric',
+        }),
         value: 0,
         start: bucketStart.getTime(),
         end: bucketEnd.getTime(),
@@ -286,7 +285,11 @@ function buildTrendSeries<T>(
     }
   }
 
-  return buckets.map((bucket) => ({ label: bucket.label, value: bucket.value }));
+  return buckets.map((bucket) => ({
+    label: bucket.label,
+    detailLabel: bucket.detailLabel,
+    value: bucket.value,
+  }));
 }
 
 function getBadgeClass(status: string) {
@@ -533,28 +536,11 @@ function ReviewIcon() {
   );
 }
 
-function EditIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="m5 16.5 8.9-8.9 3.5 3.5-8.9 8.9L5 20l.5-3.5Z" />
-      <path d="m13.1 7.5 2.4-2.4a1.7 1.7 0 0 1 2.4 0l1 1a1.7 1.7 0 0 1 0 2.4l-2.4 2.4" />
-    </svg>
-  );
-}
-
 function TariffIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
       <path d="M4.5 11.5 12 4l7.5 7.5-7.5 8-7.5-8Z" />
       <path d="M9.25 11.5h5.5" />
-    </svg>
-  );
-}
-
-function SparkIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="m12 4 1.8 4.2L18 10l-4.2 1.8L12 16l-1.8-4.2L6 10l4.2-1.8L12 4Z" />
     </svg>
   );
 }
@@ -590,21 +576,40 @@ function ActivityKindIcon({ kind }: { kind: ActivityItem['kind'] }) {
   return <UsersIcon />;
 }
 
+function AdminHint({
+  align = 'end',
+  children,
+  label,
+}: {
+  align?: 'center' | 'end' | 'start';
+  children: ReactNode;
+  label: string;
+}) {
+  return (
+    <InlineInfo align={align} label={label} overlay>
+      {children}
+    </InlineInfo>
+  );
+}
+
 function MiniTrendChart({
   points,
   tone = 'accent',
   formatValue = (value: number) => String(value),
+  metricLabel = 'Метрика',
 }: {
   points: TrendPoint[];
   tone?: 'accent' | 'warning' | 'success';
   formatValue?: (value: number) => string;
+  metricLabel?: string;
 }) {
   const width = 360;
-  const height = 136;
+  const height = 148;
   const paddingLeft = 12;
   const paddingRight = 42;
-  const paddingTop = 12;
-  const chartHeight = 82;
+  const paddingTop = 14;
+  const chartHeight = 92;
+  const [activePointKey, setActivePointKey] = useState<string | null>(null);
   const max = Math.max(...points.map((point) => point.value), 1);
   const step =
     points.length > 1 ? (width - paddingLeft - paddingRight) / (points.length - 1) : width - paddingLeft - paddingRight;
@@ -638,19 +643,29 @@ function MiniTrendChart({
           return `${path} Q ${point.x.toFixed(2)} ${point.y.toFixed(2)} ${midX.toFixed(2)} ${midY.toFixed(2)}`;
         }, '');
 
-  const areaPath = `${linePath} L ${coordinates.at(-1)?.x ?? width - paddingRight} ${paddingTop + chartHeight} L ${coordinates[0]?.x ?? paddingLeft} ${paddingTop + chartHeight} Z`;
   const gridLines = [0, 0.33, 0.66, 1].map((ratio) => paddingTop + chartHeight - chartHeight * ratio);
-  const guideLines = coordinates.map((point) => point.x);
   const scaleMarks = [
     { value: max, y: paddingTop + 6 },
     { value: Math.round(max / 2), y: paddingTop + chartHeight / 2 + 3 },
     { value: 0, y: paddingTop + chartHeight - 2 },
   ];
+  const activePoint =
+    coordinates.find((point) => `${point.label}-${point.x}` === activePointKey) ?? null;
+  const activePointLeft = activePoint ? `${(activePoint.x / width) * 100}%` : '50%';
+  const activePointTop = activePoint ? `${(activePoint.y / height) * 100}%` : '50%';
+  const tooltipAlign =
+    activePoint && activePoint.x > width - paddingRight - 40
+      ? 'end'
+      : activePoint && activePoint.x < paddingLeft + 48
+        ? 'start'
+        : 'center';
+  const tooltipPlacement = activePoint && activePoint.y < paddingTop + 28 ? 'bottom' : 'top';
 
   return (
-    <div className={`admin-line-chart admin-line-chart--${tone}`}>
+    <div className={`admin-line-chart admin-line-chart--${tone}`} onMouseLeave={() => setActivePointKey(null)}>
       {enoughData ? (
-        <svg className="admin-line-chart__svg" viewBox={`0 0 ${width} ${height}`} aria-hidden="true">
+        <div className="admin-line-chart__plot">
+          <svg className="admin-line-chart__svg" viewBox={`0 0 ${width} ${height}`} aria-hidden="true">
           {gridLines.map((y) => (
             <line
               className="admin-line-chart__grid"
@@ -661,17 +676,20 @@ function MiniTrendChart({
               y2={y}
             />
           ))}
-          {guideLines.map((x) => (
-            <line
-              className="admin-line-chart__guide"
-              key={x}
-              x1={x}
-              x2={x}
-              y1={paddingTop}
-              y2={paddingTop + chartHeight}
-            />
-          ))}
-          <path className="admin-line-chart__area" d={areaPath} />
+          {coordinates.map((point) => {
+            const pointKey = `${point.label}-${point.x}`;
+
+            return (
+              <line
+                className={`admin-line-chart__guide ${activePointKey === pointKey ? 'admin-line-chart__guide--active' : ''}`}
+                key={`guide-${pointKey}`}
+                x1={point.x}
+                x2={point.x}
+                y1={paddingTop}
+                y2={paddingTop + chartHeight}
+              />
+            );
+          })}
           <path className="admin-line-chart__line" d={linePath} />
           {scaleMarks.map((mark) => (
             <text
@@ -683,24 +701,62 @@ function MiniTrendChart({
               {formatValue(mark.value)}
             </text>
           ))}
-          {coordinates.map((point) => (
-            <circle
-              className="admin-line-chart__point"
-              cx={point.x}
-              cy={point.y}
-              key={`${point.label}-${point.x}`}
-              r="2.9"
+          {coordinates.map((point) => {
+            const pointKey = `${point.label}-${point.x}`;
+
+            return (
+              <circle
+                className={`admin-line-chart__point ${activePointKey === pointKey ? 'admin-line-chart__point--active' : ''}`}
+                cx={point.x}
+                cy={point.y}
+                key={pointKey}
+                r="2.9"
+              />
+            );
+          })}
+          </svg>
+          {coordinates.map((point) => {
+            const pointKey = `${point.label}-${point.x}`;
+
+            return (
+              <button
+                aria-label={`${metricLabel}: ${formatValue(point.value)} за ${point.detailLabel ?? point.label}`}
+                className="admin-line-chart__hotspot"
+                key={`hotspot-${pointKey}`}
+                onBlur={() => setActivePointKey((current) => (current === pointKey ? null : current))}
+                onFocus={() => setActivePointKey(pointKey)}
+                onMouseEnter={() => setActivePointKey(pointKey)}
+                onMouseLeave={() => setActivePointKey((current) => (current === pointKey ? null : current))}
+                style={{
+                  left: `${(point.x / width) * 100}%`,
+                  top: `${(point.y / height) * 100}%`,
+                }}
+                type="button"
+              />
+            );
+          })}
+          {activePoint ? (
+            <div
+              className="admin-line-chart__tooltip"
+              data-align={tooltipAlign}
+              data-placement={tooltipPlacement}
+              style={{
+                left: activePointLeft,
+                top: activePointTop,
+              }}
             >
-              <title>{`${point.label}: ${formatValue(point.value)}`}</title>
-            </circle>
-          ))}
-        </svg>
+              <span>{activePoint.detailLabel ?? activePoint.label}</span>
+              <strong>{formatValue(activePoint.value)}</strong>
+              <small>{metricLabel}</small>
+            </div>
+          ) : null}
+        </div>
       ) : (
         <div className="admin-line-chart__empty">Недостаточно данных</div>
       )}
       <div className="admin-line-chart__labels">
         {points.map((point) => (
-          <span key={point.label} title={`${point.label}: ${formatValue(point.value)}`}>
+          <span key={point.label}>
             {point.label}
           </span>
         ))}
@@ -729,9 +785,18 @@ function AdminCompactSelect({
   disabled?: boolean;
 }) {
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const popoverRef = useRef<HTMLDivElement | null>(null);
   const inputId = `admin-compact-select-${useId().replace(/:/g, '')}`;
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const [popoverStyle, setPopoverStyle] = useState<{
+    left: number;
+    maxHeight: number;
+    placement: 'bottom' | 'top';
+    top: number;
+    width: number;
+  } | null>(null);
 
   const normalizedQuery = query.trim().toLowerCase();
   const selectedOption =
@@ -754,7 +819,7 @@ function AdminCompactSelect({
         return;
       }
 
-      if (rootRef.current?.contains(target)) {
+      if (rootRef.current?.contains(target) || popoverRef.current?.contains(target)) {
         return;
       }
 
@@ -781,6 +846,77 @@ function AdminCompactSelect({
     };
   }, [isOpen]);
 
+  useLayoutEffect(() => {
+    if (!isOpen) {
+      setPopoverStyle(null);
+      return undefined;
+    }
+
+    function updatePopoverPosition() {
+      const triggerRect = triggerRef.current?.getBoundingClientRect();
+      const popoverRect = popoverRef.current?.getBoundingClientRect();
+
+      if (!triggerRect) {
+        return;
+      }
+
+      const viewportPadding = 8;
+      const nextWidth = Math.min(
+        Math.max(triggerRect.width, Math.min(320, window.innerWidth - viewportPadding * 2)),
+        window.innerWidth - viewportPadding * 2
+      );
+      const left = Math.min(
+        Math.max(viewportPadding, triggerRect.left),
+        window.innerWidth - nextWidth - viewportPadding
+      );
+      const spaceBelow = window.innerHeight - triggerRect.bottom - viewportPadding;
+      const spaceAbove = triggerRect.top - viewportPadding;
+      const measuredHeight = popoverRect?.height ?? 320;
+      const placement: 'bottom' | 'top' =
+        spaceBelow < Math.min(measuredHeight, 280) && spaceAbove > spaceBelow ? 'top' : 'bottom';
+      const maxHeight = Math.max(160, placement === 'top' ? spaceAbove : spaceBelow);
+      const visibleHeight = Math.min(measuredHeight, maxHeight);
+      const top =
+        placement === 'top'
+          ? Math.max(viewportPadding, triggerRect.top - visibleHeight - viewportPadding)
+          : Math.min(
+              window.innerHeight - visibleHeight - viewportPadding,
+              triggerRect.bottom + viewportPadding
+            );
+
+      setPopoverStyle((current) => {
+        if (
+          current &&
+          current.left === left &&
+          current.top === top &&
+          current.width === nextWidth &&
+          current.maxHeight === maxHeight &&
+          current.placement === placement
+        ) {
+          return current;
+        }
+
+        return {
+          left,
+          maxHeight,
+          placement,
+          top,
+          width: nextWidth,
+        };
+      });
+    }
+
+    const frame = window.requestAnimationFrame(updatePopoverPosition);
+    window.addEventListener('resize', updatePopoverPosition);
+    window.addEventListener('scroll', updatePopoverPosition, true);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener('resize', updatePopoverPosition);
+      window.removeEventListener('scroll', updatePopoverPosition, true);
+    };
+  }, [filteredOptions.length, isOpen, query]);
+
   return (
     <div className="admin-compact-select" ref={rootRef}>
       <button
@@ -795,6 +931,7 @@ function AdminCompactSelect({
           setIsOpen((current) => !current);
           setQuery('');
         }}
+        ref={triggerRef}
         type="button"
       >
         <span className="admin-compact-select__trigger-copy">
@@ -813,61 +950,78 @@ function AdminCompactSelect({
         </span>
       </button>
 
-      {isOpen ? (
-        <div className="admin-compact-select__popover">
-          <div className="field">
-            <label className="sr-only" htmlFor={inputId}>
-              {searchPlaceholder}
-            </label>
-            <input
-              autoFocus
-              id={inputId}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder={searchPlaceholder}
-              value={query}
-            />
-          </div>
+      {isOpen && typeof document !== 'undefined'
+        ? createPortal(
+            <div
+              className="admin-compact-select__popover"
+              data-placement={popoverStyle?.placement ?? 'bottom'}
+              ref={popoverRef}
+              style={
+                popoverStyle
+                  ? {
+                      left: `${popoverStyle.left}px`,
+                      maxHeight: `${popoverStyle.maxHeight}px`,
+                      top: `${popoverStyle.top}px`,
+                      width: `${popoverStyle.width}px`,
+                    }
+                  : {
+                      left: '0px',
+                      top: '0px',
+                      visibility: 'hidden',
+                    }
+              }
+            >
+              <div className="field">
+                <label className="sr-only" htmlFor={inputId}>
+                  {searchPlaceholder}
+                </label>
+                <input
+                  autoFocus
+                  id={inputId}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder={searchPlaceholder}
+                  value={query}
+                />
+              </div>
 
-          <div className="admin-compact-select__list" role="listbox">
-            {filteredOptions.length > 0 ? (
-              filteredOptions.map((option) => {
-                const isActive = String(option.value) === String(value ?? '');
+              <div className="admin-compact-select__list" role="listbox">
+                {filteredOptions.length > 0 ? (
+                  filteredOptions.map((option) => {
+                    const isActive = String(option.value) === String(value ?? '');
 
-                return (
-                  <button
-                    aria-selected={isActive}
-                    className={`admin-compact-select__option ${
-                      isActive ? 'admin-compact-select__option--active' : ''
-                    }`}
-                    key={String(option.value)}
-                    onClick={() => {
-                      onChange(option.value);
-                      setIsOpen(false);
-                      setQuery('');
-                    }}
-                    role="option"
-                    type="button"
-                  >
-                    <span className="admin-compact-select__option-copy">
-                      <strong title={option.label}>{option.label}</strong>
-                      {option.meta ? (
-                        <span className="mono" title={option.meta}>
-                          {option.meta}
+                    return (
+                      <button
+                        aria-selected={isActive}
+                        className={`admin-compact-select__option ${
+                          isActive ? 'admin-compact-select__option--active' : ''
+                        }`}
+                        key={String(option.value)}
+                        onClick={() => {
+                          onChange(option.value);
+                          setIsOpen(false);
+                          setQuery('');
+                        }}
+                        role="option"
+                        type="button"
+                      >
+                        <span className="admin-compact-select__option-copy">
+                          <strong>{option.label}</strong>
+                          {option.meta ? <span className="mono">{option.meta}</span> : null}
                         </span>
-                      ) : null}
-                    </span>
-                    {option.badge ? (
-                      <span className={option.badgeClass}>{option.badge}</span>
-                    ) : null}
-                  </button>
-                );
-              })
-            ) : (
-              <div className="admin-compact-select__empty">{emptyText}</div>
-            )}
-          </div>
-        </div>
-      ) : null}
+                        {option.badge ? (
+                          <span className={option.badgeClass}>{option.badge}</span>
+                        ) : null}
+                      </button>
+                    );
+                  })
+                ) : (
+                  <div className="admin-compact-select__empty">{emptyText}</div>
+                )}
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
     </div>
   );
 }
@@ -1145,9 +1299,9 @@ export default function AdminDashboardClient({
   const selectedOrderNeedsManualReview =
     selectedOrder?.paymentMethod === 'MANUAL' && selectedOrder.status === 'PROCESSING';
 
-  const dashboardManualReviewOrders = useMemo(
-    () => manualReviewOrders.slice(0, 3),
-    [manualReviewOrders]
+  const dashboardRecentOrders = useMemo(
+    () => initialData.orders.slice(0, 4),
+    [initialData.orders]
   );
   const paidOrders = useMemo(
     () => initialData.orders.filter((order) => order.status === 'PAID'),
@@ -1503,6 +1657,7 @@ export default function AdminDashboardClient({
             value: String(recentUsersCount),
             note: TREND_PERIOD_LABELS[trendPeriod].note,
             points: userTrendSeries,
+            metricLabel: 'Новые пользователи',
             hint: 'Динамика регистрации новых пользователей по выбранному периоду.',
             tone: 'success',
           },
@@ -1520,7 +1675,7 @@ export default function AdminDashboardClient({
       case 'orders':
         return {
           title: 'Заказы',
-          subtitle: 'Статусы оплат и очередь проверки без длинного журнала на экране.',
+          subtitle: 'Платежи, статусы и вынесенная в отдельный сценарий ручная проверка.',
           actionLabel: 'Открыть заказы',
           action: () => openOrdersDrawer('ALL'),
           metrics: [
@@ -1528,16 +1683,17 @@ export default function AdminDashboardClient({
             { label: ORDER_FILTER_LABELS.PROCESSING, value: String(processingCount) },
             { label: ORDER_FILTER_LABELS.PAID, value: String(paidOrders.length) },
           ],
-          rowsTitle: 'Очередь проверки',
+          rowsTitle: 'Последние заказы',
           chart: {
             title: 'Новые заказы',
             value: String(recentOrdersCount),
             note: TREND_PERIOD_LABELS[trendPeriod].note,
             points: orderTrendSeries,
+            metricLabel: 'Новые заказы',
             hint: 'Новые заказы за выбранный период.',
             tone: 'warning',
           },
-          rows: (manualReviewOrders.length > 0 ? manualReviewOrders.slice(0, 5) : initialData.orders.slice(0, 5)).map((order) => ({
+          rows: initialData.orders.slice(0, 5).map((order) => ({
             id: `order-${order.id}`,
             title: order.courseTitle,
             subtitle: `${order.userEmail} · ${formatMoney(order.amount)}`,
@@ -1559,7 +1715,7 @@ export default function AdminDashboardClient({
       case 'courses':
         return {
           title: 'Курсы',
-          subtitle: 'Сводка по курсам и вход в редактор.',
+          subtitle: 'График обновлений каталога и быстрый вход в редактор.',
           actionLabel: 'Открыть редактор курсов',
           action: () => openContentDrawer('admin-courses', { showCourseSelector: false }),
           metrics: [
@@ -1568,6 +1724,15 @@ export default function AdminDashboardClient({
             { label: 'Ознакомительные', value: String(previewLessonsTotal) },
           ],
           rowsTitle: 'Курсы в фокусе',
+          chart: {
+            title: 'Активность каталога',
+            value: String(recentLessonsCount),
+            note: TREND_PERIOD_LABELS[trendPeriod].note,
+            points: lessonTrendSeries,
+            metricLabel: 'Обновления контента',
+            hint: 'Изменения уроков и контента внутри курсов по выбранному периоду.',
+            tone: 'accent',
+          },
           rows: initialData.courses.slice(0, 5).map((course) => ({
             id: `course-${course.id}`,
             title: course.title,
@@ -1599,6 +1764,7 @@ export default function AdminDashboardClient({
             value: String(recentLessonsCount),
             note: TREND_PERIOD_LABELS[trendPeriod].note,
             points: lessonTrendSeries,
+            metricLabel: 'Обновления уроков',
             hint: 'Изменения уроков и контента по выбранному периоду.',
             tone: 'accent',
           },
@@ -1634,6 +1800,7 @@ export default function AdminDashboardClient({
             value: formatMoney(recentRevenue),
             note: TREND_PERIOD_LABELS[trendPeriod].note,
             points: revenueTrendSeries,
+            metricLabel: 'Выручка',
             hint: 'Оплаченные заказы за выбранный период.',
             tone: 'accent',
             formatValue: formatMoney,
@@ -1670,6 +1837,7 @@ export default function AdminDashboardClient({
             value: String(recentAccessCount),
             note: TREND_PERIOD_LABELS[trendPeriod].note,
             points: accessTrendSeries,
+            metricLabel: 'Новые доступы',
             hint: 'Новые выдачи доступа по выбранному периоду.',
             tone: 'accent',
           },
@@ -1706,8 +1874,6 @@ export default function AdminDashboardClient({
     jumpToCourseEditor,
     lessonTrendSeries,
     latestLessons,
-    manualReviewOrders,
-    openAdminDrawer,
     openAccessesDrawer,
     openContentDrawer,
     openOrdersDrawer,
@@ -2196,7 +2362,7 @@ export default function AdminDashboardClient({
     }
   }
 
-  function scrollToAdminSection(sectionId: string) {
+  const scrollToAdminSection = useEffectEvent((sectionId: string) => {
     const drawerBySectionId: Record<string, Exclude<AdminDrawerKey, null>> = {
       'admin-guide': 'review',
       'manual-review': 'review',
@@ -2244,7 +2410,7 @@ export default function AdminDashboardClient({
         block: 'start',
       });
     });
-  }
+  });
 
   useEffect(() => {
     function handleHashNavigation() {
@@ -2585,335 +2751,183 @@ export default function AdminDashboardClient({
     });
   }
 
-  /* const userDetailCard = selectedUser ? (
-    <article className="panel admin-user-detail" id={`admin-user-detail-${selectedUser.id}`}>
-      <div className="admin-user-detail__head">
-        <div className="admin-user-detail__copy">
-          <span className="eyebrow">Карточка пользователя</span>
-          <h3 title={selectedUser.email}>{selectedUser.email}</h3>
-          <p title={selectedUserName ?? undefined}>
-            {selectedUserName} · {formatDate(selectedUser.createdAt)}
-          </p>
-        </div>
-        <div className="admin-user-detail__actions">
-          <span className={getBadgeClass(selectedUser.role)}>{getRoleLabel(selectedUser.role)}</span>
-          <button className="ghost-button" onClick={() => handleOpenOrdersForUser(selectedUser.email)} type="button">
-            Открыть заказы
-          </button>
-          <button className="ghost-button" onClick={() => handleOpenAccessesForUser(selectedUser.email)} type="button">
-            Открыть доступы
-          </button>
-          {selectedUserHasProcessingOrder ? (
-            <button className="ghost-button" onClick={() => handleOpenReviewForUser(selectedUser.email)} type="button">
-              Проверить оплату
-            </button>
-          ) : null}
-          <button className="ghost-button" onClick={() => setSelectedUserId(null)} type="button">
-            Скрыть карточку
-          </button>
-        </div>
-      </div>
-
-      <div className="admin-management-disabled-row">
-        <button
-          className="ghost-button"
-          disabled
-          title="Недоступно: в текущем /admin нет API для изменения роли пользователя."
-          type="button"
-        >
-          {selectedUser.role === 'ADMIN' ? 'Снять роль администратора' : 'Выдать роль администратора'}
-        </button>
-        <button
-          className="ghost-button"
-          disabled
-          title="Недоступно: в модели User сейчас нет поля для блокировки."
-          type="button"
-        >
-          Заблокировать
-        </button>
-        <button
-          className="ghost-button"
-          disabled
-          title="Недоступно: безопасного admin API для удаления пользователя нет, а связанные данные удаляются каскадно."
-          type="button"
-        >
-          Удалить пользователя
-        </button>
-        <button
-          className="ghost-button"
-          disabled
-          title="Недоступно: в текущем /admin нет action или API для ручной выдачи доступа."
-          type="button"
-        >
-          Выдать доступ
-        </button>
-        <button
-          className="ghost-button"
-          disabled
-          title="Недоступно: в текущем /admin нет action или API для отзыва доступа."
-          type="button"
-        >
-          Отозвать доступ
-        </button>
-      </div>
-      <p className="admin-management-note">
-        Без отдельной backend/schema-задачи сейчас недоступны: смена роли, блокировка, hard delete, ручная выдача и отзыв доступа.
-      </p>
-
-      <div className="admin-user-detail__stats">
-        <div className="admin-inline-stat">
-          <span>Имя</span>
-          <strong>{selectedUserName}</strong>
-        </div>
-        <div className="admin-inline-stat">
-          <span>Роль</span>
-          <strong>{getRoleLabel(selectedUser.role)}</strong>
-        </div>
-        <div className="admin-inline-stat">
-          <span>Регистрация</span>
-          <strong>{formatShortDate(selectedUser.createdAt)}</strong>
-        </div>
-        <div className="admin-inline-stat">
-          <span>Доступные курсы</span>
-          <strong>{selectedUser.accessibleCoursesCount}</strong>
-        </div>
-        <div className="admin-inline-stat">
-          <span>Заказов</span>
-          <strong>{selectedUserOrders.length}</strong>
-        </div>
-        <div className="admin-inline-stat">
-          <span>Активный заказ</span>
-          <strong>{selectedUser.hasPendingOrder ? 'Есть' : 'Нет'}</strong>
-        </div>
-        <div className="admin-inline-stat">
-          <span>Доступов</span>
-          <strong>{selectedUserEnrollments.length}</strong>
-        </div>
-      </div>
-
-      <div className="admin-user-detail__grid">
-        <section className="admin-user-detail__card">
-          <div className="admin-user-detail__card-head">
-            <strong>Курсы и доступы</strong>
-            <span className="muted-text">{selectedUserCourses.length} в доступе</span>
-          </div>
-          <div className="admin-user-detail__chips">
-            {selectedUserCourses.length > 0 ? (
-              selectedUserCourses.slice(0, 6).map((course) => (
-                <button
-                  className="admin-status-pill"
-                  key={course.id}
-                  onClick={() => jumpToCourseEditor(course.id)}
-                  type="button"
-                >
-                  <span>{course.title}</span>
-                </button>
-              ))
-            ) : (
-              <p className="muted-text" style={{ margin: 0 }}>
-                Нет активных доступов.
-              </p>
-            )}
-          </div>
-        </section>
-
-        <section className="admin-user-detail__card">
-          <div className="admin-user-detail__card-head">
-            <strong>Последние доступы</strong>
-            <span className="muted-text">{selectedUserEnrollments.length}</span>
-          </div>
-          <div className="admin-mini-list admin-mini-list--surface">
-            {selectedUserEnrollments.length > 0 ? (
-              selectedUserEnrollments.slice(0, 4).map((enrollment) => (
-                <button
-                  className="admin-mini-list__item admin-mini-list__item--action"
-                  key={enrollment.id}
-                  onClick={() => jumpToCourseEditor(enrollment.courseId)}
-                  type="button"
-                >
-                  <div className="admin-mini-list__copy">
-                    <strong title={enrollment.courseTitle}>{enrollment.courseTitle}</strong>
-                    <p title={`${enrollment.courseSlug} · ${formatDate(enrollment.createdAt)}`}>
-                      {enrollment.courseSlug} · {formatShortDate(enrollment.createdAt)}
-                    </p>
-                  </div>
-                  <span className={getBadgeClass(enrollment.source)}>
-                    {getEnrollmentSourceLabel(enrollment.source)}
-                  </span>
-                </button>
-              ))
-            ) : (
-              <p className="muted-text" style={{ margin: 0 }}>
-                Доступов пока нет.
-              </p>
-            )}
-          </div>
-        </section>
-      </div>
-
-      <section className="admin-user-detail__card admin-user-detail__card--orders">
-        <div className="admin-user-detail__card-head">
-          <div>
-            <strong>Заказы пользователя</strong>
-          </div>
-          <div className="admin-filter-row">
-            {ORDER_STATUS_FILTERS.map((status) => (
-              <button
-                key={status}
-                aria-pressed={selectedUserOrderFilter === status}
-                className={`catalog-directory__filter-pill ${
-                  selectedUserOrderFilter === status ? 'catalog-directory__filter-pill--active' : ''
-                }`}
-                onClick={() => setSelectedUserOrderFilter(status)}
-                type="button"
-              >
-                {ORDER_FILTER_LABELS[status]}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="admin-user-detail__orders">
-          {filteredSelectedUserOrders.length > 0 ? (
-            filteredSelectedUserOrders.map((order) => (
-              <button
-                className="admin-workbench-row admin-workbench-row--button"
-                key={order.id}
-                onClick={() =>
-                  handleSelectOrder(order.id, {
-                    filter: 'ALL',
-                    openDrawer: false,
-                    search: selectedUser.email,
-                  })
-                }
-                type="button"
-              >
-                <div className="admin-workbench-row__copy">
-                  <strong title={order.courseTitle}>{order.courseTitle}</strong>
-                  <p title={`${order.tariffTitle} · ${formatMoney(order.amount)}`}>
-                    {order.tariffTitle} · {formatMoney(order.amount)}
-                  </p>
-                </div>
-                <div className="admin-workbench-row__meta">
-                  <span className="mono" title={formatDate(order.updatedAt)}>
-                    {formatShortDate(order.updatedAt)}
-                  </span>
-                  <span className={getBadgeClass(order.status)}>{getOrderStatusLabel(order.status)}</span>
-                </div>
-              </button>
-            ))
-          ) : (
-            <p className="muted-text" style={{ margin: 0 }}>
-              Для выбранного фильтра заказов нет.
-            </p>
-          )}
-        </div>
-      </section>
-    </article>
-  ) : null;
-  */
-
   const userManagementDetailCard = selectedUser ? (
     <article className="panel admin-user-detail" id={`admin-user-detail-${selectedUser.id}`}>
       <div className="admin-user-detail__head">
         <div className="admin-user-detail__copy">
           <span className="eyebrow">Карточка пользователя</span>
-          <h3 title={selectedUser.email}>{selectedUser.email}</h3>
-          <p title={selectedUserName ?? undefined}>
+          <h3>{selectedUser.email}</h3>
+          <p>
             {selectedUserName} · {formatDate(selectedUser.createdAt)}
           </p>
         </div>
-        <div className="admin-user-detail__actions">
+        <div className="admin-user-detail__head-meta">
           <span className={getBadgeClass(selectedUser.role)}>{getRoleLabel(selectedUser.role)}</span>
-          <button className="ghost-button" onClick={() => handleOpenOrdersForUser(selectedUser.email)} type="button">
-            Открыть заказы
-          </button>
-          <button className="ghost-button" onClick={() => handleOpenAccessesForUser(selectedUser.email)} type="button">
-            Открыть доступы
-          </button>
-          {selectedUserHasProcessingOrder ? (
-            <button className="ghost-button" onClick={() => handleOpenReviewForUser(selectedUser.email)} type="button">
-              Проверить оплату
-            </button>
-          ) : null}
+          <span className={getBadgeClass(selectedUserHasProcessingOrder ? 'PROCESSING' : 'paid')}>
+            {selectedUserHasProcessingOrder ? 'Есть ручная проверка' : 'Без ручной проверки'}
+          </span>
           <button className="ghost-button" onClick={() => setSelectedUserId(null)} type="button">
             Скрыть карточку
           </button>
         </div>
       </div>
 
-      <div className="admin-management-actions">
-        <button
-          className="ghost-button"
-          disabled={pendingManagementKey === `toggle-role-${selectedUser.id}` || isManagementPending}
-          onClick={handleToggleUserRole}
-          type="button"
-        >
-          {pendingManagementKey === `toggle-role-${selectedUser.id}`
-            ? 'Сохраняем роль...'
-            : selectedUser.role === 'ADMIN'
-              ? 'Снять роль администратора'
-              : 'Выдать роль администратора'}
-        </button>
-        <button
-          className="ghost-button"
-          disabled
-          title="Для блокировки нужен отдельный флаг в модели User."
-          type="button"
-        >
-          Заблокировать
-        </button>
-        <button
-          className="ghost-button"
-          disabled={pendingManagementKey === `delete-user-${selectedUser.id}` || isManagementPending}
-          onClick={handleDeleteSelectedUser}
-          type="button"
-        >
-          {pendingManagementKey === `delete-user-${selectedUser.id}` ? 'Проверяем удаление...' : 'Удалить пользователя'}
-        </button>
+      <div className="admin-user-detail__summary">
+        <section className="admin-user-detail__summary-card">
+          <span className="eyebrow">Контакты</span>
+          <strong>{selectedUserName}</strong>
+          <span className="mono">{selectedUser.email}</span>
+          <p className="muted-text">Регистрация: {formatDate(selectedUser.createdAt)}</p>
+        </section>
+        <section className="admin-user-detail__summary-card">
+          <span className="eyebrow">Доступы</span>
+          <strong>{selectedUser.accessibleCoursesCount} активных курсов</strong>
+          <span>{selectedUserEnrollments.length} записей в журнале</span>
+          <p className="muted-text">
+            {selectedUserGrantableCourses.length > 0
+              ? `Доступно для ручной выдачи: ${selectedUserGrantableCourses.length}.`
+              : 'Новых курсов для ручной выдачи нет.'}
+          </p>
+        </section>
+        <section className="admin-user-detail__summary-card">
+          <span className="eyebrow">Заказы</span>
+          <strong>{selectedUserOrders.length} всего</strong>
+          <span>{selectedUser.hasPendingOrder ? 'Есть активный заказ' : 'Без активного заказа'}</span>
+          <p className="muted-text">
+            {selectedUserHasProcessingOrder ? 'Есть заказ в ручной проверке.' : 'Ручная проверка не требуется.'}
+          </p>
+        </section>
       </div>
 
-      <section className="admin-user-detail__card admin-user-detail__card--grant">
-        <div className="admin-user-detail__card-head">
-          <strong>Ручной доступ</strong>
-          <span className="muted-text">
-            {selectedUserGrantableCourses.length > 0 ? 'Можно открыть курс вручную' : 'Новых курсов для выдачи нет'}
-          </span>
-        </div>
-        <AdminCompactSelect
-          ariaLabel="Выбрать курс для ручного доступа"
-          disabled={selectedUserGrantableCourses.length === 0}
-          emptyText="Нет доступных курсов"
-          onChange={(nextValue) => setSelectedGrantCourseId(Number(nextValue))}
-          options={selectedUserGrantableCourses.map((course) => ({
-            value: course.id,
-            label: course.title,
-            meta: course.slug,
-            badge: getCourseStateLabel(course.state),
-            badgeClass: getBadgeClass(course.state),
-            searchText: `${course.title} ${course.slug} ${course.groupTitle}`,
-          }))}
-          placeholder="Выберите курс"
-          searchPlaceholder="Найти курс"
-          value={selectedGrantCourseId}
-        />
-        <div className="admin-management-actions">
-          <button
-            className="ghost-button"
-            disabled={
-              selectedUserGrantableCourses.length === 0 ||
-              pendingManagementKey === `grant-access-user-${selectedUser.id}` ||
-              isManagementPending
-            }
-            onClick={handleGrantAccessToSelectedUser}
-            type="button"
-          >
-            {pendingManagementKey === `grant-access-user-${selectedUser.id}` ? 'Выдаём доступ...' : 'Выдать доступ'}
-          </button>
-          <button className="ghost-button" onClick={() => handleOpenAccessesForUser(selectedUser.email)} type="button">
-            Журнал доступов
-          </button>
-        </div>
-      </section>
+      <div className="admin-user-detail__action-groups">
+        <section className="admin-user-detail__card admin-user-detail__card--actions admin-user-detail__card--wide">
+          <div className="admin-user-detail__card-head">
+            <div>
+              <strong>Основные действия</strong>
+              <span className="muted-text">Переходы к заказам, доступам и проверке оплаты.</span>
+            </div>
+          </div>
+          <div className="admin-user-detail__action-grid">
+            <button className="secondary-button" onClick={() => handleOpenOrdersForUser(selectedUser.email)} type="button">
+              Открыть заказы
+            </button>
+            <button className="ghost-button" onClick={() => handleOpenAccessesForUser(selectedUser.email)} type="button">
+              Открыть доступы
+            </button>
+            {selectedUserHasProcessingOrder ? (
+              <button className="ghost-button" onClick={() => handleOpenReviewForUser(selectedUser.email)} type="button">
+                Проверить оплату
+              </button>
+            ) : null}
+          </div>
+        </section>
+
+        <section className="admin-user-detail__card admin-user-detail__card--grant">
+          <div className="admin-user-detail__card-head">
+            <div>
+              <strong>Доступы</strong>
+              <span className="muted-text">
+                {selectedUserGrantableCourses.length > 0 ? 'Можно открыть курс вручную.' : 'Новых курсов для выдачи нет.'}
+              </span>
+            </div>
+          </div>
+          <AdminCompactSelect
+            ariaLabel="Выбрать курс для ручного доступа"
+            disabled={selectedUserGrantableCourses.length === 0}
+            emptyText="Нет доступных курсов"
+            onChange={(nextValue) => setSelectedGrantCourseId(Number(nextValue))}
+            options={selectedUserGrantableCourses.map((course) => ({
+              value: course.id,
+              label: course.title,
+              meta: course.slug,
+              badge: getCourseStateLabel(course.state),
+              badgeClass: getBadgeClass(course.state),
+              searchText: `${course.title} ${course.slug} ${course.groupTitle}`,
+            }))}
+            placeholder="Выберите курс"
+            searchPlaceholder="Найти курс"
+            value={selectedGrantCourseId}
+          />
+          <div className="admin-user-detail__action-grid">
+            <button
+              className="primary-button"
+              disabled={
+                selectedUserGrantableCourses.length === 0 ||
+                pendingManagementKey === `grant-access-user-${selectedUser.id}` ||
+                isManagementPending
+              }
+              onClick={handleGrantAccessToSelectedUser}
+              type="button"
+            >
+              {pendingManagementKey === `grant-access-user-${selectedUser.id}` ? 'Выдаём доступ...' : 'Выдать доступ'}
+            </button>
+            <button className="ghost-button" onClick={() => handleOpenAccessesForUser(selectedUser.email)} type="button">
+              Журнал доступов
+            </button>
+          </div>
+        </section>
+
+        <section className="admin-user-detail__card">
+          <div className="admin-user-detail__card-head">
+            <div>
+              <strong>Роли и ограничения</strong>
+              <span className="muted-text">Смена роли доступна, блокировка пока зависит от schema.</span>
+            </div>
+            <AdminHint label="Почему блокировка недоступна">
+              Для блокировки нужен отдельный флаг в модели User. В текущей schema такого поля нет.
+            </AdminHint>
+          </div>
+          <div className="admin-user-detail__action-grid">
+            <button
+              className="secondary-button"
+              disabled={pendingManagementKey === `toggle-role-${selectedUser.id}` || isManagementPending}
+              onClick={handleToggleUserRole}
+              type="button"
+            >
+              {pendingManagementKey === `toggle-role-${selectedUser.id}`
+                ? 'Сохраняем роль...'
+                : selectedUser.role === 'ADMIN'
+                  ? 'Снять администратора'
+                  : 'Сделать администратором'}
+            </button>
+            <div className="admin-user-detail__action-with-hint">
+              <button className="ghost-button" disabled type="button">
+                Заблокировать
+              </button>
+              <AdminHint label="Почему блокировка недоступна">
+                Блокировка не поддержана без отдельного поля в schema и server action для смены статуса.
+              </AdminHint>
+            </div>
+          </div>
+          <p className="admin-management-note admin-management-note--tight">
+            {selectedUser.id === adminUserId
+              ? 'Для текущего администратора запрещены самодемотирование и самоудаление.'
+              : 'Смена роли применяется сразу, но полноценная блокировка требует отдельной backend-задачи.'}
+          </p>
+        </section>
+
+        <section className="admin-user-detail__card admin-user-detail__card--danger">
+          <div className="admin-user-detail__card-head">
+            <div>
+              <strong>Опасная зона</strong>
+              <span className="muted-text">Удаление доступно только для пустой учётной записи.</span>
+            </div>
+            <AdminHint label="Когда можно удалить пользователя">
+              Удаление разрешено только если у пользователя нет заказов, доступов, прогресса и других связанных данных.
+            </AdminHint>
+          </div>
+          <div className="admin-user-detail__action-grid admin-user-detail__action-grid--single">
+            <button
+              className="ghost-button admin-danger-button"
+              disabled={pendingManagementKey === `delete-user-${selectedUser.id}` || isManagementPending}
+              onClick={handleDeleteSelectedUser}
+              type="button"
+            >
+              {pendingManagementKey === `delete-user-${selectedUser.id}` ? 'Проверяем удаление...' : 'Удалить пользователя'}
+            </button>
+          </div>
+        </section>
+      </div>
 
       {managementFeedback ? (
         <p
@@ -2924,11 +2938,6 @@ export default function AdminDashboardClient({
           {managementFeedback.message}
         </p>
       ) : null}
-
-      <p className="admin-management-note">
-        Блокировка пользователя остаётся недоступной: в текущей Prisma schema нет поля для статуса блокировки.
-        {selectedUser.id === adminUserId ? ' Для текущего администратора также запрещены самодемотирование и самоудаление.' : ''}
-      </p>
 
       <div className="admin-user-detail__stats">
         <div className="admin-inline-stat">
@@ -2997,8 +3006,8 @@ export default function AdminDashboardClient({
               selectedUserEnrollments.slice(0, 4).map((enrollment) => (
                 <div className="admin-access-row" key={enrollment.id}>
                   <div className="admin-access-row__copy">
-                    <strong title={enrollment.courseTitle}>{enrollment.courseTitle}</strong>
-                    <p title={`${enrollment.courseSlug} · ${formatDate(enrollment.createdAt)}`}>
+                    <strong>{enrollment.courseTitle}</strong>
+                    <p>
                       {enrollment.courseSlug} · {formatShortDate(enrollment.createdAt)}
                     </p>
                   </div>
@@ -3009,23 +3018,26 @@ export default function AdminDashboardClient({
                     <button className="ghost-button" onClick={() => jumpToCourseEditor(enrollment.courseId)} type="button">
                       Курс
                     </button>
-                    <button
-                      className="ghost-button"
-                      disabled={
-                        enrollment.source !== 'free' ||
-                        pendingManagementKey === `revoke-access-${enrollment.id}` ||
-                        isManagementPending
-                      }
-                      onClick={() => handleRevokeEnrollment(enrollment)}
-                      title={
-                        enrollment.source === 'free'
-                          ? 'Отозвать доступ'
-                          : 'Оплаченный доступ нельзя отозвать без изменения логики оплат'
-                      }
-                      type="button"
-                    >
-                      {pendingManagementKey === `revoke-access-${enrollment.id}` ? 'Отзываем...' : 'Отозвать'}
-                    </button>
+                    {enrollment.source === 'free' ? (
+                      <button
+                        className="ghost-button"
+                        disabled={pendingManagementKey === `revoke-access-${enrollment.id}` || isManagementPending}
+                        onClick={() => handleRevokeEnrollment(enrollment)}
+                        type="button"
+                      >
+                        {pendingManagementKey === `revoke-access-${enrollment.id}` ? 'Отзываем...' : 'Отозвать'}
+                      </button>
+                    ) : (
+                      <>
+                        <button className="ghost-button" disabled type="button">
+                          Отозвать
+                        </button>
+                        <AdminHint label="Почему отзыв недоступен">
+                          Оплаченные доступы остаются под защитой текущей логики оплат и LMS. Из админки можно отзывать только
+                          free-доступы без заказа.
+                        </AdminHint>
+                      </>
+                    )}
                   </div>
                 </div>
               ))
@@ -3075,13 +3087,13 @@ export default function AdminDashboardClient({
                 type="button"
               >
                 <div className="admin-workbench-row__copy">
-                  <strong title={order.courseTitle}>{order.courseTitle}</strong>
-                  <p title={`${order.tariffTitle} · ${formatMoney(order.amount)}`}>
+                  <strong>{order.courseTitle}</strong>
+                  <p>
                     {order.tariffTitle} · {formatMoney(order.amount)}
                   </p>
                 </div>
                 <div className="admin-workbench-row__meta">
-                  <span className="mono" title={formatDate(order.updatedAt)}>
+                  <span className="mono">
                     {formatShortDate(order.updatedAt)}
                   </span>
                   <span className={getBadgeClass(order.status)}>{getOrderStatusLabel(order.status)}</span>
@@ -3103,8 +3115,8 @@ export default function AdminDashboardClient({
       <div className="admin-user-detail__head">
         <div className="admin-user-detail__copy">
           <span className="eyebrow">Карточка заказа</span>
-          <h3 title={selectedOrder.courseTitle}>{selectedOrder.courseTitle}</h3>
-          <p title={selectedOrder.userEmail}>
+          <h3>{selectedOrder.courseTitle}</h3>
+          <p>
             {selectedOrder.userEmail} · {formatMoney(selectedOrder.amount)}
           </p>
         </div>
@@ -3256,7 +3268,7 @@ export default function AdminDashboardClient({
                     </div>
                     {manualReviewOrders.length > 0 ? (
                       <div className="admin-toolbar__dropdown-list">
-                        {manualReviewOrders.slice(0, 2).map((order) => (
+                        {manualReviewOrders.slice(0, 8).map((order) => (
                           <button
                             className="admin-toolbar__dropdown-item"
                             key={order.id}
@@ -3271,8 +3283,8 @@ export default function AdminDashboardClient({
                               <ReviewIcon />
                             </span>
                             <span className="admin-toolbar__dropdown-copy">
-                              <strong title={order.userEmail}>{order.userEmail}</strong>
-                              <span title={order.courseTitle}>{order.courseTitle}</span>
+                              <strong>{order.userEmail}</strong>
+                              <span>{order.courseTitle}</span>
                             </span>
                             <span className="admin-toolbar__dropdown-meta">
                               <span className="badge badge-pending">{getOrderStatusLabel(order.status)}</span>
@@ -3289,7 +3301,7 @@ export default function AdminDashboardClient({
                     </div>
                     {timelineItems.length > 0 ? (
                       <div className="admin-toolbar__dropdown-list">
-                        {timelineItems.slice(0, 3).map((item) => (
+                        {timelineItems.slice(0, 10).map((item) => (
                           <button
                             className="admin-toolbar__dropdown-item"
                             key={item.id}
@@ -3303,8 +3315,8 @@ export default function AdminDashboardClient({
                               <ActivityKindIcon kind={item.kind} />
                             </span>
                             <span className="admin-toolbar__dropdown-copy">
-                              <strong title={item.title}>{item.title}</strong>
-                              <span title={item.meta}>{item.meta}</span>
+                              <strong>{item.title}</strong>
+                              <span>{item.meta}</span>
                             </span>
                             <span className="admin-toolbar__dropdown-meta">
                               <span className="mono">{formatShortDateTime(item.timestamp)}</span>
@@ -3383,7 +3395,7 @@ export default function AdminDashboardClient({
                     </span>
                     <span className="admin-kpi-card__label">{card.label}</span>
                     <strong>{card.value}</strong>
-                    <small title={card.note}>{card.note}</small>
+                    <small>{card.note}</small>
                   </button>
                 );
               })}
@@ -3394,20 +3406,43 @@ export default function AdminDashboardClient({
                 <article className="panel admin-surface-card admin-surface-card--orders">
                   <div className="admin-surface-card__head">
                     <div>
-                      <span className="eyebrow">Очередь оплаты</span>
-                      <h2>На проверке</h2>
+                      <span className="eyebrow">Платежи</span>
+                      <h2>Последние заказы</h2>
+                      <p className="admin-surface-card__lead">
+                        T-Bank закрывает основной поток оплат, а ручная проверка вынесена в отдельный сценарий.
+                      </p>
                     </div>
                     <button className="ghost-button admin-surface-card__link" onClick={handleOpenReviewWorkspace} type="button">
-                      Открыть проверку
+                      Проверка оплат
                     </button>
                   </div>
+                  <div className="admin-status-summary-grid">
+                    <span className="admin-status-summary admin-status-summary--processing">
+                      <strong>{processingCount}</strong>
+                      <span>требуют внимания</span>
+                    </span>
+                    <span className="admin-status-summary admin-status-summary--pending">
+                      <strong>{pendingCount}</strong>
+                      <span>ожидают</span>
+                    </span>
+                    <span className="admin-status-summary admin-status-summary--paid">
+                      <strong>{paidOrders.length}</strong>
+                      <span>оплачено</span>
+                    </span>
+                    {failedCount > 0 ? (
+                      <span className="admin-status-summary admin-status-summary--failed">
+                        <strong>{failedCount}</strong>
+                        <span>сбой/отмена</span>
+                      </span>
+                    ) : null}
+                  </div>
                   <div className="admin-queue-list">
-                    {dashboardManualReviewOrders.length > 0 ? (
-                      dashboardManualReviewOrders.map((item) => (
+                    {dashboardRecentOrders.length > 0 ? (
+                      dashboardRecentOrders.map((item) => (
                         <div className="admin-queue-item" key={`queue-${item.id}`}>
                           <div className="admin-queue-item__copy">
-                            <strong className="mono" title={item.userEmail}>{item.userEmail}</strong>
-                            <p title={item.courseTitle}>{item.courseTitle}</p>
+                            <strong className="mono">{item.userEmail}</strong>
+                            <p>{item.courseTitle}</p>
                           </div>
                           <div className="admin-queue-item__meta">
                             <strong>{formatMoney(item.amount)}</strong>
@@ -3415,19 +3450,24 @@ export default function AdminDashboardClient({
                             <button
                               className="ghost-button"
                               onClick={() => {
-                                setReviewSearch(item.userEmail);
-                                handleOpenReviewWorkspace();
+                                if (item.status === 'PROCESSING') {
+                                  setReviewSearch(item.userEmail);
+                                  handleOpenReviewWorkspace();
+                                  return;
+                                }
+
+                                handleSelectOrder(item.id, { openDrawer: true });
                               }}
                               type="button"
                             >
-                              Проверить
+                              {item.status === 'PROCESSING' ? 'Проверить' : 'Открыть'}
                             </button>
                           </div>
                         </div>
                       ))
                     ) : (
                       <p className="muted-text" style={{ margin: 0 }}>
-                        Очередь пуста.
+                        Заказы появятся после первой оплаты.
                       </p>
                     )}
                   </div>
@@ -3447,7 +3487,7 @@ export default function AdminDashboardClient({
                     <strong>{recentUsersCount}</strong>
                     <span>{TREND_PERIOD_LABELS[trendPeriod].note}</span>
                   </div>
-                  <MiniTrendChart points={userTrendSeries} tone="success" />
+                  <MiniTrendChart metricLabel="Новые пользователи" points={userTrendSeries} tone="success" />
                 </article>
 
                 <article className="panel admin-surface-card admin-surface-card--revenue">
@@ -3464,7 +3504,12 @@ export default function AdminDashboardClient({
                     <strong>{formatMoney(recentRevenue)}</strong>
                     <span>{TREND_PERIOD_LABELS[trendPeriod].note}</span>
                   </div>
-                  <MiniTrendChart formatValue={formatMoney} points={revenueTrendSeries} tone="accent" />
+                  <MiniTrendChart
+                    formatValue={formatMoney}
+                    metricLabel="Выручка"
+                    points={revenueTrendSeries}
+                    tone="accent"
+                  />
                 </article>
 
                 <article className="panel admin-surface-card admin-surface-card--actions">
@@ -3473,9 +3518,9 @@ export default function AdminDashboardClient({
                       <span className="eyebrow">Быстрые действия</span>
                       <h2>Рабочие сценарии</h2>
                     </div>
-                    <span className="admin-hint-icon" title="Каждая кнопка открывает отдельную рабочую область или нужный редактор без новой бизнес-логики.">
-                      <InfoIcon />
-                    </span>
+                    <AdminHint label="Пояснение к быстрым действиям">
+                      Каждая кнопка открывает отдельную рабочую область или нужный редактор без изменения бизнес-логики.
+                    </AdminHint>
                   </div>
                   <div className="admin-quick-grid admin-quick-grid--saas">
                     <button className="admin-quick-action" onClick={handleOpenCreateCourse} type="button">
@@ -3507,9 +3552,9 @@ export default function AdminDashboardClient({
                       <span className="eyebrow">События</span>
                       <h2>Последняя активность</h2>
                     </div>
-                    <span className="admin-hint-icon" title="Последние события по пользователям, доступам и ручной проверке.">
-                      <InfoIcon />
-                    </span>
+                    <AdminHint label="Пояснение к событиям">
+                      Последние события по пользователям, доступам и ручной проверке.
+                    </AdminHint>
                   </div>
                   <div className="admin-activity-list admin-activity-list--timeline">
                         {timelineItems.slice(0, 4).map((item) => (
@@ -3523,8 +3568,8 @@ export default function AdminDashboardClient({
                           <ActivityKindIcon kind={item.kind} />
                         </span>
                         <div className="admin-activity-list__copy">
-                          <strong title={item.title}>{item.title}</strong>
-                          <p title={item.meta}>{item.meta}</p>
+                          <strong>{item.title}</strong>
+                          <p>{item.meta}</p>
                         </div>
                         <span className="mono admin-activity-list__date">{formatShortDateTime(item.timestamp)}</span>
                       </button>
@@ -3545,9 +3590,9 @@ export default function AdminDashboardClient({
                         <span className="eyebrow">Аналитика</span>
                         <h2>{activeSectionPanel.chart.title}</h2>
                       </div>
-                      <span className="admin-hint-icon" title={activeSectionPanel.chart.hint}>
-                        <InfoIcon />
-                      </span>
+                      <AdminHint label={`Пояснение к графику ${activeSectionPanel.chart.title}`}>
+                        {activeSectionPanel.chart.hint}
+                      </AdminHint>
                     </div>
                     <div className="admin-analytics-stat">
                       <strong>{activeSectionPanel.chart.value}</strong>
@@ -3555,6 +3600,7 @@ export default function AdminDashboardClient({
                     </div>
                     <MiniTrendChart
                       formatValue={activeSectionPanel.chart.formatValue}
+                      metricLabel={activeSectionPanel.chart.metricLabel ?? activeSectionPanel.chart.title}
                       points={activeSectionPanel.chart.points}
                       tone={activeSectionPanel.chart.tone}
                     />
@@ -3568,9 +3614,9 @@ export default function AdminDashboardClient({
                       <h2>{activeSectionPanel.title}</h2>
                     </div>
                     <div className="admin-surface-card__head-actions">
-                      <span className="admin-hint-icon" title={activeSectionPanel.subtitle}>
-                        <InfoIcon />
-                      </span>
+                      <AdminHint label={`Пояснение к разделу ${activeSectionPanel.title}`}>
+                        {activeSectionPanel.subtitle}
+                      </AdminHint>
                       <button className="ghost-button admin-surface-card__link" onClick={activeSectionPanel.action} type="button">
                         {activeSectionPanel.actionLabel}
                       </button>
@@ -3625,7 +3671,6 @@ export default function AdminDashboardClient({
                             id="admin-users-workspace-search"
                             onChange={(event) => setUserSearch(event.target.value)}
                             placeholder="Поиск по email или имени"
-                            title="Поиск по email и имени пользователя, если оно уже есть в данных заказа."
                             value={userSearch}
                           />
                         </div>
@@ -3658,13 +3703,13 @@ export default function AdminDashboardClient({
                                 type="button"
                               >
                                 <div className="admin-workbench-row__copy">
-                                  <strong title={item.email}>{item.email}</strong>
-                                  <p title={userNameMap.get(item.id) ?? 'Имя не указано'}>
+                                  <strong>{item.email}</strong>
+                                  <p>
                                     {userNameMap.get(item.id) ?? 'Имя не указано'} · {userOrderCountMap.get(item.id) ?? 0} заказов
                                   </p>
                                 </div>
                                 <div className="admin-workbench-row__meta">
-                                  <span className="mono" title={formatDate(item.createdAt)}>
+                                  <span className="mono">
                                     {formatShortDate(item.createdAt)} · {item.accessibleCoursesCount} доступа
                                   </span>
                                   <span className={getBadgeClass(item.role)}>{getRoleLabel(item.role)}</span>
@@ -3698,7 +3743,6 @@ export default function AdminDashboardClient({
                             id="admin-orders-workspace-search"
                             onChange={(event) => setOrderSearch(event.target.value)}
                             placeholder="Поиск по email, курсу или способу оплаты"
-                            title="Поиск по email, курсу, тарифу, статусу и способу оплаты."
                             value={orderSearch}
                           />
                         </div>
@@ -3731,13 +3775,13 @@ export default function AdminDashboardClient({
                                 type="button"
                               >
                                 <div className="admin-workbench-row__copy">
-                                  <strong title={item.courseTitle}>{item.courseTitle}</strong>
-                                  <p title={`${item.userEmail} · ${formatMoney(item.amount)}`}>
+                                  <strong>{item.courseTitle}</strong>
+                                  <p>
                                     {item.userEmail} · {formatMoney(item.amount)}
                                   </p>
                                 </div>
                                 <div className="admin-workbench-row__meta">
-                                  <span className="mono" title={formatDate(item.updatedAt)}>
+                                  <span className="mono">
                                     {formatShortDate(item.updatedAt)} · {getPaymentMethodLabel(item.paymentMethod)}
                                   </span>
                                   <span className={getBadgeClass(item.status)}>{getOrderStatusLabel(item.status)}</span>
@@ -3771,7 +3815,6 @@ export default function AdminDashboardClient({
                             id="admin-accesses-workspace-search"
                             onChange={(event) => setAccessSearch(event.target.value)}
                             placeholder="Поиск по email, курсу или источнику"
-                            title="Поиск по email, курсу, слагу и источнику доступа."
                             value={accessSearch}
                           />
                         </div>
@@ -3857,42 +3900,22 @@ export default function AdminDashboardClient({
                         </p>
                       ) : null}
                       <p className="admin-management-note admin-management-note--access">
-                        Отзыв работает только для доступов без связанного заказа. Оплаченные доступы остаются под защитой текущей логики оплат и LMS.
-                      </p>
-                      <div className="admin-management-disabled-row">
-                        <button
-                          className="ghost-button"
-                          disabled
-                          title="Недоступно: в текущем /admin нет action или API для ручной выдачи доступа."
-                          type="button"
-                        >
-                          Выдать доступ
-                        </button>
-                        <button
-                          className="ghost-button"
-                          disabled
-                          title="Недоступно: в текущем /admin нет action или API для отзыва доступа."
-                          type="button"
-                        >
-                          Отозвать доступ
-                        </button>
-                      </div>
-                      <p className="admin-management-note">
-                        Сейчас доступны поиск, фильтры и переходы к пользователю и курсу. Ручная выдача и отзыв доступа требуют отдельной backend-задачи.
+                        Выдача доступа работает через форму выше. Отзыв доступен только для free-доступов без связанного заказа,
+                        а оплаченные доступы остаются под защитой текущей логики оплат и LMS.
                       </p>
                       <div className="admin-management-list admin-management-list--full">
                         {filteredJournalEnrollments.length > 0 ? (
                           filteredJournalEnrollments.map((item) => (
                             <div className="admin-access-row" key={item.id}>
                               <div className="admin-access-row__copy">
-                                <strong title={item.userEmail}>{item.userEmail}</strong>
-                                <p title={`${item.courseTitle} · ${formatDate(item.createdAt)}`}>
+                                <strong>{item.userEmail}</strong>
+                                <p>
                                   {item.courseTitle} · {formatShortDate(item.createdAt)}
                                 </p>
                               </div>
                               <div className="admin-access-row__meta">
                                 <span className={getBadgeClass(item.source)}>{getEnrollmentSourceLabel(item.source)}</span>
-                                <span className="mono" title={item.courseSlug}>{item.courseSlug}</span>
+                                <span className="mono">{item.courseSlug}</span>
                               </div>
                               <div className="admin-access-row__actions">
                                 <button className="ghost-button" onClick={() => handleOpenUserDetail(item.userId)} type="button">
@@ -3901,23 +3924,26 @@ export default function AdminDashboardClient({
                                 <button className="ghost-button" onClick={() => jumpToCourseEditor(item.courseId)} type="button">
                                   Курс
                                 </button>
-                                <button
-                                  className="ghost-button"
-                                  disabled={
-                                    item.source !== 'free' ||
-                                    pendingManagementKey === `revoke-access-${item.id}` ||
-                                    isManagementPending
-                                  }
-                                  onClick={() => handleRevokeEnrollment(item)}
-                                  title={
-                                    item.source === 'free'
-                                      ? 'Отозвать доступ'
-                                      : 'Оплаченный доступ нельзя отозвать без изменения логики оплат'
-                                  }
-                                  type="button"
-                                >
-                                  {pendingManagementKey === `revoke-access-${item.id}` ? 'Отзываем...' : 'Отозвать'}
-                                </button>
+                                {item.source === 'free' ? (
+                                  <button
+                                    className="ghost-button"
+                                    disabled={pendingManagementKey === `revoke-access-${item.id}` || isManagementPending}
+                                    onClick={() => handleRevokeEnrollment(item)}
+                                    type="button"
+                                  >
+                                    {pendingManagementKey === `revoke-access-${item.id}` ? 'Отзываем...' : 'Отозвать'}
+                                  </button>
+                                ) : (
+                                  <>
+                                    <button className="ghost-button" disabled type="button">
+                                      Отозвать
+                                    </button>
+                                    <AdminHint label="Почему отзыв недоступен">
+                                      Оплаченные доступы остаются под защитой текущей логики оплат и LMS. Из админки можно отзывать только
+                                      free-доступы без заказа.
+                                    </AdminHint>
+                                  </>
+                                )}
                               </div>
                             </div>
                           ))
@@ -3939,11 +3965,11 @@ export default function AdminDashboardClient({
                             type="button"
                           >
                             <div className="admin-workbench-row__copy">
-                              <strong title={row.title}>{row.title}</strong>
-                              <p title={row.subtitle}>{row.subtitle}</p>
+                              <strong>{row.title}</strong>
+                              <p>{row.subtitle}</p>
                             </div>
                             <div className="admin-workbench-row__meta">
-                              <span className="mono" title={row.meta}>{row.meta}</span>
+                              <span className="mono">{row.meta}</span>
                               <span className={row.badgeClass}>{row.badge}</span>
                             </div>
                           </button>
@@ -3993,7 +4019,6 @@ export default function AdminDashboardClient({
                       id="admin-review-search"
                       onChange={(event) => setReviewSearch(event.target.value)}
                       placeholder="Поиск по очереди"
-                      title="Поиск по email, курсу, тарифу или статусу"
                       value={reviewSearch}
                     />
                   </div>
@@ -4006,7 +4031,6 @@ export default function AdminDashboardClient({
                       id="admin-content-search"
                       onChange={(event) => setCourseSearch(event.target.value)}
                       placeholder="Поиск курса"
-                      title="Поиск по названию, слагу, статусу или направлению"
                       value={courseSearch}
                     />
                   </div>
@@ -4020,7 +4044,6 @@ export default function AdminDashboardClient({
                         id="admin-order-search"
                         onChange={(event) => setOrderSearch(event.target.value)}
                         placeholder="Поиск по заказам"
-                        title="Поиск по email, курсу, тарифу, статусу или способу оплаты"
                         value={orderSearch}
                       />
                     </div>
@@ -4050,7 +4073,6 @@ export default function AdminDashboardClient({
                         id="admin-user-search"
                         onChange={(event) => setUserSearch(event.target.value)}
                         placeholder="Поиск по email или имени"
-                        title="Поиск по email, роли и имени, если оно уже есть в данных заказа."
                         value={userSearch}
                       />
                     </div>
@@ -4080,7 +4102,6 @@ export default function AdminDashboardClient({
                         id="admin-access-search"
                         onChange={(event) => setAccessSearch(event.target.value)}
                         placeholder="Поиск доступа"
-                        title="Поиск по email, курсу, слагу или источнику"
                         value={accessSearch}
                       />
                     </div>
@@ -4295,14 +4316,14 @@ export default function AdminDashboardClient({
                   type="button"
                 >
                   <div className="admin-course-list__top">
-                    <strong title={course.title}>{course.title}</strong>
+                    <strong>{course.title}</strong>
                     <span className={getBadgeClass(course.state)}>
                       {getCourseStateLabel(course.state)}
                     </span>
                   </div>
                   <div className="admin-course-list__meta-row">
-                    <span className="mono" title={course.slug}>{course.slug}</span>
-                    <span title={course.groupTitle}>{course.groupTitle}</span>
+                    <span className="mono">{course.slug}</span>
+                    <span>{course.groupTitle}</span>
                     <span>{course.lessonsCount} уроков</span>
                     <span>{course.previewLessonsCount} ознакомительных</span>
                   </div>
@@ -4421,10 +4442,10 @@ export default function AdminDashboardClient({
                   </div>
                   <div className="admin-editor-context-strip__actions">
                     <button
+                      aria-label={isContentSidebarOpen ? 'Скрыть список курсов' : 'Показать список курсов'}
                       className="ghost-button"
                       onClick={() => setIsContentSidebarOpen((current) => !current)}
                       type="button"
-                      title={isContentSidebarOpen ? 'Скрыть список курсов' : 'Показать список курсов'}
                     >
                       {isContentSidebarOpen ? 'Скрыть список' : 'Показать список'}
                     </button>
@@ -4470,9 +4491,7 @@ export default function AdminDashboardClient({
                     </div>
                   </div>
 
-                  <p className="panel-copy" title={selectedCourse.statusNote}>
-                    Статус курса и доступность тарифа.
-                  </p>
+                  <p className="panel-copy">{selectedCourse.statusNote}</p>
 
                   <div className="field">
                     <label htmlFor="admin-course-title">Название курса</label>
@@ -4540,9 +4559,7 @@ export default function AdminDashboardClient({
                   </label>
 
                   <div className="admin-note">
-                    <p title={`${selectedCourse.courseSlugPolicy} Направление курса определяется правилами каталога.`}>
-                      Путь курса и направление берутся из правил каталога.
-                    </p>
+                    <p>{selectedCourse.courseSlugPolicy} Направление курса определяется правилами каталога.</p>
                   </div>
 
                   <div className="row-actions">
@@ -4847,9 +4864,7 @@ export default function AdminDashboardClient({
                     </span>
                   </div>
 
-                  <p className="panel-copy" title={selectedCourse.tariffSlugPolicy}>
-                    Правило слага и тарифа — в подсказке.
-                  </p>
+                  <p className="panel-copy">{selectedCourse.tariffSlugPolicy}</p>
 
                   <div className="admin-tariff-list">
                     {selectedCourse.tariffs.length > 0 ? (
@@ -4863,13 +4878,13 @@ export default function AdminDashboardClient({
                           type="button"
                         >
                           <div className="admin-tariff-list__top">
-                            <strong title={tariff.title}>{tariff.title}</strong>
+                            <strong>{tariff.title}</strong>
                             <span className={getBadgeClass(tariff.isActive ? 'paid' : 'hidden')}>
                               {tariff.isActive ? 'Активен' : 'Выключен'}
                             </span>
                           </div>
                           <div className="admin-tariff-list__meta-row">
-                            <span className="mono" title={tariff.slug}>{tariff.slug}</span>
+                            <span className="mono">{tariff.slug}</span>
                             <span>{formatMoney(tariff.price)}</span>
                             <span>{tariff.ordersCount} заказов</span>
                           </div>
@@ -4927,7 +4942,7 @@ export default function AdminDashboardClient({
                           />
                         </div>
                         <div className="field">
-                          <label htmlFor="admin-tariff-interval" title="Служебное поле тарифа">Тип доступа</label>
+                          <label htmlFor="admin-tariff-interval">Тип доступа</label>
                           <input
                             id="admin-tariff-interval"
                             onChange={(event) =>
@@ -4940,7 +4955,6 @@ export default function AdminDashboardClient({
                                   : current
                               )
                             }
-                            title="Служебное поле тарифа"
                             value={tariffDraft.interval}
                           />
                         </div>
@@ -5021,7 +5035,7 @@ export default function AdminDashboardClient({
                       </div>
                     </div>
                     <div className="field">
-                      <label htmlFor="admin-new-tariff-interval" title="Служебное поле тарифа">Тип доступа</label>
+                      <label htmlFor="admin-new-tariff-interval">Тип доступа</label>
                       <input
                         id="admin-new-tariff-interval"
                         onChange={(event) =>
@@ -5030,7 +5044,6 @@ export default function AdminDashboardClient({
                             interval: event.target.value,
                           }))
                         }
-                        title="Служебное поле тарифа"
                         value={createTariffDraft.interval}
                       />
                     </div>

@@ -50,3 +50,11 @@ yarn-error.log*
 next-env.d.ts
 
 /app/generated/prisma
+
+# Local Codex / browser smoke artifacts
+.codex-*/
+.chrome-*/
+.codex*.log
+.codex-start-local.log
+.codex-dev-*.log
+prisma/dev.db
