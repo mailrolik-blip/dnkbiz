@@ -63,10 +63,6 @@ function getCatalogCourseValueLabel(course: CatalogCourseCard) {
     return 'Доступ';
   }
 
-  if (course.previewEnabled && course.previewLessonsCount > 0) {
-    return 'Бесплатно до доступа';
-  }
-
   return 'Стоимость';
 }
 
@@ -87,10 +83,6 @@ function getCatalogCourseValue(course: CatalogCourseCard) {
 
   if (course.status === 'free') {
     return 'Открывается сразу после входа';
-  }
-
-  if (course.previewEnabled && course.previewLessonsCount > 0) {
-    return formatPreviewLessons(course.previewLessonsCount);
   }
 
   return formatCoursePrice(course.price);

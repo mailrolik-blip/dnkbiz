@@ -43,6 +43,7 @@ type CheckoutOrder = {
 
 type CheckoutClientProps = {
   order: CheckoutOrder;
+  testPaymentsEnabled: boolean;
   tbankEnabled: boolean;
 };
 
@@ -63,15 +64,35 @@ function isTbankPrimaryFlow(order: CheckoutOrder, tbankEnabled: boolean) {
   return tbankEnabled && order.status === 'PENDING' && order.paymentMethod !== 'TEST';
 }
 
-function getCheckoutPaymentMethod(order: CheckoutOrder, tbankEnabled: boolean): PaymentMethod {
+function isLocalDemoPrimaryFlow(
+  order: CheckoutOrder,
+  tbankEnabled: boolean,
+  testPaymentsEnabled: boolean
+) {
+  return testPaymentsEnabled && !tbankEnabled && order.status === 'PENDING';
+}
+
+function getCheckoutPaymentMethod(
+  order: CheckoutOrder,
+  tbankEnabled: boolean,
+  testPaymentsEnabled: boolean
+): PaymentMethod {
   if (isTbankPrimaryFlow(order, tbankEnabled)) {
     return 'TBANK';
+  }
+
+  if (isLocalDemoPrimaryFlow(order, tbankEnabled, testPaymentsEnabled)) {
+    return 'TEST';
   }
 
   return order.paymentMethod;
 }
 
-function getOrderTitle(order: CheckoutOrder, tbankEnabled: boolean) {
+function getOrderTitle(
+  order: CheckoutOrder,
+  tbankEnabled: boolean,
+  testPaymentsEnabled: boolean
+) {
   if (order.status === 'PAID') {
     return 'Доступ к курсу открыт';
   }
@@ -96,10 +117,18 @@ function getOrderTitle(order: CheckoutOrder, tbankEnabled: boolean) {
     return 'Перейдите к оплате через T-Bank';
   }
 
+  if (isLocalDemoPrimaryFlow(order, tbankEnabled, testPaymentsEnabled)) {
+    return 'Подтвердите demo-оплату';
+  }
+
   return 'Оплатите курс по QR СБП';
 }
 
-function getOrderSummary(order: CheckoutOrder, tbankEnabled: boolean) {
+function getOrderSummary(
+  order: CheckoutOrder,
+  tbankEnabled: boolean,
+  testPaymentsEnabled: boolean
+) {
   if (order.status === 'PAID') {
     return 'Оплата подтверждена. Полный доступ к курсу уже открыт.';
   }
@@ -124,17 +153,24 @@ function getOrderSummary(order: CheckoutOrder, tbankEnabled: boolean) {
     return 'Основной сценарий оплаты ведет в T-Bank PaymentURL. После подтверждения оплаты статус заказа обновится автоматически, а доступ к курсу откроется без дополнительных шагов.';
   }
 
+  if (isLocalDemoPrimaryFlow(order, tbankEnabled, testPaymentsEnabled)) {
+    return 'В локальной среде основной happy path завершается demo-подтверждением. Нажмите кнопку ниже, чтобы сразу открыть доступ к курсу. Ручная оплата по QR остается запасным сценарием.';
+  }
+
   return 'Отсканируйте QR СБП в банковском приложении, оплатите курс и затем нажмите «Я оплатил вручную», чтобы отправить платеж на ручную проверку.';
 }
 
 export default function TestCheckoutClient({
   order,
+  testPaymentsEnabled,
   tbankEnabled,
 }: CheckoutClientProps) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [manualFallbackOpen, setManualFallbackOpen] = useState(
-    !isTbankPrimaryFlow(order, tbankEnabled) || order.status === 'PROCESSING'
+    order.status === 'PROCESSING' ||
+      (!isTbankPrimaryFlow(order, tbankEnabled) &&
+        !isLocalDemoPrimaryFlow(order, tbankEnabled, testPaymentsEnabled))
   );
   const [feedback, setFeedback] = useState<{
     tone: 'error' | 'success';
@@ -144,10 +180,15 @@ export default function TestCheckoutClient({
   const canRetry = isRetryableOrderStatus(order.status);
   const canSubmitManualReview = order.status === 'PENDING';
   const tbankPrimaryFlow = isTbankPrimaryFlow(order, tbankEnabled);
-  const showManualFallbackToggle = tbankPrimaryFlow;
+  const localDemoPrimaryFlow = isLocalDemoPrimaryFlow(
+    order,
+    tbankEnabled,
+    testPaymentsEnabled
+  );
+  const showManualFallbackToggle = tbankPrimaryFlow || localDemoPrimaryFlow;
   const showManualQr =
     (order.status === 'PENDING' || order.status === 'PROCESSING') &&
-    (manualFallbackOpen || !tbankEnabled || order.status === 'PROCESSING');
+    (manualFallbackOpen || !showManualFallbackToggle || order.status === 'PROCESSING');
   const courseBackHref =
     order.status === 'PAID' || order.previewLessonsCount > 0
       ? `/courses/${order.courseSlug}`
@@ -249,6 +290,47 @@ export default function TestCheckoutClient({
     }
   }
 
+  async function handleTestPayment() {
+    setPending(true);
+    setFeedback(null);
+
+    try {
+      const response = await fetch(`/api/orders/${order.id}/test-pay`, {
+        method: 'POST',
+      });
+
+      const payload = (await response.json().catch(() => null)) as
+        | {
+            error?: string;
+            order?: { status: CheckoutOrder['status'] };
+          }
+        | null;
+
+      if (!response.ok || payload?.order?.status !== 'PAID') {
+        throw new Error(
+          payload?.error ||
+            'Не удалось подтвердить demo-оплату. Попробуйте еще раз или используйте ручную оплату.'
+        );
+      }
+
+      setFeedback({
+        tone: 'success',
+        message: 'Demo-оплата подтверждена. Полный доступ к курсу уже открыт.',
+      });
+      router.refresh();
+    } catch (error) {
+      setFeedback({
+        tone: 'error',
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Не удалось подтвердить demo-оплату. Попробуйте еще раз или используйте ручную оплату.',
+      });
+    } finally {
+      setPending(false);
+    }
+  }
+
   async function handleRetryPurchase() {
     setPending(true);
     setFeedback(null);
@@ -320,6 +402,19 @@ export default function TestCheckoutClient({
           type="button"
         >
           {pending ? 'Открываем оплату...' : 'Оплатить'}
+        </button>
+      );
+    }
+
+    if (localDemoPrimaryFlow) {
+      return (
+        <button
+          className="primary-button"
+          disabled={pending}
+          onClick={handleTestPayment}
+          type="button"
+        >
+          {pending ? 'Подтверждаем demo-оплату...' : 'Подтвердить demo-оплату'}
         </button>
       );
     }
@@ -399,9 +494,11 @@ export default function TestCheckoutClient({
               {getOrderStatusLabel(order.status)}
             </span>
           </div>
-          <h1 style={{ marginTop: '0.9rem' }}>{getOrderTitle(order, tbankEnabled)}</h1>
+          <h1 style={{ marginTop: '0.9rem' }}>
+            {getOrderTitle(order, tbankEnabled, testPaymentsEnabled)}
+          </h1>
           <p className="panel-copy" style={{ marginTop: '0.75rem' }}>
-            {getOrderSummary(order, tbankEnabled)}
+            {getOrderSummary(order, tbankEnabled, testPaymentsEnabled)}
           </p>
         </article>
 
@@ -437,7 +534,11 @@ export default function TestCheckoutClient({
               </div>
               <div>
                 <dt>Способ оплаты</dt>
-                <dd>{getPaymentMethodLabel(getCheckoutPaymentMethod(order, tbankEnabled))}</dd>
+                <dd>
+                  {getPaymentMethodLabel(
+                    getCheckoutPaymentMethod(order, tbankEnabled, testPaymentsEnabled)
+                  )}
+                </dd>
               </div>
             </div>
 
@@ -479,7 +580,7 @@ export default function TestCheckoutClient({
             </div>
 
             <p className="panel-copy" style={{ marginTop: '1rem' }}>
-              {getOrderSummary(order, tbankEnabled)}
+              {getOrderSummary(order, tbankEnabled, testPaymentsEnabled)}
             </p>
 
             {showManualQr ? (
@@ -496,9 +597,12 @@ export default function TestCheckoutClient({
                   <div className="status-card">
                     <strong>Ручная оплата по QR</strong>
                     <p>
-                      Используйте этот сценарий как запасной, если T-Bank не открылся или нужен
-                      резервный способ оплаты. Отсканируйте QR в банковском приложении и переведите{' '}
-                      {formatCoursePrice(order.amount)}.
+                      {localDemoPrimaryFlow
+                        ? 'Используйте этот сценарий как запасной, если не хотите завершать покупку через demo-подтверждение.'
+                        : tbankPrimaryFlow
+                        ? 'Используйте этот сценарий как запасной, если T-Bank не открылся или нужен резервный способ оплаты.'
+                        : 'Используйте этот сценарий, если хотите пройти ручную проверку оплаты.'}{' '}
+                      Отсканируйте QR в банковском приложении и переведите {formatCoursePrice(order.amount)}.
                     </p>
                   </div>
                   <div className="status-card">
@@ -538,12 +642,6 @@ export default function TestCheckoutClient({
               {renderManualFallbackToggle()}
             </div>
 
-            {showManualFallbackToggle ? (
-              <div className="row-actions" style={{ marginTop: '0.75rem' }}>
-                {renderManualFallbackToggle()}
-              </div>
-            ) : null}
-
             <div className="status-stack" style={{ marginTop: '1rem' }}>
               <div className="status-card">
                 <strong>Что делать дальше</strong>
@@ -554,6 +652,8 @@ export default function TestCheckoutClient({
                     ? 'Платеж уже на ручной проверке. Дождитесь завершения проверки оплаты и затем обновите статус заказа. Если проверка затянулась, свяжитесь с нами.'
                     : canRetry
                     ? 'Создайте новый заказ и снова откройте оплату. После подтверждения оплаты доступ откроется автоматически.'
+                    : localDemoPrimaryFlow
+                    ? 'Подтвердите demo-оплату и после обновления страницы откройте курс или вернитесь в кабинет. Если нужен запасной сценарий, раскройте ручную оплату по QR.'
                     : tbankPrimaryFlow
                     ? 'Откройте T-Bank, завершите оплату и затем вернитесь на страницу заказа. Если ссылка не открылась, используйте ручную оплату как запасной сценарий.'
                     : 'Оплатите заказ по QR СБП и затем нажмите «Я оплатил вручную», чтобы передать платеж на ручную проверку.'}
