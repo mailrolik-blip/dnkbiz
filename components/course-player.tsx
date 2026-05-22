@@ -71,15 +71,25 @@ function isCourseCompleted(lessons: CourseViewerLesson[]) {
   return lessons.length > 0 && lessons.every((lesson) => lesson.progress?.completed);
 }
 
+function isLessonAccessible(lesson: CourseViewerLesson) {
+  return !lesson.isLocked;
+}
+
 function getNextLessonId(lessons: CourseViewerLesson[], currentLessonId?: number) {
-  if (currentLessonId && lessons.some((lesson) => lesson.id === currentLessonId)) {
+  if (
+    currentLessonId &&
+    lessons.some(
+      (lesson) => lesson.id === currentLessonId && isLessonAccessible(lesson)
+    )
+  ) {
     return currentLessonId;
   }
 
   return (
-    lessons.find((lesson) => !lesson.isLocked && !lesson.progress?.completed)?.id ??
-    lessons.find((lesson) => lesson.isLocked)?.id ??
-    lessons.find((lesson) => !lesson.isLocked)?.id ??
+    lessons.find(
+      (lesson) => isLessonAccessible(lesson) && !lesson.progress?.completed
+    )?.id ??
+    lessons.find((lesson) => isLessonAccessible(lesson))?.id ??
     lessons[0]?.id ??
     0
   );
@@ -94,7 +104,7 @@ function getRequestedLessonId(
   }
 
   const lesson = lessons.find(
-    (item) => item.slug === requestedLessonSlug && !item.isLocked
+    (item) => item.slug === requestedLessonSlug && isLessonAccessible(item)
   );
 
   return lesson?.id;
@@ -1107,6 +1117,12 @@ export default function CoursePlayer({
     currentLessonIndex >= 0 && currentLessonIndex < lessons.length - 1
       ? lessons[currentLessonIndex + 1]
       : null;
+  const nextAccessibleLesson =
+    currentLessonIndex >= 0
+      ? lessons
+          .slice(currentLessonIndex + 1)
+          .find((lesson) => isLessonAccessible(lesson)) ?? null
+      : null;
   const completedCount = lessons.filter((lesson) => lesson.progress?.completed).length;
   const progressPercent =
     lessons.length > 0 ? Math.round((completedCount / lessons.length) * 100) : 0;
@@ -1114,6 +1130,7 @@ export default function CoursePlayer({
     (lesson) => lesson.isPreview && lesson.progress?.completed
   ).length;
   const courseFinished = isCourseCompleted(lessons);
+  const useStabilizedMobileLessonFeed = true;
   const currentHomeworkDraft = currentLesson
     ? parseHomeworkAnswer(currentLesson)
     : { text: '', selectedOptions: [] };
@@ -1392,6 +1409,12 @@ export default function CoursePlayer({
   }
 
   function openLesson(lessonId: number) {
+    const lesson = lessons.find((item) => item.id === lessonId);
+
+    if (!lesson || !isLessonAccessible(lesson)) {
+      return;
+    }
+
     setCurrentLessonId(lessonId);
     setMessage(null);
     if (successOpen) {
@@ -1400,11 +1423,11 @@ export default function CoursePlayer({
   }
 
   function openNextLesson() {
-    if (!nextLesson) {
+    if (!nextAccessibleLesson) {
       return;
     }
 
-    openLesson(nextLesson.id);
+    openLesson(nextAccessibleLesson.id);
   }
 
   function syncMobileCardReadProgress() {
@@ -1957,6 +1980,224 @@ export default function CoursePlayer({
     );
   }
 
+  function renderMobileStatusChips() {
+    if (!currentLesson) {
+      return null;
+    }
+
+    return (
+      <div className="lesson-mobile-card__status">
+        {mobileStatusItems.map((item) => (
+          <span
+            key={item.key}
+            className={`lesson-mobile-status-chip lesson-mobile-status-chip--${item.tone}`}
+            data-label={item.label}
+          >
+            <span aria-hidden="true" className="lesson-mobile-status-chip__icon">
+              {item.icon}
+            </span>
+            <span className="sr-only">{item.label}</span>
+          </span>
+        ))}
+      </div>
+    );
+  }
+
+  function renderMobileFeedCardBody(
+    card: (typeof mobileLessonCards)[number]
+  ) {
+    if (!currentLesson || currentLessonLocked) {
+      return null;
+    }
+
+    if (card.id === 'intro') {
+      return (
+        <>
+          <div className="lesson-mobile-card__copy">
+            <span className="lesson-mobile-card__eyebrow">{card.eyebrow}</span>
+            <h2 className="lesson-mobile-card__title">{card.title}</h2>
+            <p className="lesson-mobile-card__summary">{card.summary}</p>
+          </div>
+
+          <div className="lesson-mobile-card__hint-panel">
+            <span className="eyebrow">Важная подсказка</span>
+            <p>{mobileHintText}</p>
+          </div>
+
+          {card.detailBlocks.length > 0 ? (
+            <div className="lesson-mobile-card__detail-panel">
+              <LessonContentBlocks blocks={card.detailBlocks} />
+            </div>
+          ) : null}
+        </>
+      );
+    }
+
+    if (card.id === 'example') {
+      return (
+        <>
+          <div className="lesson-mobile-card__copy">
+            <span className="lesson-mobile-card__eyebrow">{card.eyebrow}</span>
+            <h2 className="lesson-mobile-card__title">{card.title}</h2>
+            <p className="lesson-mobile-card__summary">{card.summary}</p>
+          </div>
+
+          <div className="lesson-mobile-card__visual-shell">
+            {currentLesson.videoUrl ? (
+              <VideoBlock lesson={currentLesson} />
+            ) : mobileExampleBlock ? (
+              <div className="lesson-rich-content lesson-rich-content--embedded">
+                <LessonContentBlocks blocks={[mobileExampleBlock]} />
+              </div>
+            ) : visualSupportBlocks.length > 0 ? (
+              <div className="lesson-rich-content lesson-rich-content--embedded">
+                <LessonContentBlocks blocks={visualSupportBlocks} />
+              </div>
+            ) : (
+              <div className="video-placeholder lesson-video lesson-video--fallback">
+                <div className="video-placeholder__icon">
+                  <PlayIcon />
+                </div>
+                <div className="lesson-video__meta">
+                  <strong>Рабочий фрагмент урока</strong>
+                  <p>
+                    Опирайтесь на текущий материал урока и переходите к
+                    следующей карточке без дополнительных свайпов.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </>
+      );
+    }
+
+    if (card.id === 'checklist') {
+      return (
+        <>
+          <div className="lesson-mobile-card__copy">
+            <span className="lesson-mobile-card__eyebrow">{card.eyebrow}</span>
+            <h2 className="lesson-mobile-card__title">{card.title}</h2>
+            <p className="lesson-mobile-card__summary">{card.summary}</p>
+          </div>
+
+          <div className="lesson-mobile-card__checklist-summary">
+            <strong>
+              {currentHomeworkOptions.length > 0
+                ? `${selectedChecklistCount}/${checklistItems.length} пунктов отмечено`
+                : 'Опорные пункты урока'}
+            </strong>
+            <span>
+              {currentHomeworkType === 'CHECKLIST'
+                ? 'Практика по уроку'
+                : 'Подготовка к заданию'}
+            </span>
+          </div>
+
+          {currentHomeworkOptions.length > 0 ? (
+            <div className="lesson-mobile-checklist">
+              {checklistItems.map((item) => {
+                const checked = currentHomeworkDraft.selectedOptions.includes(item);
+
+                return (
+                  <label
+                    key={item}
+                    className={`lesson-mobile-checklist__item ${
+                      checked ? 'lesson-mobile-checklist__item--checked' : ''
+                    }`}
+                  >
+                    <input
+                      checked={checked}
+                      onChange={() => handleHomeworkOptionToggle(item)}
+                      type="checkbox"
+                    />
+                    <span className="checkmark">
+                      <CheckIcon />
+                    </span>
+                    <span>{item}</span>
+                  </label>
+                );
+              })}
+            </div>
+          ) : checklistItems.length > 0 ? (
+            <div className="lesson-mobile-checklist">
+              {checklistItems.map((item) => (
+                <div
+                  key={item}
+                  className="lesson-mobile-checklist__item lesson-mobile-checklist__item--static"
+                >
+                  <span className="checkmark">
+                    <CheckIcon />
+                  </span>
+                  <span>{item}</span>
+                </div>
+              ))}
+            </div>
+          ) : card.detailBlocks.length > 0 ? (
+            <div className="lesson-mobile-card__detail-panel">
+              <LessonContentBlocks blocks={card.detailBlocks} />
+            </div>
+          ) : (
+            <div className="lesson-mobile-card__hint-panel">
+              <span className="eyebrow">Практика</span>
+              <p>
+                Следующая карточка откроет задание и сохранение прогресса по
+                уроку.
+              </p>
+            </div>
+          )}
+        </>
+      );
+    }
+
+    if (card.id === 'assignment') {
+      return (
+        <>
+          <div className="lesson-mobile-card__copy">
+            <span className="lesson-mobile-card__eyebrow">{card.eyebrow}</span>
+            <h2 className="lesson-mobile-card__title">{card.title}</h2>
+            <p className="lesson-mobile-card__summary">{card.summary}</p>
+          </div>
+
+          <LessonHomeworkPanel
+            className="homework-box--mobile-card"
+            compact
+            homeworkDraft={currentHomeworkDraft}
+            homeworkOptions={currentHomeworkOptions}
+            homeworkType={currentHomeworkType}
+            lesson={currentLesson}
+            nextLesson={nextAccessibleLesson}
+            pendingLessonId={pendingLessonId}
+            showChecklistOptions={false}
+            onCompletedToggle={handleCompletedToggle}
+            onHomeworkOptionToggle={handleHomeworkOptionToggle}
+            onHomeworkTextChange={handleHomeworkTextChange}
+            onOpenNextLesson={openNextLesson}
+            onPersistProgress={persistProgress}
+          />
+        </>
+      );
+    }
+
+    return (
+      <>
+        <div className="lesson-mobile-card__copy">
+          <span className="lesson-mobile-card__eyebrow">{card.eyebrow}</span>
+          <h2 className="lesson-mobile-card__title">{card.title}</h2>
+          <p className="lesson-mobile-card__summary">{card.summary}</p>
+        </div>
+
+        <div className="lesson-mobile-card__finish-panel">
+          <div>
+            <span className="eyebrow">Следом в курсе</span>
+            <strong>{nextStepTitle}</strong>
+          </div>
+          <p>{nextStepCopy}</p>
+        </div>
+      </>
+    );
+  }
+
   return (
     <main
       className={`page-shell course-player-page ${
@@ -2014,7 +2255,7 @@ export default function CoursePlayer({
           </div>
         </div>
 
-        {currentLesson ? (
+        {currentLesson && !useStabilizedMobileLessonFeed ? (
           <section
             className={`course-player-mobile-header ${
               mobileHeaderCollapsed ? 'course-player-mobile-header--compact' : ''
@@ -2284,7 +2525,262 @@ export default function CoursePlayer({
                     }`.trim()}
                     hidden={!isMobileViewport}
                   >
-                    {currentLessonLocked ? (
+                    {useStabilizedMobileLessonFeed ? (
+                      <div className="course-player-lesson-mobile-feed">
+                        <article className="lesson-mobile-card lesson-mobile-card--feed-block lesson-mobile-card--feed-hero">
+                          <div className="lesson-mobile-card__copy">
+                            <span className="lesson-mobile-card__eyebrow">
+                              {courseShortTitle}
+                            </span>
+                            <h2 className="lesson-mobile-card__title">
+                              Урок {currentLesson.position}. {currentLesson.title}
+                            </h2>
+                            <p className="lesson-mobile-card__summary">
+                              {currentLesson.description || mobileSummaryText}
+                            </p>
+                          </div>
+
+                          {renderMobileStatusChips()}
+
+                          <div className="badge-row">
+                            {currentLesson.isPreview ? (
+                              <span className="badge badge-pending">Превью</span>
+                            ) : (
+                              <span className="badge badge-paid">Полный доступ</span>
+                            )}
+                            <span className="badge badge-complete">
+                              {progressPercent}% прогресса
+                            </span>
+                          </div>
+                        </article>
+
+                        <article className="lesson-mobile-card lesson-mobile-card--feed-block lesson-mobile-card--feed-progress">
+                          <div className="lesson-mobile-card__copy">
+                            <span className="lesson-mobile-card__eyebrow">
+                              Карточка прогресса
+                            </span>
+                            <h2 className="lesson-mobile-card__title">
+                              Прогресс по курсу
+                            </h2>
+                            <p className="lesson-mobile-card__summary">
+                              {lessonProgressLabel}.{' '}
+                              {nextLesson
+                                ? `Дальше по курсу: ${nextStepTitle}.`
+                                : 'Это последний урок курса.'}
+                            </p>
+                          </div>
+
+                          <div className="progress-box">
+                            <div className="progress-info">
+                              <span>Завершено</span>
+                              <span>{progressPercent}%</span>
+                            </div>
+                            <div className="progress-line">
+                              <div
+                                className="progress-fill"
+                                style={{ width: `${progressPercent}%` }}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="lesson-mobile-card__hint-panel">
+                            <span className="eyebrow">Текущий статус</span>
+                            <p>
+                              {currentLesson.progress?.completed
+                                ? 'Урок уже отмечен завершенным. Прогресс сохранится после следующего открытия.'
+                                : 'Можно завершить урок сейчас или сохранить прогресс и продолжить позже.'}
+                            </p>
+                          </div>
+                        </article>
+
+                        <details className="course-mobile-outline course-mobile-outline--lesson-feed">
+                          <summary className="course-mobile-outline__summary">
+                            <div>
+                              <span className="eyebrow">Меню уроков</span>
+                              <strong>Программа курса</strong>
+                            </div>
+                            <span className="course-mobile-outline__progress">
+                              {currentLesson.position}/{lessons.length}
+                            </span>
+                          </summary>
+                          <div className="course-mobile-outline__body">
+                            {courseState.access.accessMode === 'PREVIEW' ? (
+                              <div className="course-preview-summary">
+                                <span className="eyebrow">Ознакомительный доступ</span>
+                                <span className="badge badge-pending">
+                                  {previewCompletedCount}/
+                                  {courseState.access.previewLessonsCount} урока открыто
+                                </span>
+                                <p className="muted-text">
+                                  Preview-уроки доступны без оплаты, а locked уроки
+                                  остаются в меню как ориентир по программе.
+                                </p>
+                              </div>
+                            ) : null}
+
+                            <div className="lessons-list">
+                              {lessons.map((lesson) => (
+                                <button
+                                  key={lesson.id}
+                                  aria-current={
+                                    lesson.id === currentLessonId ? 'step' : undefined
+                                  }
+                                  aria-disabled={lesson.isLocked ? 'true' : undefined}
+                                  className={`lesson-btn ${
+                                    lesson.id === currentLessonId ? 'active' : ''
+                                  } ${lesson.progress?.completed ? 'completed' : ''} ${
+                                    lesson.isLocked ? 'lesson-btn--locked' : ''
+                                  }`}
+                                  disabled={lesson.isLocked}
+                                  onClick={() => openLesson(lesson.id)}
+                                  type="button"
+                                >
+                                  <span className="lesson-btn__body">
+                                    <span className="lesson-btn__title">
+                                      {lesson.position}. {lesson.title}
+                                    </span>
+                                    <span className="lesson-btn__meta">
+                                      {lesson.isLocked
+                                        ? 'Откроется после оплаты'
+                                        : lesson.isPreview &&
+                                            courseState.access.accessMode === 'PREVIEW'
+                                          ? 'Доступно в preview'
+                                          : lesson.progress?.completed
+                                            ? 'Урок уже завершен'
+                                            : lesson.description ||
+                                              'Откройте урок, чтобы продолжить обучение.'}
+                                    </span>
+                                  </span>
+                                  <span className="check-icon">
+                                    {lesson.isLocked ? <LockIcon /> : <CheckIcon />}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </details>
+
+                        {currentLessonLocked ? (
+                          <article className="lesson-mobile-card lesson-mobile-card--feed-block lesson-mobile-card--locked">
+                            <div className="lesson-mobile-card__status">
+                              <span className="badge badge-paid">Закрыто до оплаты</span>
+                              {currentLesson.isPreview ? (
+                                <span className="badge badge-pending">Превью</span>
+                              ) : null}
+                            </div>
+
+                            <div className="lesson-mobile-card__body lesson-mobile-card__body--feed lesson-mobile-card__body--locked">
+                              <div className="lesson-mobile-card__hero">
+                                <span className="lesson-mobile-card__eyebrow">
+                                  Урок {currentLesson.position} из {lessons.length}
+                                </span>
+                                <h2 className="lesson-mobile-card__title">
+                                  {currentLesson.title}
+                                </h2>
+                                <p className="lesson-mobile-card__summary">
+                                  {mobileHintText}
+                                </p>
+                              </div>
+
+                              <div className="lesson-mobile-card__section lesson-mobile-card__section--paywall">
+                                <PaywallBlock
+                                  course={courseState}
+                                  lesson={currentLesson}
+                                  onCreateOrder={handleCreateOrder}
+                                  purchasePending={purchasePending}
+                                />
+                              </div>
+                            </div>
+                          </article>
+                        ) : (
+                          <>
+                            {mobileLessonCards.map((card) => (
+                              <article
+                                key={`${currentLesson.id}-${card.id}`}
+                                className="lesson-mobile-card lesson-mobile-card--feed-block"
+                              >
+                                <div className="lesson-mobile-card__body lesson-mobile-card__body--feed">
+                                  {renderMobileFeedCardBody(card)}
+                                </div>
+                              </article>
+                            ))}
+
+                            <article className="lesson-mobile-card lesson-mobile-card--feed-block lesson-mobile-card--feed-actions">
+                              <div className="lesson-mobile-card__copy">
+                                <span className="lesson-mobile-card__eyebrow">
+                                  Карточка действий
+                                </span>
+                                <h2 className="lesson-mobile-card__title">
+                                  Навигация и сохранение
+                                </h2>
+                                <p className="lesson-mobile-card__summary">
+                                  Сохраните прогресс, откройте следующий доступный урок
+                                  или вернитесь к программе курса без потери контекста.
+                                </p>
+                              </div>
+
+                              <div className="lesson-mobile-card__hint-panel">
+                                <span className="eyebrow">Следующий шаг</span>
+                                <p>{nextStepCopy}</p>
+                              </div>
+
+                              <div className="lesson-mobile-feed-actions">
+                                <button
+                                  className="primary-button"
+                                  disabled={pendingLessonId === currentLesson.id}
+                                  onClick={persistProgress}
+                                  type="button"
+                                >
+                                  {pendingLessonId === currentLesson.id
+                                    ? 'Сохраняем...'
+                                    : 'Сохранить прогресс'}
+                                </button>
+
+                                {nextAccessibleLesson ? (
+                                  <button
+                                    className="secondary-button"
+                                    onClick={openNextLesson}
+                                    type="button"
+                                  >
+                                    Следующий урок
+                                  </button>
+                                ) : nextLesson?.isLocked ? (
+                                  courseState.access.pendingOrder ? (
+                                    <Link
+                                      href={courseState.access.pendingOrder.checkoutUrl}
+                                      className="secondary-button"
+                                    >
+                                      {getActiveOrderActionLabel(
+                                        courseState.access.pendingOrder.status
+                                      )}
+                                    </Link>
+                                  ) : (
+                                    <button
+                                      className="secondary-button"
+                                      disabled={purchasePending}
+                                      onClick={handleCreateOrder}
+                                      type="button"
+                                    >
+                                      {purchasePending
+                                        ? 'Открываем оплату...'
+                                        : 'Получить доступ'}
+                                    </button>
+                                  )
+                                ) : null}
+
+                                <Link className="ghost-button" href={courseCatalogHref}>
+                                  Назад к курсу
+                                </Link>
+                                <Link className="ghost-button" href="/lk">
+                                  В кабинет
+                                </Link>
+                              </div>
+                            </article>
+                          </>
+                        )}
+                      </div>
+                    ) : null}
+                    {!useStabilizedMobileLessonFeed && (currentLessonLocked ? (
                       <article className="lesson-mobile-card lesson-mobile-card--locked">
                         <div className="lesson-mobile-card__status">
                           <span className="badge badge-paid">Закрыто до оплаты</span>
@@ -2413,7 +2909,7 @@ export default function CoursePlayer({
                           </div>
                         </div>
                       </>
-                    ) : null}
+                    ) : null)}
                   </div>
 
                   <div className="course-player-lesson-desktop" hidden={isMobileViewport}>
