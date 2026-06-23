@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -28,6 +28,13 @@ type DashboardUser = {
 
 type DashboardClientProps = {
   activity: LearnerActivitySnapshot;
+  aiAssistantRequest: {
+    businessType: string;
+    createdAt: string;
+    id: number;
+    pain: string;
+    status: 'NEW' | 'REVIEWED' | 'IN_PROGRESS' | 'READY' | 'CLOSED';
+  } | null;
   freeCourses: CatalogCourseCard[];
   myCourses: CatalogCourseCard[];
   paidCourses: CatalogCourseCard[];
@@ -335,6 +342,67 @@ function DashboardPriorityCard({
   );
 }
 
+function getAiAssistantStatusLabel(
+  status: NonNullable<DashboardClientProps['aiAssistantRequest']>['status']
+) {
+  if (status === 'NEW') {
+    return 'Заявка отправлена';
+  }
+
+  if (status === 'REVIEWED') {
+    return 'На рассмотрении';
+  }
+
+  if (status === 'IN_PROGRESS') {
+    return 'В работе';
+  }
+
+  if (status === 'READY') {
+    return 'Готово к тесту';
+  }
+
+  return 'Закрыта';
+}
+
+function DashboardAiAssistantToolCard({
+  request,
+}: {
+  request: DashboardClientProps['aiAssistantRequest'];
+}) {
+  const statusLabel = request ? getAiAssistantStatusLabel(request.status) : 'Новая задача';
+  const copy = request
+    ? `${request.businessType}. Главная боль: ${request.pain}.`
+    : 'Опишите задачу, а помощник соберёт контекст для тестового сценария.';
+
+  return (
+    <article className="panel dashboard-ai-card">
+      <div className="dashboard-ai-card__copy">
+        <div className="badge-row">
+          <span className={request ? 'badge badge-complete' : 'badge badge-pending'}>
+            {statusLabel}
+          </span>
+        </div>
+        <span className="eyebrow">AI-помощник</span>
+        <h2>AI-помощник</h2>
+        <p className="panel-copy">{copy}</p>
+      </div>
+      <div className="dashboard-ai-card__actions">
+        <Link className="primary-button" href={request ? '/ai-assistant?mode=demo' : '/ai-assistant'}>
+          {request ? 'Открыть чат' : 'Создать первую задачу'}
+        </Link>
+        {request ? (
+          <>
+            <Link className="secondary-button" href="/ai-assistant?new=1">
+              Отправить новую задачу
+            </Link>
+            <span className="dashboard-ai-card__meta">Заявка #{request.id}</span>
+          </>
+        ) : null}
+      </div>
+    </article>
+  );
+}
+
 function DashboardCourseCard({
   course,
   mode,
@@ -469,6 +537,7 @@ function DashboardCourseCard({
 
 export default function DashboardClient({
   activity,
+  aiAssistantRequest,
   freeCourses,
   myCourses,
   paidCourses,
@@ -1000,6 +1069,8 @@ export default function DashboardClient({
             />
           </div>
         </section>
+
+        <DashboardAiAssistantToolCard request={aiAssistantRequest} />
 
         {desktopPendingCourses.length > 0 ? (
           <section className="panel dashboard-section dashboard-desktop-only">

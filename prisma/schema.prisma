@@ -27,6 +27,14 @@ enum PaymentMethod {
   MANUAL
 }
 
+enum AiAssistantRequestStatus {
+  NEW
+  REVIEWED
+  IN_PROGRESS
+  READY
+  CLOSED
+}
+
 model User {
   id           Int       @id @default(autoincrement())
   email        String    @unique
@@ -40,6 +48,31 @@ model User {
   lessonActivityEvents LessonActivityEvent[]
   lessonProgress       LessonProgress[]
   orders               Order[]
+  aiAssistantRequests  AiAssistantRequest[]
+}
+
+model AiAssistantRequest {
+  id          Int                      @id @default(autoincrement())
+  userId      Int?
+  name        String
+  contact     String
+  businessType String
+  pain        String
+  tasks       Json
+  channels    Json
+  comment     String?
+  adminNote   String?
+  status      AiAssistantRequestStatus @default(NEW)
+  n8nStatus   String?
+  n8nResponse Json?
+  payload     Json
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
 }
 
 model ProgramRequest {

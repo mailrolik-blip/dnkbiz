@@ -1,6 +1,11 @@
-import 'server-only';
+﻿import 'server-only';
 
-import type { OrderStatus, PaymentMethod, UserRole } from '@prisma/client';
+import type {
+  AiAssistantRequestStatus,
+  OrderStatus,
+  PaymentMethod,
+  UserRole,
+} from '@prisma/client';
 
 import prisma from '@/lib/prisma';
 import {
@@ -105,6 +110,26 @@ export type AdminCourseRow = {
   tariffs: AdminTariffRow[];
 };
 
+export type AdminAiAssistantRequestRow = {
+  id: number;
+  userId: number | null;
+  userEmail: string | null;
+  name: string;
+  contact: string;
+  businessType: string;
+  pain: string;
+  tasks: string[];
+  channels: string[];
+  comment: string | null;
+  adminNote: string | null;
+  status: AiAssistantRequestStatus;
+  n8nStatus: string | null;
+  n8nResponse: unknown;
+  payload: unknown;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type AdminDashboardData = {
   totals: {
     users: number;
@@ -117,7 +142,14 @@ export type AdminDashboardData = {
   orders: AdminOrderRow[];
   enrollments: AdminEnrollmentRow[];
   courses: AdminCourseRow[];
+  aiAssistantRequests: AdminAiAssistantRequestRow[];
 };
+
+function jsonArrayToStrings(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string')
+    : [];
+}
 
 function getCourseStateLabel(course: {
   isPublished: boolean;
@@ -153,7 +185,7 @@ function getCourseStatusNote(course: {
 }
 
 export async function getAdminDashboardData(): Promise<AdminDashboardData> {
-  const [freeCourses, users, orders, enrollments, courses] = await Promise.all([
+  const [freeCourses, users, orders, enrollments, courses, aiAssistantRequests] = await Promise.all([
     prisma.course.findMany({
       where: {
         isPublished: true,
@@ -307,6 +339,35 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
         },
       },
     }),
+    prisma.aiAssistantRequest.findMany({
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: 100,
+      select: {
+        businessType: true,
+        channels: true,
+        comment: true,
+        adminNote: true,
+        contact: true,
+        createdAt: true,
+        id: true,
+        n8nResponse: true,
+        n8nStatus: true,
+        name: true,
+        pain: true,
+        payload: true,
+        status: true,
+        tasks: true,
+        updatedAt: true,
+        userId: true,
+        user: {
+          select: {
+            email: true,
+          },
+        },
+      },
+    }),
   ]);
 
   const freeCourseIds = new Set(freeCourses.map((course) => course.id));
@@ -434,5 +495,24 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
     orders: orderRows,
     enrollments: enrollmentRows,
     courses: courseRows,
+    aiAssistantRequests: aiAssistantRequests.map((item) => ({
+      id: item.id,
+      userId: item.userId,
+      userEmail: item.user?.email ?? null,
+      name: item.name,
+      contact: item.contact,
+      businessType: item.businessType,
+      pain: item.pain,
+      tasks: jsonArrayToStrings(item.tasks),
+      channels: jsonArrayToStrings(item.channels),
+      comment: item.comment,
+      adminNote: item.adminNote,
+      status: item.status,
+      n8nStatus: item.n8nStatus,
+      n8nResponse: item.n8nResponse,
+      payload: item.payload,
+      createdAt: toIsoString(item.createdAt),
+      updatedAt: toIsoString(item.updatedAt),
+    })),
   };
 }

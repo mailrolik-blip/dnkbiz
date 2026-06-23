@@ -16,6 +16,7 @@ import {
 } from 'react';
 
 import type {
+  AdminAiAssistantRequestRow,
   AdminCourseRow,
   AdminDashboardData,
   AdminEnrollmentRow,
@@ -88,6 +89,7 @@ type AdminDashboardTab = 'dashboard' | 'users' | 'orders' | 'courses' | 'lessons
 type TrendPeriod = 'day' | 'week' | 'month' | 'year';
 type UserListFilter = 'ALL' | 'ADMIN' | 'USER' | 'ACTIVE_ORDER' | 'HAS_ACCESS';
 type AccessSourceFilter = 'ALL' | AdminEnrollmentRow['source'];
+type AiRequestStatusFilter = 'ALL' | AdminAiAssistantRequestRow['status'];
 type TrendPoint = {
   label: string;
   detailLabel?: string;
@@ -477,6 +479,31 @@ const ACCESS_FILTER_LABELS: Record<AccessSourceFilter, string> = {
   free: 'Бесплатно',
 };
 const ORDER_STATUS_FILTERS = ['ALL', 'PROCESSING', 'PENDING', 'PAID', 'FAILED', 'CANCELED', 'EXPIRED'] as const;
+const AI_REQUEST_STATUSES = ['NEW', 'REVIEWED', 'IN_PROGRESS', 'READY', 'CLOSED'] as const;
+const AI_REQUEST_STATUS_LABELS: Record<AdminAiAssistantRequestRow['status'], string> = {
+  NEW: 'Новая',
+  REVIEWED: 'На проверке',
+  IN_PROGRESS: 'В работе',
+  READY: 'Готова',
+  CLOSED: 'Закрыта',
+};
+
+function buildAiAssistantN8nBrief(request: AdminAiAssistantRequestRow) {
+  return [
+    `AI-заявка #${request.id}`,
+    `Имя: ${request.name}`,
+    `Контакт: ${request.contact}`,
+    request.userEmail ? `Аккаунт DNK: ${request.userEmail}` : null,
+    `Тип бизнеса: ${request.businessType}`,
+    `Главная боль: ${request.pain}`,
+    `Что передать помощнику: ${request.tasks.join(', ')}`,
+    `Где сейчас общение: ${request.channels.join(', ')}`,
+    request.comment ? `Комментарий: ${request.comment}` : null,
+    request.adminNote ? `Заметка администратора: ${request.adminNote}` : null,
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
 
 function UsersIcon() {
   return (
@@ -532,6 +559,52 @@ function ReviewIcon() {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
       <circle cx="12" cy="12" r="8" />
       <path d="M12 7.8v4.6l3.1 1.8" />
+    </svg>
+  );
+}
+
+function EyeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M3.5 12s3-5.5 8.5-5.5 8.5 5.5 8.5 5.5-3 5.5-8.5 5.5S3.5 12 3.5 12Z" />
+      <circle cx="12" cy="12" r="2.4" />
+    </svg>
+  );
+}
+
+function EditIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="m5 16.8-.8 3 3-.8L18.7 7.5l-2.2-2.2L5 16.8Z" />
+      <path d="m15.5 6.3 2.2 2.2" />
+    </svg>
+  );
+}
+
+function CopyIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <rect x="8" y="8" width="10" height="10" rx="2" />
+      <path d="M6 14H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v1" />
+    </svg>
+  );
+}
+
+function ExternalLinkIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M13 5h6v6" />
+      <path d="m11 13 8-8" />
+      <path d="M19 14v3.5A1.5 1.5 0 0 1 17.5 19h-11A1.5 1.5 0 0 1 5 17.5v-11A1.5 1.5 0 0 1 6.5 5H10" />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="m7 7 10 10" />
+      <path d="M17 7 7 17" />
     </svg>
   );
 }
@@ -1031,11 +1104,13 @@ export default function AdminDashboardClient({
   initialData,
   adminEmail,
   adminUserId,
+  n8nWorkflowUrl,
 }: {
   adminActions: AdminDashboardActions;
   initialData: AdminDashboardData;
   adminEmail: string;
   adminUserId: number;
+  n8nWorkflowUrl: string | null;
 }) {
   const router = useRouter();
   const courseEditorRef = useRef<HTMLElement | null>(null);
@@ -1098,6 +1173,13 @@ export default function AdminDashboardClient({
   );
   const [accessWorkspaceMode, setAccessWorkspaceMode] = useState<'journal' | 'grant'>('journal');
   const [pendingManagementKey, setPendingManagementKey] = useState<string | null>(null);
+  const [expandedAiAssistantRequestId, setExpandedAiAssistantRequestId] = useState<number | null>(null);
+  const [aiAssistantDetailId, setAiAssistantDetailId] = useState<number | null>(null);
+  const [aiAssistantStatusDraft, setAiAssistantStatusDraft] = useState<AdminAiAssistantRequestRow['status']>('NEW');
+  const [aiAssistantAdminNoteDraft, setAiAssistantAdminNoteDraft] = useState('');
+  const [aiAssistantN8nStatusDraft, setAiAssistantN8nStatusDraft] = useState('');
+  const [aiRequestStatusFilter, setAiRequestStatusFilter] = useState<AiRequestStatusFilter>('ALL');
+  const [aiRequestSearch, setAiRequestSearch] = useState('');
   const [isManagementPending, startManagementTransition] = useTransition();
 
   const manualReviewOrders = useMemo(
@@ -1112,6 +1194,89 @@ export default function AdminDashboardClient({
   const userSearchValue = userSearch.trim().toLowerCase();
   const accessSearchValue = accessSearch.trim().toLowerCase();
   const courseSearchValue = courseSearch.trim().toLowerCase();
+  const aiRequestSearchValue = aiRequestSearch.trim().toLowerCase();
+
+  async function handleCopyAiAssistantBrief(request: AdminAiAssistantRequestRow) {
+    try {
+      await navigator.clipboard.writeText(buildAiAssistantN8nBrief(request));
+      setManagementFeedback({
+        tone: 'success',
+        message: `ТЗ для n8n по заявке #${request.id} скопировано.`,
+      });
+    } catch {
+      setManagementFeedback({
+        tone: 'error',
+        message: 'Не удалось скопировать ТЗ.',
+      });
+    }
+  }
+
+  async function handleCopyAiAssistantPayload(request: AdminAiAssistantRequestRow) {
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(request.payload ?? null, null, 2));
+      setManagementFeedback({
+        tone: 'success',
+        message: `Payload JSON по заявке #${request.id} скопирован.`,
+      });
+    } catch {
+      setManagementFeedback({
+        tone: 'error',
+        message: 'Не удалось скопировать payload JSON.',
+      });
+    }
+  }
+
+  function handleToggleAiAssistantRequest(requestId: number) {
+    setExpandedAiAssistantRequestId((current) => (current === requestId ? null : requestId));
+  }
+
+  function handleOpenAiAssistantDetails(request: AdminAiAssistantRequestRow) {
+    setAiAssistantDetailId(request.id);
+    setAiAssistantStatusDraft(request.status);
+    setAiAssistantAdminNoteDraft(request.adminNote ?? '');
+    setAiAssistantN8nStatusDraft(request.n8nStatus ?? '');
+  }
+
+  function handleCloseAiAssistantDetails() {
+    setAiAssistantDetailId(null);
+  }
+
+  function handleResetAiAssistantFilters() {
+    setAiRequestStatusFilter('ALL');
+    setAiRequestSearch('');
+  }
+
+  async function handleSaveAiAssistantDetails(request: AdminAiAssistantRequestRow) {
+    setManagementFeedback(null);
+    setPendingKey(`ai-request-${request.id}`);
+
+    try {
+      await requestJson(
+        `/api/admin/ai-assistant-requests/${request.id}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({
+            adminNote: aiAssistantAdminNoteDraft,
+            n8nStatus: aiAssistantN8nStatusDraft,
+            status: aiAssistantStatusDraft,
+          }),
+        },
+        'Не удалось сохранить AI-заявку.'
+      );
+      setManagementFeedback({
+        tone: 'success',
+        message: `Заявка #${request.id} сохранена.`,
+      });
+      router.refresh();
+    } catch (error) {
+      setManagementFeedback({
+        tone: 'error',
+        message: error instanceof Error ? error.message : 'Не удалось сохранить AI-заявку.',
+      });
+    } finally {
+      setPendingKey(null);
+    }
+  }
 
   const filteredOrders = useMemo(
     () =>
@@ -3187,6 +3352,37 @@ export default function AdminDashboardClient({
     </article>
   ) : null;
 
+  const aiAssistantRequestCounts = useMemo(() => {
+    const requests = initialData.aiAssistantRequests;
+
+    return {
+      all: requests.length,
+      inProgress: requests.filter((request) => request.status === 'IN_PROGRESS').length,
+      new: requests.filter((request) => request.status === 'NEW').length,
+      ready: requests.filter((request) => request.status === 'READY').length,
+    };
+  }, [initialData.aiAssistantRequests]);
+  const filteredAiAssistantRequests = useMemo(
+    () =>
+      initialData.aiAssistantRequests.filter((request) => {
+        if (aiRequestStatusFilter !== 'ALL' && request.status !== aiRequestStatusFilter) {
+          return false;
+        }
+
+        if (!aiRequestSearchValue) {
+          return true;
+        }
+
+        return [request.id, request.name, request.contact, request.userEmail ?? '']
+          .join(' ')
+          .toLowerCase()
+          .includes(aiRequestSearchValue);
+      }),
+    [aiRequestSearchValue, aiRequestStatusFilter, initialData.aiAssistantRequests]
+  );
+  const aiAssistantDetailRequest =
+    initialData.aiAssistantRequests.find((request) => request.id === aiAssistantDetailId) ?? null;
+
   return (
     <section className="dnk-section admin-shell admin-shell--saas" id="admin-overview">
       <div className="admin-app-layout">
@@ -3400,6 +3596,366 @@ export default function AdminDashboardClient({
                 );
               })}
             </div> : null}
+
+            {isDashboardHome ? (
+              <article className="panel admin-ai-requests admin-ai-queue" id="admin-ai-requests">
+                <div className="admin-ai-queue__head">
+                  <div>
+                    <h2>Заявки на AI-помощника</h2>
+                    <p className="panel-copy">Очередь пилота: заявки, статусы и подготовка n8n.</p>
+                  </div>
+                  <div className="admin-ai-counters" aria-label="Счетчики AI-заявок">
+                    <span><strong>{aiAssistantRequestCounts.all}</strong> всего</span>
+                    <span><strong>{aiAssistantRequestCounts.new}</strong> новые</span>
+                    <span><strong>{aiAssistantRequestCounts.inProgress}</strong> в работе</span>
+                    <span><strong>{aiAssistantRequestCounts.ready}</strong> готовы</span>
+                  </div>
+                </div>
+
+                {managementFeedback ? (
+                  <p className={`feedback ${managementFeedback.tone === 'success' ? 'feedback-success' : 'feedback-error'}`}>
+                    {managementFeedback.message}
+                  </p>
+                ) : null}
+
+                <div className="admin-ai-filters">
+                  <div className="admin-ai-filter-group" aria-label="Фильтр по статусу">
+                    <span>Статус</span>
+                    <div>
+                      {(['ALL', 'NEW', 'REVIEWED', 'IN_PROGRESS', 'READY', 'CLOSED'] as const).map((status) => (
+                        <button
+                          aria-pressed={aiRequestStatusFilter === status}
+                          className={`admin-ai-filter-chip ${aiRequestStatusFilter === status ? 'admin-ai-filter-chip--active' : ''}`}
+                          key={status}
+                          onClick={() => setAiRequestStatusFilter(status)}
+                          type="button"
+                        >
+                          {status === 'ALL' ? 'Все' : AI_REQUEST_STATUS_LABELS[status]}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="field admin-ai-search-field">
+                    <label htmlFor="admin-ai-search">Поиск</label>
+                    <input
+                      id="admin-ai-search"
+                      onChange={(event) => setAiRequestSearch(event.target.value)}
+                      placeholder="Имя, email, контакт"
+                      value={aiRequestSearch}
+                    />
+                  </div>
+                  <button className="ghost-button admin-ai-reset" onClick={handleResetAiAssistantFilters} type="button">
+                    Сбросить
+                  </button>
+                </div>
+
+                <div className="admin-ai-inbox" role="list">
+                  {initialData.aiAssistantRequests.length === 0 ? (
+                    <div className="admin-ai-empty">
+                      <h3>Заявок пока нет</h3>
+                      <p>Когда пользователь пройдёт AI-разбор, заявка появится здесь.</p>
+                    </div>
+                  ) : filteredAiAssistantRequests.length > 0 ? (
+                    filteredAiAssistantRequests.map((request) => {
+                      const previewTasks = request.tasks.slice(0, 2);
+                      const hiddenTasks = Math.max(request.tasks.length - previewTasks.length, 0);
+                      const previewChannels = request.channels.slice(0, 2);
+                      const hiddenChannels = Math.max(request.channels.length - previewChannels.length, 0);
+                      const isExpanded = expandedAiAssistantRequestId === request.id;
+
+                      return (
+                        <section
+                          aria-expanded={isExpanded}
+                          className={`admin-ai-inbox-item ${isExpanded ? 'admin-ai-inbox-item--active' : ''}`}
+                          key={request.id}
+                          role="listitem"
+                        >
+                          <div className="admin-ai-inbox-item__row">
+                            <button className="admin-ai-inbox-item__click" onClick={() => handleToggleAiAssistantRequest(request.id)} type="button">
+                              <span className="admin-ai-inbox-item__meta">
+                                <strong>#{request.id}</strong>
+                                <small>{formatShortDateTime(request.createdAt)}</small>
+                              </span>
+                              <span className="admin-ai-inbox-item__content">
+                                <span className="admin-ai-inbox-item__person">
+                                  <strong>{request.name}</strong>
+                                  <small>{request.userEmail ?? request.contact}</small>
+                                </span>
+                                <span className="admin-ai-inbox-item__summary">
+                                  <span>{request.businessType}</span>
+                                  <span>{request.pain}</span>
+                                </span>
+                                <span className="admin-ai-inbox-item__chips">
+                                  <span className="admin-ai-chip-label">Функции</span>
+                                  {previewTasks.map((task) => (
+                                    <span className="admin-ai-compact-chip" key={task}>{task}</span>
+                                  ))}
+                                  {hiddenTasks > 0 ? <span className="admin-ai-compact-chip admin-ai-compact-chip--muted">+{hiddenTasks}</span> : null}
+                                  <span className="admin-ai-chip-label">Каналы</span>
+                                  {previewChannels.map((channel) => (
+                                    <span className="admin-ai-compact-chip" key={channel}>{channel}</span>
+                                  ))}
+                                  {hiddenChannels > 0 ? <span className="admin-ai-compact-chip admin-ai-compact-chip--muted">+{hiddenChannels}</span> : null}
+                                </span>
+                              </span>
+                            </button>
+
+                            <div className="admin-ai-inbox-item__side">
+                              <div className="admin-ai-inbox-item__badges">
+                                <span className={`admin-ai-status-pill admin-ai-status-pill--${request.status.toLowerCase().replace('_', '-')}`}>
+                                  {AI_REQUEST_STATUS_LABELS[request.status]}
+                                </span>
+                                <span className="admin-ai-n8n-status" title={request.n8nStatus || 'NOT_CONFIGURED'}>
+                                  {request.n8nStatus || '—'}
+                                </span>
+                              </div>
+                              <div className="admin-ai-row-actions">
+                                <button className="admin-icon-button" onClick={() => handleToggleAiAssistantRequest(request.id)} title={isExpanded ? 'Скрыть' : 'Открыть'} type="button">
+                                  <EyeIcon />
+                                </button>
+                                <button className="admin-icon-button" onClick={() => handleOpenAiAssistantDetails(request)} title="Подробнее" type="button">
+                                  <EditIcon />
+                                </button>
+                                <button className="admin-icon-button" onClick={() => handleCopyAiAssistantBrief(request)} title="Скопировать ТЗ" type="button">
+                                  <CopyIcon />
+                                </button>
+                                {n8nWorkflowUrl ? (
+                                  <a
+                                    aria-label="Открыть n8n"
+                                    className="admin-icon-button"
+                                    href={n8nWorkflowUrl}
+                                    rel="noreferrer"
+                                    target="_blank"
+                                    title="Открыть n8n"
+                                  >
+                                    <ExternalLinkIcon />
+                                  </a>
+                                ) : (
+                                  <span className="admin-icon-button admin-icon-button--disabled" title="n8n workflow URL не настроен">
+                                    <ExternalLinkIcon />
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {isExpanded ? (
+                            <div className="admin-ai-inbox-expand">
+                              <div>
+                                <span>Комментарий</span>
+                                <p>{request.comment || '—'}</p>
+                              </div>
+                              <div>
+                                <span>Контакт</span>
+                                <p>{request.contact}</p>
+                              </div>
+                              <div className="admin-ai-inbox-expand__brief">
+                                <span>Краткое ТЗ</span>
+                                <pre>{buildAiAssistantN8nBrief(request)}</pre>
+                              </div>
+                              <div className="admin-ai-inbox-expand__actions">
+                                <button className="secondary-button" onClick={() => handleOpenAiAssistantDetails(request)} type="button">
+                                  Подробнее
+                                </button>
+                                <button className="secondary-button" onClick={() => handleCopyAiAssistantBrief(request)} type="button">
+                                  Скопировать ТЗ
+                                </button>
+                                {n8nWorkflowUrl ? (
+                                  <a className="secondary-button" href={n8nWorkflowUrl} rel="noreferrer" target="_blank">
+                                    Открыть n8n
+                                  </a>
+                                ) : (
+                                  <span className="secondary-button secondary-button--disabled" title="n8n workflow URL не настроен">
+                                    Открыть n8n
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          ) : null}
+                        </section>
+                      );
+                    })
+                  ) : (
+                    <p className="muted-text admin-ai-empty-inline">По выбранным фильтрам заявок нет.</p>
+                  )}
+                </div>
+
+              </article>
+            ) : null}
+
+            {aiAssistantDetailRequest && typeof document !== 'undefined'
+              ? createPortal(
+                  <div className="admin-modal-backdrop" onClick={handleCloseAiAssistantDetails} role="presentation">
+                    <aside
+                      aria-label={`Заявка #${aiAssistantDetailRequest.id}`}
+                      className="admin-ai-drawer"
+                      onClick={(event) => event.stopPropagation()}
+                      role="dialog"
+                    >
+                      <header className="admin-ai-drawer__head">
+                        <div>
+                          <span className="eyebrow">Заявка #{aiAssistantDetailRequest.id}</span>
+                          <h3>{aiAssistantDetailRequest.businessType}</h3>
+                          <p>{aiAssistantDetailRequest.pain}</p>
+                        </div>
+                        <button className="admin-icon-button" onClick={handleCloseAiAssistantDetails} title="Закрыть" type="button">
+                          <CloseIcon />
+                        </button>
+                      </header>
+
+                      <div className="admin-ai-drawer__body">
+                        <div className="admin-ai-detail-grid">
+                          <div>
+                            <span>Пользователь</span>
+                            <strong>{aiAssistantDetailRequest.name}</strong>
+                            <small>
+                              {aiAssistantDetailRequest.userId ? `#${aiAssistantDetailRequest.userId}` : 'Гость'}
+                              {aiAssistantDetailRequest.userEmail ? ` · ${aiAssistantDetailRequest.userEmail}` : ''}
+                            </small>
+                          </div>
+                          <div>
+                            <span>Контакт</span>
+                            <strong>{aiAssistantDetailRequest.contact}</strong>
+                          </div>
+                          <div>
+                            <span>Бизнес</span>
+                            <strong>{aiAssistantDetailRequest.businessType}</strong>
+                          </div>
+                          <div>
+                            <span>Боль</span>
+                            <strong>{aiAssistantDetailRequest.pain}</strong>
+                          </div>
+                        </div>
+
+                        <div className="admin-ai-detail-section">
+                          <span>Функции</span>
+                          <div className="admin-ai-function-list">
+                            {aiAssistantDetailRequest.tasks.map((task) => (
+                              <span className="admin-ai-function-badge" key={task}>{task}</span>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="admin-ai-detail-section">
+                          <span>Каналы</span>
+                          <div className="admin-ai-function-list admin-ai-function-list--compact">
+                            {aiAssistantDetailRequest.channels.map((channel) => (
+                              <span className="admin-ai-function-badge" key={channel}>{channel}</span>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="admin-ai-detail-section">
+                          <span>Комментарий</span>
+                          <p>{aiAssistantDetailRequest.comment || '—'}</p>
+                        </div>
+
+                        <div className="admin-ai-editor-grid">
+                          <div className="field">
+                            <label htmlFor="admin-ai-detail-status">Статус</label>
+                            <select
+                              className="admin-ai-status-select"
+                              disabled={pendingKey === `ai-request-${aiAssistantDetailRequest.id}`}
+                              id="admin-ai-detail-status"
+                              onChange={(event) =>
+                                setAiAssistantStatusDraft(event.target.value as AdminAiAssistantRequestRow['status'])
+                              }
+                              value={aiAssistantStatusDraft}
+                            >
+                              {AI_REQUEST_STATUSES.map((status) => (
+                                <option key={status} value={status}>
+                                  {AI_REQUEST_STATUS_LABELS[status]}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="field">
+                            <label htmlFor="admin-ai-detail-n8n">n8n status</label>
+                            <input
+                              id="admin-ai-detail-n8n"
+                              onChange={(event) => setAiAssistantN8nStatusDraft(event.target.value)}
+                              placeholder="NOT_CONFIGURED"
+                              value={aiAssistantN8nStatusDraft}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="field admin-ai-note-field">
+                          <label htmlFor="admin-ai-detail-note">Внутренняя заметка администратора</label>
+                          <textarea
+                            id="admin-ai-detail-note"
+                            onChange={(event) => setAiAssistantAdminNoteDraft(event.target.value)}
+                            placeholder="Что важно помнить при подготовке сценария"
+                            value={aiAssistantAdminNoteDraft}
+                          />
+                        </div>
+
+                        <div className="admin-ai-drawer__notice">
+                          <strong>n8n workflow</strong>
+                          <span>{n8nWorkflowUrl ? 'Открывается во внешней вкладке.' : 'n8n workflow URL не настроен.'}</span>
+                        </div>
+
+                        <div className="admin-ai-detail-section">
+                          <span>Краткое ТЗ для n8n</span>
+                          <pre className="admin-ai-brief">{buildAiAssistantN8nBrief(aiAssistantDetailRequest)}</pre>
+                        </div>
+
+                        <details className="admin-ai-collapsed-debug">
+                          <summary>payload JSON</summary>
+                          <pre className="admin-ai-payload">
+                            {JSON.stringify(aiAssistantDetailRequest.payload ?? null, null, 2)}
+                          </pre>
+                        </details>
+                        <details className="admin-ai-collapsed-debug">
+                          <summary>n8n response</summary>
+                          <pre className="admin-ai-payload">
+                            {JSON.stringify(aiAssistantDetailRequest.n8nResponse ?? null, null, 2)}
+                          </pre>
+                        </details>
+                      </div>
+
+                      <footer className="admin-ai-drawer__actions">
+                        <div className="admin-ai-drawer__secondary-actions">
+                          <button className="secondary-button" onClick={() => handleCopyAiAssistantBrief(aiAssistantDetailRequest)} type="button">
+                            <CopyIcon />
+                            <span>ТЗ</span>
+                          </button>
+                          <button className="secondary-button" onClick={() => handleCopyAiAssistantPayload(aiAssistantDetailRequest)} type="button">
+                            <CopyIcon />
+                            <span>JSON</span>
+                          </button>
+                          {n8nWorkflowUrl ? (
+                            <a className="secondary-button" href={n8nWorkflowUrl} rel="noreferrer" target="_blank">
+                              <ExternalLinkIcon />
+                              <span>n8n</span>
+                            </a>
+                          ) : (
+                            <button className="secondary-button" disabled title="n8n workflow URL не настроен" type="button">
+                              <ExternalLinkIcon />
+                              <span>n8n</span>
+                            </button>
+                          )}
+                        </div>
+                        <div className="admin-ai-drawer__primary-actions">
+                          <button
+                            className="primary-button"
+                            disabled={pendingKey === `ai-request-${aiAssistantDetailRequest.id}`}
+                            onClick={() => handleSaveAiAssistantDetails(aiAssistantDetailRequest)}
+                            type="button"
+                          >
+                            Сохранить
+                          </button>
+                          <button className="ghost-button" onClick={handleCloseAiAssistantDetails} type="button">
+                            Закрыть
+                          </button>
+                        </div>
+                      </footer>
+                    </aside>
+                  </div>,
+                  document.body
+                )
+              : null}
 
             {isDashboardHome ? (
               <div className="admin-saas-grid admin-saas-grid--overview">
