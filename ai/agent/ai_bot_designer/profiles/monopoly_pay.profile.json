@@ -1,0 +1,16 @@
+{
+  "project_key": "monopoly_pay",
+  "project_name": "Monopoly Pay",
+  "default_mode": "composer",
+  "allowed_modes": ["composer"],
+  "text_style_rules": "Russian performance promo copy about payments, banks, checkout, conversion, payment links and methods. Keep headline 2-6 words.",
+  "image_style_rules": "Modern fintech promo visual: clean payment UI cues, cards, bank/payment icons, bright commercial polish. Illustration/icons are separate layers.",
+  "composition_rules": "Use composer pipeline with separate text, payment illustration/icon layer and background. Prioritize readability and product clarity.",
+  "negative_rules": "Do not generate Cyrillic text inside AI image. Avoid fake bank interfaces, tiny unreadable text, random payment logos and overloaded icon clutter.",
+  "asset_rules": "Prefer saved Pay backgrounds, payment icon overlays, brand colors, logo zones and reusable ad templates. Keep layers stable during isolated revisions.",
+  "layout_presets": ["pay_square_v1", "pay_square_method_card", "pay_square_bank_alert", "pay_story_vertical"],
+  "output_formats": ["square", "vk_post", "story"],
+  "revision_commands": ["revise_text_layer", "regenerate_text_layer", "revise_illustration_layer", "regenerate_illustration_layer", "revise_background_layer", "change_composition", "change_output_format", "approve_final"],
+  "telegram_examples": ["для монополии пэй нужна новая картинка с текстом Яндекс-Яндекс", "monopoly pay новые триггеры банков", "pay оплата по ссылке"],
+  "quality_check_rules": ["project_key is monopoly_pay", "text_layer not empty", "payment illustration layer exists or placeholder warning exists", "AI does not own final Cyrillic text"]
+}

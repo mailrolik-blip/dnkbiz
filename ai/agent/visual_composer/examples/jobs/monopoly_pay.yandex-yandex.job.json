@@ -1,0 +1,41 @@
+{
+  "job_type": "visual_production",
+  "project_key": "monopoly_pay",
+  "visual_mode": "composer",
+  "source_text": "новый способ оплаты Яндекс-Яндекс",
+  "output_format": "square",
+  "text_layer": {
+    "enabled": true,
+    "text": "ЯНДЕКС-ЯНДЕКС",
+    "subtitle": "НОВЫЙ МЕТОД",
+    "cta": "БЫСТРАЯ ОПЛАТА",
+    "variant": "pay_title",
+    "position": "top",
+    "locked": false
+  },
+  "illustration_layer": {
+    "enabled": true,
+    "asset_path": "examples/assets/pay-illustration.png",
+    "position": "center",
+    "locked": false
+  },
+  "background_layer": {
+    "enabled": true,
+    "asset_path": "examples/assets/pay-bg.png",
+    "locked": false
+  },
+  "layout": {
+    "variant": "pay_square_v1",
+    "width": 1080,
+    "height": 1080,
+    "safe_area": 64
+  },
+  "brand": {
+    "logo_path": "",
+    "colors": {
+      "primary": "#19D47B",
+      "accent": "#006DFF",
+      "dark": "#101820"
+    }
+  }
+}

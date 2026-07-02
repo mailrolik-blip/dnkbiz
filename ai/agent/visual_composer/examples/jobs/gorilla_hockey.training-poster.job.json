@@ -1,0 +1,43 @@
+{
+  "job_type": "visual_production",
+  "project_key": "gorilla_hockey",
+  "visual_mode": "hockey_generated_poster",
+  "source_text": "набор детей на тренировку",
+  "output_format": "vk_post",
+  "text_layer": {
+    "enabled": true,
+    "text": "НАБОР ДЕТЕЙ",
+    "subtitle": "ТРЕНИРОВКИ ПО ХОККЕЮ",
+    "cta": "ЗАПИСЬ НА ТРЕНИРОВКУ",
+    "contacts": "gorillahockey.ru | +7 900 000-00-00",
+    "position": "bottom",
+    "locked": false
+  },
+  "illustration_layer": {
+    "enabled": true,
+    "asset_path": "examples/assets/hockey-photo.png",
+    "position": "cover",
+    "locked": false
+  },
+  "background_layer": {
+    "enabled": true,
+    "asset_path": "",
+    "locked": false
+  },
+  "layout": {
+    "variant": "hockey_poster_v1",
+    "width": 1080,
+    "height": 1350,
+    "safe_area": 64
+  },
+  "brand": {
+    "logo_path": "",
+    "website": "gorillahockey.ru",
+    "colors": {
+      "primary": "#E3202A",
+      "accent": "#F6C500",
+      "dark": "#090D12",
+      "light": "#F5F7FA"
+    }
+  }
+}

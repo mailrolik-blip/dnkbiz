@@ -1,0 +1,10 @@
+{
+  "command_text": "используй это фото и сделай листовку a4 набор детей на хоккей",
+  "uploaded_assets": [],
+  "options": {
+    "enable_ai": false,
+    "return_mode": "json",
+    "save_output": true,
+    "layout_variant": "auto"
+  }
+}

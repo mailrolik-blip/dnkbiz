@@ -8,24 +8,35 @@
     "dev:local": "next dev -H 127.0.0.1 -p 3100",
     "build": "next build",
     "start": "next start",
-    "start:staging": "next start -H 127.0.0.1 -p 3000",
     "start:3002": "next start --port 3002",
     "start:local": "next start -H 127.0.0.1 -p 3100",
     "lint": "eslint .",
+    "visual:build": "tsc -p ai/agent/visual_composer/tsconfig.json",
+    "visual:compose": "npm run visual:build --silent && node ai/agent/visual_composer/dist/index.js",
+    "visual:build-job": "npm run visual:build --silent && node ai/agent/visual_composer/dist/index.js --build-job",
+    "visual:revise": "npm run visual:build --silent && node ai/agent/visual_composer/dist/index.js --revise",
+    "visual:assets:index": "npm run visual:build --silent && node ai/agent/visual_composer/dist/index.js --index-assets",
+    "visual:validate": "npm run visual:build --silent && node ai/agent/visual_composer/dist/index.js --validate",
+    "visual:project-smoke": "npm run visual:build --silent && node ai/agent/visual_composer/dist/index.js --project-smoke",
+    "visual:quality-check": "npm run visual:build --silent && node ai/agent/visual_composer/dist/index.js --quality-check",
+    "visual:api:test": "node ai/agent/visual_composer/scripts/test-api-compose.mjs",
+    "visual:produce:test": "node ai/agent/visual_composer/scripts/test-api-produce.mjs",
+    "visual:produce:local": "npm run visual:build --silent && node ai/agent/visual_composer/scripts/produce-local.mjs",
+    "telegram:visual:build": "tsc -p ai/agent/telegram_visual_bot/tsconfig.json",
+    "telegram:visual:smoke": "npm run telegram:visual:build --silent && node ai/agent/telegram_visual_bot/scripts/smoke.mjs",
+    "telegram:visual:set-webhook": "npm run telegram:visual:build --silent && node ai/agent/telegram_visual_bot/scripts/set-webhook.mjs",
+    "telegram:visual:delete-webhook": "npm run telegram:visual:build --silent && node ai/agent/telegram_visual_bot/scripts/delete-webhook.mjs",
+    "telegram:visual:get-webhook": "npm run telegram:visual:build --silent && node ai/agent/telegram_visual_bot/scripts/get-webhook-info.mjs",
     "db:generate": "prisma generate",
-    "db:migrate:dev": "prisma migrate dev",
-    "db:migrate:deploy": "prisma migrate deploy",
     "db:seed": "node --env-file=.env prisma/seed.mjs"
-  },
-  "engines": {
-    "node": ">=20.9.0"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
     "next": "16.2.3",
     "prisma": "^6.19.3",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "sharp": "^0.34.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

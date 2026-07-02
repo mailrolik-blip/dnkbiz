@@ -41,6 +41,7 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
+!.env.visual-bot.example
 
 # vercel
 .vercel
@@ -53,8 +54,27 @@ next-env.d.ts
 
 # Local Codex / browser smoke artifacts
 .codex-*/
+.codex-*
+.codex_backups/
 .chrome-*/
 .codex*.log
 .codex-start-local.log
 .codex-dev-*.log
 prisma/dev.db
+
+# Local n8n workflow backups may contain exported credentials or tokens
+/ai/agent/ai_bot_designer/backups/
+
+# Visual composer generated build/cache artifacts
+/ai/agent/visual_composer/dist/
+/ai/agent/telegram_visual_bot/dist/
+/ai/agent/visual_composer/.cache/
+/ai/agent/visual_composer/examples/outputs/*.png
+/ai/agent/visual_composer/examples/outputs/jobs/*.json
+/ai/agent/visual_assets/manifest.local.json
+/ai/agent/visual_assets/manual_project_packs/*
+!/ai/agent/visual_assets/manual_project_packs/README.md
+!/ai/agent/visual_assets/manual_project_packs/**/.gitkeep
+/.storage/
+/public/generated/visual/*
+!/public/generated/visual/.gitkeep

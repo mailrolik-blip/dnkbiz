@@ -1,0 +1,11 @@
+{
+  "job_id": "replace-with-produce-job-id",
+  "target": "layout",
+  "instruction": "сделай другую композицию",
+  "uploaded_assets": [],
+  "options": {
+    "enable_ai": false,
+    "return_mode": "json",
+    "save_output": true
+  }
+}

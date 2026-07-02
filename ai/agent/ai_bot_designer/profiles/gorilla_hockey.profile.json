@@ -1,0 +1,16 @@
+{
+  "project_key": "gorilla_hockey",
+  "project_name": "Gorilla Hockey",
+  "default_mode": "hockey_generated_poster",
+  "allowed_modes": ["hockey_generated_poster", "hockey_photo_template", "hockey_print_layout"],
+  "text_style_rules": "Energetic Russian sports copy for hockey club posts, parents, kids, training, games and announcements. Keep poster headlines short and strong.",
+  "image_style_rules": "Dynamic hockey club visual with ice, speed, team energy and confident sports atmosphere. In photo template mode keep uploaded photo intact.",
+  "composition_rules": "Use strong hierarchy: logo slot, headline plaque, date/time/location when present, red accent plaque, CTA and contacts. Respect print margins.",
+  "negative_rules": "Do not distort uploaded photos. Avoid random team emblems, fake sponsor logos, unreadable small text, broken anatomy and overbusy backgrounds.",
+  "asset_rules": "Use saved club logos, badges, overlays, plaques, ice textures and poster templates. Uploaded photo is the photo/background layer and should remain stable on text revisions.",
+  "layout_presets": ["hockey_poster_v1", "hockey_poster_photo_v1", "hockey_training_recruitment", "hockey_print_a4_v1", "hockey_print_a5_v1"],
+  "output_formats": ["square", "vk_post", "story", "print_a4", "print_a5"],
+  "revision_commands": ["revise_text_layer", "regenerate_text_layer", "revise_illustration_layer", "regenerate_illustration_layer", "revise_background_layer", "change_composition", "change_output_format", "approve_final"],
+  "telegram_examples": ["сделай пост для хоккея завтра тренировка для детей надо пригласить родителей записаться", "задача для хоккея набор детей на тренировку", "хоккей печать A4 набор детей 2016-2018"],
+  "quality_check_rules": ["project_key is gorilla_hockey", "photo template uses uploaded photo", "print layouts use print dimensions", "text revision keeps photo/background unchanged"]
+}

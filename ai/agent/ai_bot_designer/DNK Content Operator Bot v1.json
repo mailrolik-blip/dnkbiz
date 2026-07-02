@@ -1,0 +1,2824 @@
+{
+  "name": "DNK Content Operator Bot v1",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message",
+          "callback_query"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        320,
+        288
+      ],
+      "id": "9c1dfec7-d304-4a10-8cc9-93f97e4677a8",
+      "name": "Telegram Trigger",
+      "webhookId": "22d67aff-4e5d-4af4-b5e0-6e880e20616c",
+      "credentials": {
+        "telegramApi": {
+          "id": "4VbYz1MHLb2xPqim",
+          "name": "Telegram account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "829aea64-7821-482d-a205-3fe5e2b12a48",
+                    "leftValue": "={{ !!$json.callback_query?.data }}",
+                    "rightValue": "true",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "callback"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "890c02c7-1962-450b-bd72-c862faed634d",
+                    "leftValue": "={{ !!$json.message?.voice?.file_id }}",
+                    "rightValue": "true",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "voice"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "e822b45e-0b99-41b9-98b4-6b0d790fb610",
+                    "leftValue": "={{ !!$json.message?.text && !!$json.message?.reply_to_message }}",
+                    "rightValue": "true",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "state_text_reply"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "c3c0502d-5e72-427a-9446-66940e6a30f0",
+                    "leftValue": "={{ !!$json.message?.text && !$json.message?.reply_to_message }}",
+                    "rightValue": "true",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "normal_text"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "f0846ae9-7388-4d5e-9a2e-5a894b233799",
+                    "leftValue": "={{ !!$json.message?.photo?.length }}",
+                    "rightValue": "true",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "photo"
+            }
+          ]
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        496,
+        256
+      ],
+      "id": "4a8edd1d-d339-4369-bb6b-a4376861bab6",
+      "name": "Message Type"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c3cb4ed5-c69a-4a8d-9009-91111694435e",
+              "name": "chat_id",
+              "value": "={{ String($('Telegram Trigger').item.json.message.chat.id) }}",
+              "type": "string"
+            },
+            {
+              "id": "4b12210e-4777-4f2b-9451-0425a2b5370b",
+              "name": "user_id",
+              "value": "={{ String($('Telegram Trigger').item.json.message.from.id) }}",
+              "type": "string"
+            },
+            {
+              "id": "e685115e-d184-439d-9568-531a51887073",
+              "name": "username",
+              "value": "={{ $('Telegram Trigger').item.json.message.from.username || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "c8db3c1a-1d08-41ee-8a6a-1ea3cd67a772",
+              "name": "source_type",
+              "value": "text",
+              "type": "string"
+            },
+            {
+              "id": "cba87f79-9138-498f-9843-6d9b3b85e0ae",
+              "name": "text",
+              "value": "={{ $('Telegram Trigger').item.json.message.text }}",
+              "type": "string"
+            },
+            {
+              "id": "21dca2df-099b-4b7c-bac0-db2e6a9baf8a",
+              "name": "raw_text",
+              "value": "={{ $('Telegram Trigger').item.json.message.text }}",
+              "type": "string"
+            },
+            {
+              "id": "cd7fec65-ff78-4359-b189-464e8b41d60a",
+              "name": "has_photo",
+              "value": "false",
+              "type": "boolean"
+            },
+            {
+              "id": "40c23314-67c1-4b4b-bd98-852d89bc4ffe",
+              "name": "photo_file_id",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1216,
+        0
+      ],
+      "id": "e1d972d7-e071-41fc-8646-b3b3538ac326",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=Определи проект и формат картинки по входным полям.\n\nДоступные проекты:\n- dnk — деловой AI/business стиль\n- hockey — хоккей, тренировки, дети, родители, спортивная энергия\n- monopoly — рекламная стилистика Monopoly, персонажи, оффер, яркий Telegram-пост\n- pay — платежи, способы оплаты, банки, конверсия\n- casper — обменник, новости, предупреждения, подписка\n\nВ ответе всегда сохраняй структуру:\n\nПроект: ...\nЗадача:\n...\n\nГотовый пост:\n...\n\nИдея картинки:\n...\n\nТекст на картинке:\n...\n\nСлужебно:\n...\n\nЕсли проект dnk — текст на картинке не обязателен, можно делать чистую иллюстрацию.\nЕсли project = hockey / monopoly / pay / casper — обязательно предложи короткий текст на картинке: 2–6 слов, крупно, без мелкого текста."
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        1584,
+        0
+      ],
+      "id": "787107d9-c3a0-4a02-8da3-ae2e48b7175c",
+      "name": "Message a model",
+      "credentials": {
+        "openAiApi": {
+          "id": "fAK79FOHEh5GINRg",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ebf5b212-a6e6-4bd3-827f-9c00ccea24f4",
+              "name": "chat_id",
+              "value": "={{ $json.callback_query.message.chat.id }}",
+              "type": "string"
+            },
+            {
+              "id": "8213d95c-c507-46b5-bf47-6b9c4f829b98",
+              "name": "action",
+              "value": "={{ $json.callback_query.data }}",
+              "type": "string"
+            },
+            {
+              "id": "98721475-06ac-4260-9e3e-db8ec1e8d7ae",
+              "name": "original_text",
+              "value": "={{ $json.callback_query.message.caption || $json.callback_query.message.text || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "e92e0fba-4c67-47d1-b96c-77fa8539e811",
+              "name": "callback_id",
+              "value": "={{ $json.callback_query.id }}",
+              "type": "string"
+            },
+            {
+              "id": "6657c159-dda7-4335-a6cc-b3afd7bcc179",
+              "name": "photo_file_id",
+              "value": "={{ ($json.callback_query.message.photo || []).slice(-1)[0]?.file_id || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "fdea639d-7c3d-4a93-965f-b321ff689cdc",
+              "name": "callback_message_id",
+              "value": "={{ $json.callback_query.message.message_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        768,
+        528
+      ],
+      "id": "5d5fbc95-e4e0-470e-99d8-5dea9f9a102f",
+      "name": "Normalize Callback"
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.message.voice.file_id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        752,
+        272
+      ],
+      "id": "bc16f69e-faa9-46fd-96c2-b559dd56bee4",
+      "name": "Get a file",
+      "webhookId": "4e28f8a2-0dac-47a2-b8c4-c980aa39ac37",
+      "credentials": {
+        "telegramApi": {
+          "id": "4VbYz1MHLb2xPqim",
+          "name": "Telegram account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "91bf1d7a-ea1a-4268-9cc7-41d418eec023",
+              "name": "chat_id",
+              "value": "={{ String($('Telegram Trigger').item.json.message.chat.id) }}",
+              "type": "string"
+            },
+            {
+              "id": "4670c6cd-4a98-4357-833f-e68c2cfae9a0",
+              "name": "user_id",
+              "value": "={{ String($('Telegram Trigger').item.json.message.from.id) }}",
+              "type": "string"
+            },
+            {
+              "id": "e4c400a7-af97-4e3d-b05f-37218b219cc0",
+              "name": "username",
+              "value": "={{ $('Telegram Trigger').item.json.message.from.username || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "7324b82f-06cd-4d8b-8f04-a34e66005396",
+              "name": "source_type",
+              "value": "voice",
+              "type": "string"
+            },
+            {
+              "id": "72bed762-e7ee-4d5a-93c2-f3293b119296",
+              "name": "text",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "10aaa7d3-fa5a-49f4-ad72-e48d6f34b3a9",
+              "name": "raw_text",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "875b4788-aab8-4a7b-abe9-9bfcdce46b62",
+              "name": "has_photo",
+              "value": "false",
+              "type": "boolean"
+            },
+            {
+              "id": "aa68c3bc-91f1-4fde-9315-022535706f8c",
+              "name": "photo_file_id",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1184,
+        272
+      ],
+      "id": "783ea0c7-efa6-437c-a0fb-906a19dfcd65",
+      "name": "Normalize Voice Task"
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        896,
+        272
+      ],
+      "id": "9d60ef0d-97f7-4d54-a9d0-d736fec8073b",
+      "name": "Transcribe a recording",
+      "credentials": {
+        "openAiApi": {
+          "id": "fAK79FOHEh5GINRg",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/bot{{$env.TELEGRAM_BOT_TOKEN}}/sendPhoto",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "=@DNKTestPosts"
+            },
+            {
+              "name": "caption",
+              "value": "={{ $json.final_post }}"
+            },
+            {
+              "name": "=photo",
+              "value": "={{ $json.photo_file_id }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.action === 'approve' ? $json.final_post : $json.action === 'publish_telegram' ? $json.final_post : $json.action === 'regenerate_image' ? $json.final_post : $json.action === 'revise_image' ? '✏️ Чтобы доработать картинку, ответь текстом именно на сообщение с картинкой. Например: “сделай фон темнее, убери текст, добавь логотип DNK”.' : $json.action === 'send_client' ? '📤 Отправку клиенту подключим следующим шагом.' : $json.action === 'publish_vk' ? 'VK подключим позже.' : $json.action === 'publish_instagram' ? 'Instagram подключим позже.' : $json.action === 'publish_all' ? 'Публикацию во все соцсети подключим после Telegram.' : $json.action === 'revise' ? '🔁 Что переделать? Напиши правку одним сообщением.' : $json.action === 'cancel' ? '❌ Отменил задачу.' : 'Не понял действие кнопки.' }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1744,
+        688
+      ],
+      "id": "f183bbc0-4ddc-4191-85b9-6e53e61acc78",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Normalize Callback').item.json.action }}",
+                    "rightValue": "publish_telegram",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "48d95450-6c4b-4de9-ba74-1e6cb0f201bf"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "published"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1904,
+        688
+      ],
+      "id": "ff19833c-c199-4027-8cb5-43bd0b3d4fdd",
+      "name": "Was Published To Telegram"
+    },
+    {
+      "parameters": {
+        "url": "https://api.telegram.org/bot{{$env.TELEGRAM_BOT_TOKEN}}/sendMessage",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "={{ $('Normalize Callback').item.json.chat_id }}"
+            },
+            {
+              "name": "text",
+              "value": "✅ Опубликовано в Telegram-канале @DNKTestPosts."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2048,
+        688
+      ],
+      "id": "a958b664-37b3-4e74-81c0-0d3b367e9719",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a2548b26-df2c-4753-9c41-5ddeddd60927",
+              "name": "chat_id",
+              "value": "={{ $json.chat_id }}",
+              "type": "string"
+            },
+            {
+              "id": "1f90596c-214d-42be-8ddc-3087d8dd0730",
+              "name": "action",
+              "value": "={{ $json.action }}",
+              "type": "string"
+            },
+            {
+              "id": "a9710c1c-5624-45db-be00-4c4c56662f17",
+              "name": "final_post",
+              "value": "={{ (($json.original_text || '').includes('Готовый пост:') ? (($json.original_text || '').split('Готовый пост:')[1] || '').split('Идея картинки:')[0].trim() : ($json.original_text || '').trim()) }}",
+              "type": "string"
+            },
+            {
+              "id": "e583cb6e-3417-4330-b35f-093032d58788",
+              "name": "photo_file_id",
+              "value": "={{ $json.photo_file_id }}",
+              "type": "string"
+            },
+            {
+              "id": "1e86a4df-76c0-4c55-8d16-ac8d69693d0b",
+              "name": "image_prompt",
+              "value": "={{ (($json.original_text || '').includes('Идея картинки:') ? (($json.original_text || '').split('Идея картинки:')[1] || '').split('Служебно:')[0].trim() : 'Создай новую картинку для этого поста: ' + ($json.original_text || '').trim()) }}",
+              "type": "string"
+            },
+            {
+              "id": "84c8b097-c1f6-47c3-9521-a89dcb7e2d13",
+              "name": "image_text",
+              "value": "={{ (($json.original_text || '').includes('Текст на картинке:') ? (($json.original_text || '').split('Текст на картинке:')[1] || '').split('Служебно:')[0].trim() : '') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        912,
+        528
+      ],
+      "id": "42e016dc-653a-47e5-bd28-e7e0773ab9be",
+      "name": "Build Final Post"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "4f5e33a7-34d3-402b-975b-269d67ba8ee2",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "approve",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "approve"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "9cff6b0d-1ec2-4668-9576-e79cf518a0a2",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "publish_telegram",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "publish_telegram"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "9b3eabfd-9726-4e30-ae21-f887120f6c45",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "regenerate_image",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "regenerate_image"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "2ab8ab7e-be99-422c-afda-5eec5175b305",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "revise_image",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "revise_image"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "7805a28e-0cab-4fc6-aab1-22067482a0bf",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "regenerate_text",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "regenerate_text"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "94d39c05-8da6-40aa-9e5e-7cb78fe7d5e2",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "revise_text",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "revise_text"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "bc985679-43d9-4d50-934e-9b589c994f39",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "change_visual_text",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "change_visual_text"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "371b7550-72f9-444e-b537-b9c0888ad569",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "change_illustration",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "change_illustration"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "5bdf7752-1ff7-4ed7-90b2-54f9eadfd696",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "change_background",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "change_background"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "9dd4c8fa-1bfc-43a0-8225-5c00897704b7",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "change_layout",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "change_layout"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1440,
+        480
+      ],
+      "id": "4a47a99a-5518-46a4-bacf-f8fb75b2e4e9",
+      "name": "Final Action Type"
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-image-1",
+          "mode": "list",
+          "cachedResultName": "GPT-IMAGE-1"
+        },
+        "prompt": "=Create a square 1:1 visual preview for the production pipeline.\n\nIf this is a Visual Production Bot v2.1 composer-prep payload, do not treat the task as one random final banner. Create a clean temporary preview based on the described layers. The real pixel-perfect composer will be connected as a separate service later.\n\nProject: {{ $json.project }}\nMode: {{ $json.visual_mode }}\n\nPayload / prompt:\n{{ $json.image_prompt }}\n\nPost text / source task:\n{{ $json.final_post }}\n\nConstraints:\n- do not add long small text to the image;\n- avoid unreadable Russian lettering;\n- do not add random logos or watermarks.",
+        "options": {
+          "quality": "low",
+          "size": "1024x1024"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        1904,
+        496
+      ],
+      "id": "5597fec7-6c34-4c06-8977-1004303eba35",
+      "name": "OpenAI Image",
+      "credentials": {
+        "openAiApi": {
+          "id": "fAK79FOHEh5GINRg",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendPhoto",
+        "chatId": "={{ $('Build Image Payload').item.json.chat_id }}",
+        "binaryData": true,
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "📤 Отправить клиенту",
+                    "additionalFields": {
+                      "callback_data": "send_client"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "📣 Telegram",
+                    "additionalFields": {
+                      "callback_data": "publish_telegram"
+                    }
+                  },
+                  {
+                    "text": "VK",
+                    "additionalFields": {
+                      "callback_data": "publish_vk"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "Instagram",
+                    "additionalFields": {
+                      "callback_data": "publish_instagram"
+                    }
+                  },
+                  {
+                    "text": "Все соцсети",
+                    "additionalFields": {
+                      "callback_data": "publish_all"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "🔁 Новый текст",
+                    "additionalFields": {
+                      "callback_data": "regenerate_text"
+                    }
+                  },
+                  {
+                    "text": "✏️ Править текст",
+                    "additionalFields": {
+                      "callback_data": "revise_text"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "♻️ Новая картинка",
+                    "additionalFields": {
+                      "callback_data": "regenerate_image"
+                    }
+                  },
+                  {
+                    "text": "🎨 Править картинку",
+                    "additionalFields": {
+                      "callback_data": "revise_image"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "✏️ Текст",
+                    "additionalFields": {
+                      "callback_data": "change_visual_text"
+                    }
+                  },
+                  {
+                    "text": "Иллюстрация",
+                    "additionalFields": {
+                      "callback_data": "change_illustration"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "Фон",
+                    "additionalFields": {
+                      "callback_data": "change_background"
+                    }
+                  },
+                  {
+                    "text": "Композиция",
+                    "additionalFields": {
+                      "callback_data": "change_layout"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "caption": "={{ $('Build Image Payload').item.json.final_post }}"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2048,
+        496
+      ],
+      "id": "fd07cea2-84cb-4b05-8e0d-9d60d703a885",
+      "name": "Send Photo",
+      "webhookId": "5849ecdb-308f-4e1d-8417-d1060943fe17",
+      "credentials": {
+        "telegramApi": {
+          "id": "4VbYz1MHLb2xPqim",
+          "name": "Telegram account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "dd42da74-ba72-477d-81e9-83e63d8b5eb4",
+              "name": "preview_message_id",
+              "value": "={{ $('Send Photo').item.json.result.message_id }}",
+              "type": "string"
+            },
+            {
+              "id": "823cd91e-4b5a-4652-9843-d2481921e96e",
+              "name": "preview_file_id",
+              "value": "={{ $('Send Photo').item.json.result.photo.slice(-1)[0].file_id }}",
+              "type": "string"
+            },
+            {
+              "id": "567a01af-c9e3-4e4e-94fd-6d26b3f58d45",
+              "name": "final_post",
+              "value": "={{ $('Build Image Payload').item.json.final_post }}",
+              "type": "string"
+            },
+            {
+              "id": "4fd12424-f869-4ba4-904d-3b3b1c5dbf4b",
+              "name": "image_prompt",
+              "value": "={{ $('Build Image Payload').item.json.image_prompt }}",
+              "type": "string"
+            },
+            {
+              "id": "d160a4b1-930d-45bd-86ca-857877494aba",
+              "name": "project",
+              "value": "={{ $('Build Image Payload').item.json.project || 'DNK' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2240,
+        288
+      ],
+      "id": "7e32a8dc-d101-4669-9a4a-64b41029ab81",
+      "name": "Save Preview Meta"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/bot{{$env.TELEGRAM_BOT_TOKEN}}/sendMessage",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "={{ String($json.chat_id || $('Telegram Trigger').item.json.message?.chat?.id || $('Telegram Trigger').item.json.callback_query?.message?.chat?.id || \"\") }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.output[0].content[0].text }}"
+            },
+            {
+              "name": "parse_mode",
+              "value": "HTML"
+            },
+            {
+              "name": "reply_markup",
+              "value": "={{ JSON.stringify({ inline_keyboard: [[{ text: '✅ Утвердить', callback_data: 'approve' }, { text: '🔁 Переделать', callback_data: 'revise' }, { text: '❌ Отмена', callback_data: 'cancel' }]] }) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1936,
+        0
+      ],
+      "id": "be070d78-5141-455a-ba32-ed1a666f7031",
+      "name": "Telegram API Draft Reply"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a471ffe4-6fd5-49fd-9635-164fa7532920",
+              "name": "chat_id",
+              "value": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+              "type": "string"
+            },
+            {
+              "id": "85e68965-9797-4517-945a-592470e82ee1",
+              "name": "final_post",
+              "value": "={{ $('Get Bot State').item.json.final_post }}",
+              "type": "string"
+            },
+            {
+              "id": "f125c476-eb44-40f5-bd40-986b9762c123",
+              "name": "image_prompt",
+              "value": "={{ \"Сделай новую версию картинки для того же поста. Исходная идея: \" + $('Get Bot State').item.json.image_prompt + \". Правка пользователя: \" + $('Telegram Trigger').item.json.message.text }}",
+              "type": "string"
+            },
+            {
+              "id": "e3f3c35d-fedf-408b-8bab-dd509aff838b",
+              "name": "project",
+              "value": "={{ $('Get Bot State').item.json.project || 'DNK' }}",
+              "type": "string"
+            },
+            {
+              "id": "26a2b3eb-bc2e-457b-89f9-30a278f76316",
+              "name": "action",
+              "value": "approve",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1408,
+        832
+      ],
+      "id": "09531dd2-f5f8-4166-83be-5a15c2952ff4",
+      "name": "Normalize Image Revision"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/bot{{$env.TELEGRAM_BOT_TOKEN}}/sendMessage",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "={{ $json.chat_id }}"
+            },
+            {
+              "name": "text",
+              "value": "✏️ Напиши правку ответом на сообщение с картинкой.  Например: “сделай фон темнее, убери текст на картинке, добавь больше делового стиля”"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2048,
+        864
+      ],
+      "id": "2d785069-090d-45fa-8bd3-37f06df903cd",
+      "name": "Ask Image Revision Text"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "T6LhBgZRg3AZt2OK",
+          "mode": "list",
+          "cachedResultName": "content_bot_state",
+          "cachedResultUrl": "/projects/om9kOEQ7GorfCtzO/datatables/T6LhBgZRg3AZt2OK"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "chat_id",
+              "keyValue": "={{ String($json.message?.chat?.id || $json.callback_query?.message?.chat?.id || \"\") }}"
+            }
+          ]
+        },
+        "limit": 1
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        784,
+        848
+      ],
+      "id": "9ffb829f-6c61-4d89-8fab-eb963997933b",
+      "name": "Get Bot State",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "value": "T6LhBgZRg3AZt2OK",
+          "mode": "list",
+          "cachedResultName": "content_bot_state",
+          "cachedResultUrl": "/projects/om9kOEQ7GorfCtzO/datatables/T6LhBgZRg3AZt2OK"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "chat_id",
+              "keyValue": "={{ String($json.chat_id || $('Telegram Trigger').item.json.callback_query?.message?.chat?.id || $('Telegram Trigger').item.json.message?.chat?.id || '') }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "chat_id": "={{ String($json.chat_id || $('Telegram Trigger').item.json.callback_query?.message?.chat?.id || $('Telegram Trigger').item.json.message?.chat?.id || '') }}",
+            "mode": "awaiting_image_revision",
+            "final_post": "={{ $json.final_post || \"\" }}",
+            "image_prompt": "={{ $json.image_prompt || \"\" }}",
+            "photo_file_id": "={{ $json.photo_file_id || \"\" }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "chat_id",
+              "displayName": "chat_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "mode",
+              "displayName": "mode",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "final_post",
+              "displayName": "final_post",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "image_prompt",
+              "displayName": "image_prompt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "photo_file_id",
+              "displayName": "photo_file_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1744,
+        864
+      ],
+      "id": "a70c7458-f893-4061-8036-33898cb6b27f",
+      "name": "Save Awaiting Image Revision"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "b116a01a-6345-423f-b49d-d3cef8b8f188",
+                    "leftValue": "={{ $json.mode === \"awaiting_image_revision\" ? \"image_revision\" : $json.mode === \"awaiting_text_revision\" ? \"text_revision\" : \"normal_text\" }}",
+                    "rightValue": "image_revision",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "image_revision"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "73a14a73-247e-4aa3-9920-3d056c2c2854",
+                    "leftValue": "={{ $json.mode === \"awaiting_image_revision\" ? \"image_revision\" : $json.mode === \"awaiting_text_revision\" ? \"text_revision\" : \"normal_text\" }}",
+                    "rightValue": "text_revision",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "text_revision"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "e84ebc51-5bbb-4a92-8a68-d498794dcb5e",
+                    "leftValue": "={{ $json.mode === \"awaiting_image_revision\" ? \"image_revision\" : $json.mode === \"awaiting_text_revision\" ? \"text_revision\" : \"normal_text\" }}",
+                    "rightValue": "normal_text",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "normal_text"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        928,
+        848
+      ],
+      "id": "958aa27e-2e4b-45cc-b4bd-42ed8cbc4a99",
+      "name": "Text State Router"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "value": "T6LhBgZRg3AZt2OK",
+          "mode": "list",
+          "cachedResultName": "content_bot_state",
+          "cachedResultUrl": "/projects/om9kOEQ7GorfCtzO/datatables/T6LhBgZRg3AZt2OK"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "chat_id",
+              "keyValue": "={{ String($json.result?.chat?.id || $('Build Image Payload').item.json.chat_id || \"\") }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "chat_id": "={{ String($json.result?.chat?.id || $('Build Image Payload').item.json.chat_id || \"\") }}",
+            "mode": "idle",
+            "final_post": "",
+            "image_prompt": "",
+            "photo_file_id": ""
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "chat_id",
+              "displayName": "chat_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "mode",
+              "displayName": "mode",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "final_post",
+              "displayName": "final_post",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "image_prompt",
+              "displayName": "image_prompt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "photo_file_id",
+              "displayName": "photo_file_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2240,
+        496
+      ],
+      "id": "95f2ec24-cd07-4bad-8d6b-096213203929",
+      "name": "Clear Bot State",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b90bfe87-058a-4dae-a2b2-5501b32f42b2",
+              "name": "chat_id",
+              "value": "={{ String($json.chat_id || $('Telegram Trigger').item.json.message?.chat?.id || $('Telegram Trigger').item.json.callback_query?.message?.chat?.id || \"\") }}",
+              "type": "string"
+            },
+            {
+              "id": "286ed873-686b-4a71-899d-14e95edb443d",
+              "name": "final_post",
+              "value": "={{ $json.final_post || $json.source_text || $json.task_text || $('Telegram Trigger').item.json.message?.reply_to_message?.caption || $('Telegram Trigger').item.json.callback_query?.message?.caption || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "03ec66a8-2ca6-48df-8066-98f0ecafeda0",
+              "name": "image_prompt",
+              "value": "={{ $json.image_prompt || ($json.visual_job ? JSON.stringify($json.visual_job) : \"\") || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "95a19faf-3465-49b3-913f-094bb8fde0ff",
+              "name": "action",
+              "value": "={{ $json.action || \"approve\" }}",
+              "type": "string"
+            },
+            {
+              "id": "aebf100c-d8b7-4e17-ac56-65968b37d0b6",
+              "name": "image_text",
+              "value": "={{ $json.image_text || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "270d9df1-1326-4e42-8ede-529a2a93e1d3",
+              "name": "visual_mode",
+              "value": "={{ $json.visual_mode || \"post_generation\" }}",
+              "type": "string"
+            },
+            {
+              "id": "8ad5b333-fb7a-453a-a09d-1f1b811339f7",
+              "name": "project",
+              "value": "={{ $json.project_key || $json.project || \"dnk\" }}",
+              "type": "string"
+            },
+            {
+              "id": "f11909a6-dd3e-453f-bce5-32b98925eaf1",
+              "name": "photo_file_id",
+              "value": "={{ $json.photo_file_id || $('Telegram Trigger').item.json.callback_query?.message?.photo?.slice(-1)[0]?.file_id || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "1f32306e-fd38-44c9-9ef2-09b7a3241df9",
+              "name": "visual_job_json",
+              "value": "={{ $json.visual_job_json || ($json.visual_job ? JSON.stringify($json.visual_job) : \"\") }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1744,
+        496
+      ],
+      "id": "7f070ca7-7340-49e8-a79c-abc23f0b9187",
+      "name": "Build Image Payload"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "46e5877a-270e-47fb-b9f5-d3796e5db77f",
+              "name": "chat_id",
+              "value": "={{ $json.chat_id }}",
+              "type": "string"
+            },
+            {
+              "id": "9628e697-e633-4e7a-92f2-1b39b54f88e1",
+              "name": "text",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "6ac04f9d-97ee-4575-b2e2-cf922802e461",
+              "name": "project",
+              "value": "={{    ($json.text || '').toLowerCase().includes('хокке') || ($json.text || '').toLowerCase().includes('gorilla') || ($json.text || '').toLowerCase().includes('горилл') ? 'hockey' :   ($json.text || '').toLowerCase().includes('монопол') || ($json.text || '').toLowerCase().includes('monopoly') ? 'monopoly' :   ($json.text || '').toLowerCase().includes('pay') || ($json.text || '').toLowerCase().includes('пэй') ? 'pay' :   ($json.text || '').toLowerCase().includes('casper') || ($json.text || '').toLowerCase().includes('каспер') ? 'casper' :   'dnk' }}",
+              "type": "string"
+            },
+            {
+              "id": "09ae1a32-5466-46a6-b07e-93af4e9e2cd7",
+              "name": "visual_mode",
+              "value": "={{    ['monopoly','pay','casper','hockey'].includes(     (($json.text || '').toLowerCase().includes('хокке') || ($json.text || '').toLowerCase().includes('gorilla') || ($json.text || '').toLowerCase().includes('горилл')) ? 'hockey' :     (($json.text || '').toLowerCase().includes('монопол') || ($json.text || '').toLowerCase().includes('monopoly')) ? 'monopoly' :     (($json.text || '').toLowerCase().includes('pay') || ($json.text || '').toLowerCase().includes('пэй')) ? 'pay' :     (($json.text || '').toLowerCase().includes('casper') || ($json.text || '').toLowerCase().includes('каспер')) ? 'casper' :     'dnk'   ) ? 'template_with_text' : 'clean_visual' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1392,
+        0
+      ],
+      "id": "73bc0528-b712-4444-b5bf-757aef2f8068",
+      "name": "Detect Project Profile"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "value": "T6LhBgZRg3AZt2OK",
+          "mode": "list",
+          "cachedResultName": "content_bot_state",
+          "cachedResultUrl": "/projects/om9kOEQ7GorfCtzO/datatables/T6LhBgZRg3AZt2OK"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "chat_id",
+              "keyValue": "={{ String($json.chat_id || $('Telegram Trigger').item.json.message?.chat?.id || \"\") }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "chat_id": "={{ String($json.chat_id || $('Telegram Trigger').item.json.message?.chat?.id || \"\") }}",
+            "mode": "idle",
+            "final_post": "",
+            "image_prompt": "",
+            "photo_file_id": ""
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "chat_id",
+              "displayName": "chat_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "mode",
+              "displayName": "mode",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "final_post",
+              "displayName": "final_post",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "image_prompt",
+              "displayName": "image_prompt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "photo_file_id",
+              "displayName": "photo_file_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {},
+        "matchType": "allConditions"
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1056,
+        0
+      ],
+      "id": "154da71e-b61d-4cc8-94b2-f035f42e0148",
+      "name": "Reset State Before New Task"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fc28e5bc-3b6e-46a4-b624-0200e346e920",
+              "name": "chat_id",
+              "value": "={{ String($json.chat_id || $('Telegram Trigger').item.json.callback_query?.message?.chat?.id || $('Telegram Trigger').item.json.message?.chat?.id || \"\") }}",
+              "type": "string"
+            },
+            {
+              "id": "dd5fb05b-cedf-43db-9393-e7ef2dd8a62a",
+              "name": "project",
+              "value": "={{ $json.project || $json.project_key || \"dnk\" }}",
+              "type": "string"
+            },
+            {
+              "id": "e0b99d5c-3ef5-418a-9be1-dd8131adabc1",
+              "name": "old_post",
+              "value": "={{ $json.final_post || $('Telegram Trigger').item.json.callback_query?.message?.caption || $('Telegram Trigger').item.json.callback_query?.message?.text || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "2c23b81f-d80e-4009-8de0-b8e188132b7b",
+              "name": "revision",
+              "value": "={{ $('Telegram Trigger').item.json.message?.text || ($json.action === \"regenerate_text\" ? \"Generate a new text variant without a user revision.\" : \"\") }}",
+              "type": "string"
+            },
+            {
+              "id": "9046adc2-6f6e-4f1d-8f74-33e005e4eb34",
+              "name": "text",
+              "value": "={{ \"Generate a new Russian post text for the same topic. Old post: \" + ($json.final_post || $('Telegram Trigger').item.json.callback_query?.message?.caption || $('Telegram Trigger').item.json.callback_query?.message?.text || \"\") + \". User revision: \" + ($('Telegram Trigger').item.json.message?.text || ($json.action === \"regenerate_text\" ? \"new variant\" : \"\")) + \". Keep the same project and meaning. Return the same section structure: Project, Task, Final post, Image idea, Image text, Service notes.\" }}",
+              "type": "string"
+            },
+            {
+              "id": "49772be7-a250-4c05-9e02-6efaa923a540",
+              "name": "final_post",
+              "value": "={{ $json.final_post || $('Telegram Trigger').item.json.callback_query?.message?.caption || $('Telegram Trigger').item.json.callback_query?.message?.text || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "c90e71a5-9cde-464a-94c9-6da4f213c5a9",
+              "name": "image_prompt",
+              "value": "={{ $json.image_prompt || \"\" }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1424,
+        272
+      ],
+      "id": "564df833-1258-411a-a1e1-482b3e2b1a00",
+      "name": "Build Text Revision Prompt"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/bot{{$env.TELEGRAM_BOT_TOKEN}}/sendMessage",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "={{ $json.chat_id }}"
+            },
+            {
+              "name": "text",
+              "value": "✏️ Напиши, что изменить в тексте поста.  Например: “сделай короче, добавь призыв записаться, убери слишком официальный тон”"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2048,
+        1152
+      ],
+      "id": "8b92a464-e18d-458d-ae53-9746d01248a8",
+      "name": "Ask Text Revision"
+    },
+    {
+      "id": "01b198b6-866e-416b-bf76-81131d476a97",
+      "name": "Normalize Photo Task",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        960,
+        560
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d6af47f6-7852-460f-b7eb-e9f28900ac1e",
+              "name": "chat_id",
+              "value": "={{ String($('Telegram Trigger').item.json.message.chat.id) }}",
+              "type": "string"
+            },
+            {
+              "id": "1380aa02-3123-4181-9d7c-540386d864e4",
+              "name": "user_id",
+              "value": "={{ String($('Telegram Trigger').item.json.message.from.id) }}",
+              "type": "string"
+            },
+            {
+              "id": "4b2374e2-07de-4c1d-bd3f-e44c9b558987",
+              "name": "username",
+              "value": "={{ $('Telegram Trigger').item.json.message.from.username || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "e48fe343-b18f-4852-abfa-c557efdd6bb0",
+              "name": "source_type",
+              "value": "photo",
+              "type": "string"
+            },
+            {
+              "id": "e6eef5e2-2386-4ba6-be24-59e1421ae6e6",
+              "name": "text",
+              "value": "={{ $('Telegram Trigger').item.json.message.caption || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "b81782d2-d941-4363-8ac9-4e3c88b0829e",
+              "name": "raw_text",
+              "value": "={{ $('Telegram Trigger').item.json.message.caption || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "8f22c31f-6c76-46cf-b35c-1fe704ff9823",
+              "name": "has_photo",
+              "value": "true",
+              "type": "boolean"
+            },
+            {
+              "id": "0463df6d-fbf7-4a67-9557-536a9bc192f0",
+              "name": "photo_file_id",
+              "value": "={{ ($('Telegram Trigger').item.json.message.photo || []).slice(-1)[0]?.file_id || \"\" }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "2698de5e-5139-41ef-b9b5-18c5d2b56a61",
+      "name": "Normalize Incoming Command",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1360,
+        160
+      ],
+      "parameters": {
+        "jsCode": "return items.map((item) => {\n  const j = item.json || {};\n  const rawText = String(j.raw_text || j.text || '').trim();\n  const photoFileId = String(j.photo_file_id || '');\n  return {\n    json: {\n      ...j,\n      chat_id: String(j.chat_id || ''),\n      user_id: String(j.user_id || ''),\n      username: j.username || '',\n      source_type: j.source_type || (photoFileId ? 'photo' : 'text'),\n      raw_text: rawText,\n      text: rawText,\n      has_photo: Boolean(j.has_photo === true || j.has_photo === 'true' || photoFileId),\n      photo_file_id: photoFileId\n    }\n  };\n});"
+      }
+    },
+    {
+      "id": "051efb4a-94c2-4be8-9457-e22e48b0be37",
+      "name": "Visual Request Classifier",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1576,
+        160
+      ],
+      "parameters": {
+        "jsCode": "return items.map((item) => {\n  const j = item.json || {};\n  const text = String(j.raw_text || j.text || '').toLowerCase();\n  const hasPhoto = Boolean(j.has_photo || j.photo_file_id);\n  const hasAny = (...words) => words.some((w) => text.includes(w));\n  const mentionsVisual = hasAny('картин', 'визуал', 'постер', 'афиш', 'баннер', 'изображ', 'листовк', 'флаер', 'poster', 'banner', 'image') || hasPhoto;\n  const mentionsPay = hasAny('pay', 'пэй', 'оплат', 'яндекс-яндекс', 'yandex-yandex');\n  const mentionsMonopoly = hasAny('монопол', 'monopoly');\n  const mentionsCasper = hasAny('casper', 'каспер');\n  const mentionsHockey = hasAny('хоккей', 'gorilla', 'горилл', 'тренировк', 'афиш', 'постер', 'листовк', 'печать', 'a4', 'a5');\n\n  let projectKey = 'dnk';\n  if (mentionsPay) projectKey = 'monopoly_pay';\n  else if (mentionsMonopoly) projectKey = 'monopoly';\n  else if (mentionsCasper) projectKey = 'casper';\n  else if (mentionsHockey) projectKey = 'gorilla_hockey';\n\n  let visualMode = 'post_generation';\n  if (projectKey === 'monopoly' || projectKey === 'monopoly_pay') visualMode = 'composer';\n  else if (projectKey === 'casper') visualMode = 'style_generation';\n  else if (projectKey === 'gorilla_hockey') {\n    if (hasPhoto) visualMode = 'hockey_photo_template';\n    else if (hasAny('листовк', 'печать', 'a4', 'a5')) visualMode = 'hockey_print_layout';\n    else if (hasAny('афиш')) visualMode = 'hockey_print_layout';\n    else visualMode = 'hockey_generated_poster';\n  }\n\n  const hasToken = (token) => new RegExp('(^|[^a-z0-9\\\\u0430-\\\\u044f])' + token + '($|[^a-z0-9\\\\u0430-\\\\u044f])', 'iu').test(text);\n  let outputFormat = 'square';\n  if (hasAny('\\u0441\\u0442\\u043e\\u0440\\u0438\\u0441', 'story', '1080x1920')) outputFormat = 'story';\n  else if (hasToken('vk') || hasToken('\\u0432\\u043a') || hasAny('1080x1350')) outputFormat = 'vk_post';\n  else if (hasToken('a4') || hasToken('\\u04304')) outputFormat = 'print_a4';\n  else if (hasToken('a5') || hasToken('\\u04305')) outputFormat = 'print_a5';\n\n  const isVisualRequest = Boolean(mentionsVisual || ['monopoly','monopoly_pay','casper','gorilla_hockey'].includes(projectKey));\n  return {\n    json: {\n      ...j,\n      is_visual_request: isVisualRequest,\n      project_key: projectKey,\n      project: projectKey,\n      visual_mode: visualMode,\n      output_format: outputFormat,\n      needs_text_layer: ['composer','hockey_photo_template','hockey_print_layout'].includes(visualMode) || mentionsVisual,\n      needs_illustration_layer: ['composer','style_generation','hockey_generated_poster'].includes(visualMode),\n      needs_background_layer: ['composer','hockey_print_layout'].includes(visualMode),\n      needs_uploaded_photo: visualMode === 'hockey_photo_template',\n      task_text: String(j.raw_text || j.text || '').trim()\n    }\n  };\n});"
+      }
+    },
+    {
+      "id": "4d443b2a-e9d1-4f81-9d62-d5b4b03c843c",
+      "name": "Visual Request Route",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1792,
+        160
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "280ad413-afdd-4789-8832-3283a87b2ce4",
+                    "leftValue": "={{ $json.is_visual_request ? \"true\" : \"false\" }}",
+                    "rightValue": "true",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "visual_request"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "c8431bd7-e1cd-41ba-a11d-f4748e953c86",
+                    "leftValue": "={{ $json.is_visual_request ? \"true\" : \"false\" }}",
+                    "rightValue": "false",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "legacy_post_generation"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "f35efec0-7abb-427b-b035-12bb6e7319a8",
+      "name": "Project Profile Loader",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2016,
+        80
+      ],
+      "parameters": {
+        "jsCode": "const profiles = {\n  \"casper\": {\n    \"project_key\": \"casper\",\n    \"project_name\": \"Casper\",\n    \"default_mode\": \"style_generation\",\n    \"allowed_modes\": [\n      \"style_generation\",\n      \"composer\"\n    ],\n    \"text_style_rules\": \"Concise Russian copy for exchange, news, warnings and subscription prompts. Tone should be direct, trustworthy and easy to scan.\",\n    \"image_style_rules\": \"Casper-style generated visual based on saved references: clear subject, modern digital finance mood, enough contrast for overlay text.\",\n    \"composition_rules\": \"Style generation is allowed, but readable Russian text should be rendered as a separate layer when text is required on the image.\",\n    \"negative_rules\": \"Avoid fake guarantees, unreadable small text, random financial logos, misleading charts and excessive visual noise.\",\n    \"asset_rules\": \"Use saved Casper references, brand-safe colors, backgrounds and optional text overlay templates.\",\n    \"output_formats\": [\n      \"1080x1080\",\n      \"1080x1350\",\n      \"1080x1920\"\n    ],\n    \"revision_commands\": [\n      \"revise_text_layer\",\n      \"regenerate_text_layer\",\n      \"revise_illustration_layer\",\n      \"regenerate_illustration_layer\",\n      \"change_composition\",\n      \"change_output_format\",\n      \"approve_final\"\n    ]\n  },\n  \"gorilla_hockey\": {\n    \"project_key\": \"gorilla_hockey\",\n    \"project_name\": \"Gorilla Hockey\",\n    \"default_mode\": \"hockey_generated_poster\",\n    \"allowed_modes\": [\n      \"hockey_generated_poster\",\n      \"hockey_photo_template\",\n      \"hockey_print_layout\"\n    ],\n    \"text_style_rules\": \"Energetic Russian sports copy for hockey club posts, parents, kids, training, games and announcements. Keep poster headlines short and strong.\",\n    \"image_style_rules\": \"Dynamic hockey club visual with ice, speed, team energy and confident sports atmosphere. For photo template mode, keep the uploaded photo intact.\",\n    \"composition_rules\": \"Use strong hierarchy: headline, date/time/location if present, logo zone, CTA. For print layouts, respect margins and output size requirements.\",\n    \"negative_rules\": \"Do not distort uploaded photos. Avoid unreadable small text, fake sponsor logos, random team emblems, broken anatomy and overbusy backgrounds.\",\n    \"asset_rules\": \"Use saved club logos, badges, overlays, plaques, ice textures and poster templates. Keep source photo/background stable during text-only revisions.\",\n    \"output_formats\": [\n      \"1080x1080\",\n      \"1080x1350\",\n      \"1080x1920\",\n      \"A4\",\n      \"A5\"\n    ],\n    \"revision_commands\": [\n      \"revise_text_layer\",\n      \"regenerate_text_layer\",\n      \"revise_illustration_layer\",\n      \"regenerate_illustration_layer\",\n      \"revise_background_layer\",\n      \"change_composition\",\n      \"change_output_format\",\n      \"approve_final\"\n    ]\n  },\n  \"monopoly\": {\n    \"project_key\": \"monopoly\",\n    \"project_name\": \"Monopoly\",\n    \"default_mode\": \"composer\",\n    \"allowed_modes\": [\n      \"composer\"\n    ],\n    \"text_style_rules\": \"Short Russian advertising copy for Telegram/VK posts. Use a confident, playful, promotional tone. Image headline should be 2-6 words, readable at mobile size.\",\n    \"image_style_rules\": \"Bright Monopoly-style promotional illustration, expressive characters, board-game energy, clear product story, clean commercial finish. Generate illustration as a separate layer when possible.\",\n    \"composition_rules\": \"Final image is assembled from background, illustration and text layers. Keep headline large, leave safe margins, keep CTA/caption separate from image headline.\",\n    \"negative_rules\": \"Do not generate the whole final banner as one uncontrolled image. Avoid tiny unreadable text, distorted Russian letters, random logos, visual clutter, watermark-like marks.\",\n    \"asset_rules\": \"Prefer saved Monopoly backgrounds, textures, logo-safe zones and reusable template layouts. Keep selected assets stable during unrelated revisions.\",\n    \"output_formats\": [\n      \"1080x1080\",\n      \"1080x1350\",\n      \"1080x1920\"\n    ],\n    \"revision_commands\": [\n      \"revise_text_layer\",\n      \"regenerate_text_layer\",\n      \"revise_illustration_layer\",\n      \"regenerate_illustration_layer\",\n      \"revise_background_layer\",\n      \"change_composition\",\n      \"change_output_format\",\n      \"approve_final\"\n    ]\n  },\n  \"monopoly_pay\": {\n    \"project_key\": \"monopoly_pay\",\n    \"project_name\": \"Monopoly Pay\",\n    \"default_mode\": \"composer\",\n    \"allowed_modes\": [\n      \"composer\"\n    ],\n    \"text_style_rules\": \"Russian performance-oriented advertising copy about payments, payment methods, banks, checkout, conversion and convenience. Headline should be 2-6 words and readable.\",\n    \"image_style_rules\": \"Modern fintech promotional visual in Monopoly Pay style: clean payment UI cues, bank/payment associations, conversion-focused mood, bright commercial polish. Illustration is a separate layer.\",\n    \"composition_rules\": \"Use composer pipeline with separate text, illustration and background layers. Prioritize product clarity, offer readability and space for logo/payment symbols.\",\n    \"negative_rules\": \"Do not create fake bank interfaces or unreadable Russian text. Do not change illustration/background when only text is revised. Avoid overloaded financial icon soup.\",\n    \"asset_rules\": \"Prefer saved Monopoly Pay backgrounds, payment-themed overlays, brand colors, logo zones and reusable ad templates.\",\n    \"output_formats\": [\n      \"1080x1080\",\n      \"1080x1350\",\n      \"1080x1920\"\n    ],\n    \"revision_commands\": [\n      \"revise_text_layer\",\n      \"regenerate_text_layer\",\n      \"revise_illustration_layer\",\n      \"regenerate_illustration_layer\",\n      \"revise_background_layer\",\n      \"change_composition\",\n      \"change_output_format\",\n      \"approve_final\"\n    ]\n  }\n};\nreturn items.map((item) => {\n  const j = item.json || {};\n  const profile = profiles[j.project_key] || profiles.dnk || {\n    project_key: 'dnk',\n    project_name: 'DNK',\n    default_mode: 'post_generation',\n    allowed_modes: ['post_generation'],\n    text_style_rules: '',\n    image_style_rules: '',\n    composition_rules: '',\n    negative_rules: '',\n    asset_rules: '',\n    output_formats: ['1080x1080'],\n    revision_commands: []\n  };\n  const requestedMode = j.visual_mode || profile.default_mode;\n  const visualMode = (profile.allowed_modes || []).includes(requestedMode) ? requestedMode : profile.default_mode;\n  return { json: { ...j, ...profile, project_key: profile.project_key, project: profile.project_key, visual_mode: visualMode } };\n});"
+      }
+    },
+    {
+      "id": "6378ed62-84e2-4377-8c38-d0fbf613691e",
+      "name": "Build Visual Job Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2240,
+        80
+      ],
+      "parameters": {
+        "jsCode": "return items.map((item) => {\n  const j = item.json || {};\n  const task = String(j.task_text || j.raw_text || j.text || '').trim();\n  const isComposer = j.visual_mode === 'composer';\n  const isCasper = j.visual_mode === 'style_generation';\n  const visualJob = {\n    job_type: 'visual_production',\n    project_key: j.project_key,\n    visual_mode: j.visual_mode,\n    source_text: task,\n    output_format: j.output_format || 'square',\n    text_layer: {\n      enabled: Boolean(j.needs_text_layer),\n      prompt: 'Generate a short readable Russian image headline and optional subheadline for: ' + task,\n      generated_text: '',\n      position: '',\n      style: j.text_style_rules || ''\n    },\n    illustration_layer: {\n      enabled: Boolean(j.needs_illustration_layer),\n      prompt: 'Create an illustration layer for: ' + task + '. Style: ' + (j.image_style_rules || ''),\n      asset_ref: '',\n      locked: false\n    },\n    background_layer: {\n      enabled: Boolean(j.needs_background_layer),\n      prompt: 'Use or generate a background according to asset rules: ' + (j.asset_rules || ''),\n      asset_ref: '',\n      locked: false\n    },\n    layout: {\n      variant: 'auto',\n      composition_rules: j.composition_rules || ''\n    },\n    profile: {\n      text_style_rules: j.text_style_rules || '',\n      image_style_rules: j.image_style_rules || '',\n      composition_rules: j.composition_rules || '',\n      negative_rules: j.negative_rules || ''\n    },\n    revision_state: {\n      can_change_text: true,\n      can_change_illustration: true,\n      can_change_background: true,\n      can_change_layout: true\n    }\n  };\n  let imagePrompt;\n  if (isComposer) {\n    imagePrompt = [\n      'Visual Production Bot v2.1 composer-prep stage.',\n      'Do not treat this as a final one-prompt banner. Prepare a controlled preview from separate layers: text_layer, illustration_layer, background_layer and layout.',\n      'Project: ' + j.project_name + ' (' + j.project_key + ').',\n      'Task: ' + task,\n      'Text layer prompt: ' + visualJob.text_layer.prompt,\n      'Illustration layer prompt: ' + visualJob.illustration_layer.prompt,\n      'Background layer prompt: ' + visualJob.background_layer.prompt,\n      'Composition rules: ' + (j.composition_rules || ''),\n      'Negative rules: ' + (j.negative_rules || ''),\n      'Temporary limitation: real pixel-perfect composer service is not connected yet; keep the preview clean and avoid tiny unreadable Russian text.'\n    ].join('\n');\n  } else if (isCasper) {\n    imagePrompt = [\n      'Generate a Casper style visual preview from project profile.',\n      'Task: ' + task,\n      'Style rules: ' + (j.image_style_rules || ''),\n      'If Russian text is needed, keep it short and readable; final text layer should later be rendered by composer.',\n      'Negative rules: ' + (j.negative_rules || '')\n    ].join('\n');\n  } else {\n    imagePrompt = [\n      'Generate a hockey visual preview for mode ' + j.visual_mode + '.',\n      'Task: ' + task,\n      'Style rules: ' + (j.image_style_rules || ''),\n      'Composition rules: ' + (j.composition_rules || ''),\n      j.has_photo ? 'Uploaded photo file id is available for future template composer: ' + (j.photo_file_id || '') : '',\n      'Temporary limitation: real photo/template/print composer service is not connected yet.'\n    ].filter(Boolean).join('\n');\n  }\n  return {\n    json: {\n      ...j,\n      visual_job: visualJob,\n      visual_job_json: JSON.stringify(visualJob),\n      image_prompt: imagePrompt,\n      image_text: '',\n      final_post: task || (j.project_name + ' visual task'),\n      action: 'approve'\n    }\n  };\n});"
+      }
+    },
+    {
+      "id": "c31a7621-9e48-459a-87a6-78bc816277b7",
+      "name": "Save Awaiting Text Revision",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1744,
+        1152
+      ],
+      "parameters": {
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "value": "T6LhBgZRg3AZt2OK",
+          "mode": "list",
+          "cachedResultName": "content_bot_state",
+          "cachedResultUrl": "/projects/om9kOEQ7GorfCtzO/datatables/T6LhBgZRg3AZt2OK"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "chat_id",
+              "keyValue": "={{ String($json.chat_id || $('Telegram Trigger').item.json.callback_query?.message?.chat?.id || $('Telegram Trigger').item.json.message?.chat?.id || '') }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "chat_id": "={{ String($json.chat_id || $('Telegram Trigger').item.json.callback_query?.message?.chat?.id || $('Telegram Trigger').item.json.message?.chat?.id || '') }}",
+            "mode": "awaiting_text_revision",
+            "final_post": "={{ $json.final_post || \"\" }}",
+            "image_prompt": "={{ $json.image_prompt || \"\" }}",
+            "photo_file_id": "={{ $json.photo_file_id || \"\" }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "chat_id",
+              "displayName": "chat_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "mode",
+              "displayName": "mode",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "final_post",
+              "displayName": "final_post",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "image_prompt",
+              "displayName": "image_prompt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "photo_file_id",
+              "displayName": "photo_file_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "fa9a8c30-da1f-46ec-9c0d-b1f2b9106908",
+      "name": "Compose Visual",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2464,
+        80
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ ($env.DNK_VISUAL_COMPOSER_URL || \"\").replace(/\\/$/, \"\") + \"/api/visual/compose\" }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ \"Bearer \" + ($env.VISUAL_COMPOSER_API_KEY || \"\") }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ visual_job: $json.visual_job, options: { return_mode: \"json\", save_output: true } }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "797e2784-95df-46b7-a9b9-d5b8e611e696",
+      "name": "Build Telegram Visual Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2688,
+        80
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d4024f66-edaf-40a5-b71f-e6f60ceb8b6a",
+              "name": "chat_id",
+              "value": "={{ String($('Build Visual Job Payload').item.json.chat_id || $('Telegram Trigger').item.json.message?.chat?.id || \"\") }}",
+              "type": "string"
+            },
+            {
+              "id": "d9f9f63b-acf7-466d-8977-df1b34876064",
+              "name": "project_key",
+              "value": "={{ $json.project_key || $('Build Visual Job Payload').item.json.project_key || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "39b2c71f-8551-45eb-a0bc-724adb92a169",
+              "name": "visual_mode",
+              "value": "={{ $json.visual_mode || $('Build Visual Job Payload').item.json.visual_mode || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "25dfd6d9-b86b-4f4f-874a-3203b9ac8ee7",
+              "name": "output_url",
+              "value": "={{ $json.output_url || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "81a90df3-9062-4b3d-8d70-de2d44dd2a89",
+              "name": "output_path",
+              "value": "={{ $json.output_path || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "d4739ed8-203e-46ac-9efe-ee2823fe3d40",
+              "name": "photo_url",
+              "value": "={{ ($json.output_url || \"\").startsWith(\"http\") ? $json.output_url : (($env.DNK_PUBLIC_BASE_URL || $env.DNK_VISUAL_COMPOSER_URL || \"\").replace(/\\/$/, \"\") + ($json.output_url || \"\")) }}",
+              "type": "string"
+            },
+            {
+              "id": "5f43ae7d-414f-44e1-93be-fe97b9306f28",
+              "name": "caption",
+              "value": "={{ \"????? ??????: \" + ($json.project_key || $('Build Visual Job Payload').item.json.project_key || \"project\") + \" / \" + ($json.visual_mode || $('Build Visual Job Payload').item.json.visual_mode || \"mode\") }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ba7cb0b4-9965-4203-a855-b30f12de6e40",
+      "name": "Telegram API Send Visual Photo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2912,
+        80
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/bot{{$env.TELEGRAM_BOT_TOKEN}}/sendPhoto",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "={{ $json.chat_id }}"
+            },
+            {
+              "name": "photo",
+              "value": "={{ $json.photo_url }}"
+            },
+            {
+              "name": "caption",
+              "value": "={{ $json.caption }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ab88c4db-b4d1-4a54-985f-46d3cf056f13",
+      "name": "Produce Visual",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2016,
+        80
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ ($env.DNK_VISUAL_COMPOSER_URL || \"\").replace(/\\/$/, \"\") + \"/api/visual/produce\" }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ \"Bearer \" + ($env.VISUAL_COMPOSER_API_KEY || \"\") }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ command_text: $json.raw_text || $json.text || $json.task_text || \"\", project_key: $json.project_key || \"\", visual_mode: $json.visual_mode || \"\", output_format: $json.output_format || \"\", uploaded_assets: [], options: { enable_ai: false, return_mode: \"json\", save_output: true } }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "0c6087c6-7a4a-45df-bd5a-495ec8be6d92",
+      "name": "Build Telegram Produced Visual Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2240,
+        80
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "46967a85-0745-40ba-9c9a-aebc31e45563",
+              "name": "chat_id",
+              "value": "={{ String($('Normalize Incoming Command').item.json.chat_id || $('Telegram Trigger').item.json.message?.chat?.id || \"\") }}",
+              "type": "string"
+            },
+            {
+              "id": "f0cab43e-fde9-4971-9f96-998b6e6e8f85",
+              "name": "job_id",
+              "value": "={{ $json.job_id || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "4e1a21f9-6d96-4428-a1ab-0eeff3cc74ca",
+              "name": "project_key",
+              "value": "={{ $json.detected?.project_key || $json.project_key || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "a23da466-cb4c-456f-8e53-b21078d023d6",
+              "name": "visual_mode",
+              "value": "={{ $json.detected?.visual_mode || $json.visual_mode || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "e8f9e457-08b8-473d-a1d8-0c3ffe0044fb",
+              "name": "output_url",
+              "value": "={{ $json.output_url || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "f9ae46e0-3815-416c-87ca-41b250291d02",
+              "name": "output_path",
+              "value": "={{ $json.output_path || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "3532d7b4-7878-4099-bde5-cabbd6f43699",
+              "name": "photo_url",
+              "value": "={{ ($json.output_url || \"\").startsWith(\"http\") ? $json.output_url : (($env.DNK_PUBLIC_BASE_URL || $env.DNK_VISUAL_COMPOSER_URL || \"\").replace(/\\/$/, \"\") + ($json.output_url || \"\")) }}",
+              "type": "string"
+            },
+            {
+              "id": "f2140689-fb75-4724-9971-79fff2fc2452",
+              "name": "caption",
+              "value": "={{ \"????? ??????: \" + ($json.detected?.project_key || \"project\") + \" / \" + ($json.detected?.visual_mode || \"mode\") + ($json.job_id ? \"\njob_id: \" + $json.job_id : \"\") }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "2b02909b-0615-43fa-b5fc-8ee6fa8ce0b0",
+      "name": "Revise Visual",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2464,
+        1152
+      ],
+      "notes": "Starter node for v2.5. Requires content_bot_state columns visual_job_id and revision_target before wiring into live reply flow.",
+      "parameters": {
+        "method": "POST",
+        "url": "={{ ($env.DNK_VISUAL_COMPOSER_URL || \"\").replace(/\\/$/, \"\") + \"/api/visual/revise\" }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ \"Bearer \" + ($env.VISUAL_COMPOSER_API_KEY || \"\") }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ job_id: $json.visual_job_id || $json.job_id || \"\", target: $json.revision_target || \"text\", instruction: $json.text || $json.raw_text || \"\", uploaded_assets: [], options: { enable_ai: false, return_mode: \"json\", save_output: true } }) }}",
+        "options": {}
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Message Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message Type": {
+      "main": [
+        [
+          {
+            "node": "Normalize Callback",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get a file",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Bot State",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Bot State",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Normalize Photo Task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Normalize Incoming Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Telegram API Draft Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Callback": {
+      "main": [
+        [
+          {
+            "node": "Build Final Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Voice Task": {
+      "main": [
+        [
+          {
+            "node": "Normalize Incoming Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcribe a recording": {
+      "main": [
+        [
+          {
+            "node": "Normalize Voice Task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Was Published To Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Was Published To Telegram": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Final Post": {
+      "main": [
+        [
+          {
+            "node": "Final Action Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Final Action Type": {
+      "main": [
+        [
+          {
+            "node": "Build Image Payload",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Image Payload",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Save Awaiting Image Revision",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Text Revision Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Save Awaiting Text Revision",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Save Awaiting Text Revision",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Save Awaiting Image Revision",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Save Awaiting Image Revision",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Save Awaiting Image Revision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Image": {
+      "main": [
+        [
+          {
+            "node": "Send Photo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Photo": {
+      "main": [
+        [
+          {
+            "node": "Clear Bot State",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Save Preview Meta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Image Revision": {
+      "main": [
+        [
+          {
+            "node": "Build Image Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Awaiting Image Revision": {
+      "main": [
+        [
+          {
+            "node": "Ask Image Revision Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Bot State": {
+      "main": [
+        [
+          {
+            "node": "Text State Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text State Router": {
+      "main": [
+        [
+          {
+            "node": "Normalize Image Revision",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Text Revision Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reset State Before New Task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Image Payload": {
+      "main": [
+        [
+          {
+            "node": "OpenAI Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Detect Project Profile": {
+      "main": []
+    },
+    "Reset State Before New Task": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Text Revision Prompt": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Photo Task": {
+      "main": [
+        [
+          {
+            "node": "Normalize Incoming Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Incoming Command": {
+      "main": [
+        [
+          {
+            "node": "Visual Request Classifier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Visual Request Classifier": {
+      "main": [
+        [
+          {
+            "node": "Visual Request Route",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Visual Request Route": {
+      "main": [
+        [
+          {
+            "node": "Produce Visual",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Project Profile Loader": {
+      "main": [
+        [
+          {
+            "node": "Build Visual Job Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Visual Job Payload": {
+      "main": [
+        [
+          {
+            "node": "Compose Visual",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Awaiting Text Revision": {
+      "main": [
+        [
+          {
+            "node": "Ask Text Revision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a file": {
+      "main": [
+        [
+          {
+            "node": "Transcribe a recording",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compose Visual": {
+      "main": [
+        [
+          {
+            "node": "Build Telegram Visual Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Telegram Visual Response": {
+      "main": [
+        [
+          {
+            "node": "Telegram API Send Visual Photo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Produce Visual": {
+      "main": [
+        [
+          {
+            "node": "Build Telegram Produced Visual Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Telegram Produced Visual Response": {
+      "main": [
+        [
+          {
+            "node": "Telegram API Send Visual Photo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "550dc78e-de8d-4cf6-ab69-cbf26b2f4ecc",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9d1933cb1f05ff26bfbd9ef1ec335063ec6f84b513d0a6c1546fe3122ac165ba"
+  },
+  "nodeGroups": [],
+  "id": "aEIVhi0Smo0F9JLQ",
+  "tags": []
+}

@@ -1,0 +1,210 @@
+{
+  "name": "DNK Visual Bot Manual Test",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "9f4f0ea9-5aa1-45d7-a753-visual-test-trigger",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        320,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1d6f89f1-c1e8-46f9-9c20-chat",
+              "name": "chat_id",
+              "value": "={{ String($json.message.chat.id) }}",
+              "type": "string"
+            },
+            {
+              "id": "2d6f89f1-c1e8-46f9-9c20-text",
+              "name": "text",
+              "value": "={{ $json.message.text || $json.message.caption || \"\" }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9f4f0ea9-5aa1-45d7-a753-normalize",
+      "name": "Normalize Telegram Text",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        560,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ ($env.DNK_VISUAL_COMPOSER_URL || \"\").replace(/\\/$/, \"\") + \"/api/visual/produce\" }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $env.VISUAL_COMPOSER_API_KEY ? \"Bearer \" + $env.VISUAL_COMPOSER_API_KEY : \"\" }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ command_text: $json.text, options: { enable_ai: false, return_mode: \"json\", save_output: true } }) }}",
+        "options": {}
+      },
+      "id": "9f4f0ea9-5aa1-45d7-a753-produce",
+      "name": "Produce Visual",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        800,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3d6f89f1-c1e8-46f9-9c20-chat",
+              "name": "chat_id",
+              "value": "={{ $('Normalize Telegram Text').item.json.chat_id }}",
+              "type": "string"
+            },
+            {
+              "id": "4d6f89f1-c1e8-46f9-9c20-photo",
+              "name": "photo_url",
+              "value": "={{ ($json.output_url || \"\").startsWith(\"http\") ? $json.output_url : (($env.DNK_PUBLIC_BASE_URL || $env.DNK_VISUAL_COMPOSER_URL || \"\").replace(/\\/$/, \"\") + ($json.output_url || \"\")) }}",
+              "type": "string"
+            },
+            {
+              "id": "5d6f89f1-c1e8-46f9-9c20-caption",
+              "name": "caption",
+              "value": "={{ \"✅ Готово\\nПроект: \" + ($json.detected?.project_key || \"\") + \"\\nРежим: \" + ($json.detected?.visual_mode || \"\") + \"\\nJob: \" + ($json.job_id || \"\") }}",
+              "type": "string"
+            },
+            {
+              "id": "6d6f89f1-c1e8-46f9-9c20-job",
+              "name": "job_id",
+              "value": "={{ $json.job_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9f4f0ea9-5aa1-45d7-a753-build",
+      "name": "Build Photo URL",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1040,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/bot{{$env.TELEGRAM_BOT_TOKEN}}/sendPhoto",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "={{ $json.chat_id }}"
+            },
+            {
+              "name": "photo",
+              "value": "={{ $json.photo_url }}"
+            },
+            {
+              "name": "caption",
+              "value": "={{ $json.caption }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9f4f0ea9-5aa1-45d7-a753-send",
+      "name": "Telegram API Send Photo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1280,
+        320
+      ]
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Normalize Telegram Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Telegram Text": {
+      "main": [
+        [
+          {
+            "node": "Produce Visual",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Produce Visual": {
+      "main": [
+        [
+          {
+            "node": "Build Photo URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Photo URL": {
+      "main": [
+        [
+          {
+            "node": "Telegram API Send Photo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-02T00:00:00.000Z",
+  "versionId": "manual-test-v2-6"
+}

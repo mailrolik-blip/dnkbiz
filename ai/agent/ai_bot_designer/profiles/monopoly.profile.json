@@ -1,0 +1,16 @@
+{
+  "project_key": "monopoly",
+  "project_name": "Monopoly",
+  "default_mode": "composer",
+  "allowed_modes": ["composer"],
+  "text_style_rules": "Short Russian promo headlines for Telegram/VK. Use confident, playful language. Image headline should be 2-6 words, large and readable.",
+  "image_style_rules": "Bright board-game promo illustration, expressive characters, gold/red accents, clean commercial finish. Generate illustration as a separate layer.",
+  "composition_rules": "Assemble final PNG from background, illustration and text layers. Keep headline large, safe margins clear, CTA/caption separate from AI image text.",
+  "negative_rules": "Do not generate final banner text inside AI image. Avoid distorted Cyrillic, random logos, tiny text, clutter and watermark-like marks.",
+  "asset_rules": "Prefer safe approved Monopoly backgrounds, reusable character/illustration layers, logo zones and template layouts. Keep assets stable during unrelated revisions.",
+  "layout_presets": ["monopoly_square_title_top", "monopoly_square_title_bottom", "monopoly_square_character_center", "monopoly_story_vertical", "monopoly_sticker_style"],
+  "output_formats": ["square", "vk_post", "story"],
+  "revision_commands": ["revise_text_layer", "regenerate_text_layer", "revise_illustration_layer", "regenerate_illustration_layer", "revise_background_layer", "change_composition", "change_output_format", "approve_final"],
+  "telegram_examples": ["сделай новую картинку для монополии история знакомства", "сделай картинку для монополии новый конкурс", "монополия результаты конкурса"],
+  "quality_check_rules": ["text_layer not empty", "output file exists", "width/height match output_format", "text revision keeps illustration/background unchanged"]
+}

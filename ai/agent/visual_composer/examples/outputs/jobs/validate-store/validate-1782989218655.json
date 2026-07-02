@@ -1,0 +1,87 @@
+{
+  "job_id": "validate-1782989218655",
+  "created_at": "2026-07-02T10:46:58.656Z",
+  "updated_at": "2026-07-02T10:46:58.656Z",
+  "source": {
+    "command_text": "сделай картинку для монополии история знакомства"
+  },
+  "detected": {
+    "project_key": "monopoly",
+    "visual_mode": "composer",
+    "output_format": "square"
+  },
+  "visual_job": {
+    "job_type": "visual_production",
+    "project_key": "monopoly",
+    "visual_mode": "composer",
+    "source_text": "сделай картинку для монополии история знакомства",
+    "output_format": "square",
+    "text_layer": {
+      "enabled": true,
+      "text": "МОНОПОЛИИ ИСТОРИЯ ЗНАКОМСТВА",
+      "variant": "gold_3d_title",
+      "position": "top",
+      "locked": false
+    },
+    "illustration_layer": {
+      "enabled": true,
+      "asset_path": "",
+      "position": "bottom",
+      "locked": false
+    },
+    "background_layer": {
+      "enabled": true,
+      "asset_path": "",
+      "locked": false
+    },
+    "layout": {
+      "variant": "title_top_character_bottom",
+      "width": 1080,
+      "height": 1080,
+      "safe_area": 64
+    },
+    "brand": {
+      "logo_path": "",
+      "colors": {
+        "primary": "#FFD000",
+        "accent": "#FF4A00",
+        "dark": "#121A20"
+      }
+    }
+  },
+  "outputs": [
+    {
+      "version": 1,
+      "output_path": "C:\\Gorilla\\dnkbiz\\ai\\agent\\visual_composer\\examples\\outputs\\monopoly.title_top_character_bottom.visual-job.png",
+      "output_url": "/generated/visual/validate.png",
+      "width": 1080,
+      "height": 1080,
+      "created_at": "2026-07-02T10:46:58.655Z"
+    }
+  ],
+  "layers": {
+    "text": {
+      "locked": false,
+      "last_updated_at": "2026-07-02T10:46:58.656Z"
+    },
+    "illustration": {
+      "locked": false,
+      "last_updated_at": "2026-07-02T10:46:58.656Z"
+    },
+    "background": {
+      "locked": false,
+      "last_updated_at": "2026-07-02T10:46:58.656Z"
+    },
+    "layout": {
+      "locked": false,
+      "last_updated_at": "2026-07-02T10:46:58.656Z"
+    }
+  },
+  "history": [
+    {
+      "type": "created",
+      "message": "Visual job created.",
+      "created_at": "2026-07-02T10:46:58.656Z"
+    }
+  ]
+}

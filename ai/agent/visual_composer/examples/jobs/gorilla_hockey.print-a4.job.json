@@ -1,0 +1,43 @@
+{
+  "job_type": "visual_production",
+  "project_key": "gorilla_hockey",
+  "visual_mode": "hockey_print_layout",
+  "source_text": "листовка набора детей на хоккей",
+  "output_format": "print_a4",
+  "text_layer": {
+    "enabled": true,
+    "text": "НАБОР ДЕТЕЙ В ХОККЕЙ",
+    "subtitle": "ПЕРВАЯ ТРЕНИРОВКА БЕСПЛАТНО",
+    "body": "Группы для начинающих. Тренировки на льду и общая физическая подготовка. Помогаем детям полюбить спорт, команду и движение.",
+    "contacts": "gorillahockey.ru | +7 900 000-00-00 | Омск",
+    "position": "top",
+    "locked": false
+  },
+  "illustration_layer": {
+    "enabled": false,
+    "asset_path": "",
+    "locked": false
+  },
+  "background_layer": {
+    "enabled": true,
+    "asset_path": "examples/assets/print-bg.png",
+    "locked": false
+  },
+  "layout": {
+    "variant": "gorilla_print_a4_v1",
+    "width": 2480,
+    "height": 3508,
+    "safe_area": 180
+  },
+  "brand": {
+    "logo_path": "",
+    "qr_path": "",
+    "contacts": "gorillahockey.ru | +7 900 000-00-00",
+    "colors": {
+      "primary": "#E3202A",
+      "accent": "#F6C500",
+      "dark": "#111820",
+      "light": "#F7F7F2"
+    }
+  }
+}

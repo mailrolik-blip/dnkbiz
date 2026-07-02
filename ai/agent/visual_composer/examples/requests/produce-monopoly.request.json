@@ -1,0 +1,10 @@
+{
+  "command_text": "сделай картинку для монополии история знакомства",
+  "uploaded_assets": [],
+  "options": {
+    "enable_ai": false,
+    "return_mode": "json",
+    "save_output": true,
+    "layout_variant": "auto"
+  }
+}

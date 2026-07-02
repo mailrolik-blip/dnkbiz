@@ -1,0 +1,18 @@
+{
+  "job_id": "replace-with-produce-job-id",
+  "target": "illustration",
+  "instruction": "используй эту иллюстрацию",
+  "uploaded_assets": [
+    {
+      "id": "local-illustration-example",
+      "type": "illustration",
+      "source": "local",
+      "path": ""
+    }
+  ],
+  "options": {
+    "enable_ai": false,
+    "return_mode": "json",
+    "save_output": true
+  }
+}

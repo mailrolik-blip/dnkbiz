@@ -1,0 +1,16 @@
+{
+  "version": "example-v1",
+  "assets": [
+    {
+      "id": "monopoly-bg-default",
+      "project_key": "monopoly",
+      "type": "background",
+      "path": "ai/agent/visual_assets/monopoly/backgrounds/default.png",
+      "tags": ["square", "warm", "promo"],
+      "usage": "Default square Monopoly background.",
+      "description": "Example only. Do not commit real client assets.",
+      "safe_for_auto_use": true,
+      "created_at": "2026-07-02"
+    }
+  ]
+}

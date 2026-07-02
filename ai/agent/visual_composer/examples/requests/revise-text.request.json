@@ -1,0 +1,11 @@
+{
+  "job_id": "replace-with-produce-job-id",
+  "target": "text",
+  "instruction": "поменяй текст на НОВЫЙ СПОСОБ ОПЛАТЫ",
+  "uploaded_assets": [],
+  "options": {
+    "enable_ai": false,
+    "return_mode": "json",
+    "save_output": true
+  }
+}

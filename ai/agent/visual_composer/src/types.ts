@@ -1,0 +1,111 @@
+export type VisualProjectKey = "monopoly" | "monopoly_pay" | "casper" | "gorilla_hockey" | "dnk";
+
+export type VisualMode =
+  | "composer"
+  | "style_generation"
+  | "hockey_generated_poster"
+  | "hockey_photo_template"
+  | "hockey_print_layout"
+  | "post_generation";
+
+export type OutputFormat = "square" | "story" | "vk_post" | "print_a4" | "print_a5";
+
+export interface TextLayer {
+  enabled: boolean;
+  text?: string;
+  subtitle?: string;
+  sticker?: string;
+  body?: string;
+  cta?: string;
+  contacts?: string;
+  post_caption?: string;
+  internal_prompt?: string;
+  variant?: string;
+  position?: "top" | "bottom" | "center" | "overlay";
+  locked?: boolean;
+}
+
+export interface IllustrationLayer {
+  enabled: boolean;
+  asset_path?: string;
+  position?: "center" | "bottom" | "top" | "cover";
+  locked?: boolean;
+}
+
+export interface BackgroundLayer {
+  enabled: boolean;
+  asset_path?: string;
+  locked?: boolean;
+}
+
+export interface LayoutConfig {
+  variant: string;
+  width?: number;
+  height?: number;
+  safe_area?: number;
+}
+
+export interface BrandElement {
+  logo_path?: string;
+  qr_path?: string;
+  colors?: {
+    primary?: string;
+    accent?: string;
+    dark?: string;
+    light?: string;
+  };
+  website?: string;
+  contacts?: string;
+}
+
+export interface VisualJob {
+  job_type: "visual_production";
+  project_key: VisualProjectKey;
+  visual_mode: VisualMode;
+  source_text?: string;
+  output_format: OutputFormat;
+  text_layer?: TextLayer;
+  illustration_layer?: IllustrationLayer;
+  background_layer?: BackgroundLayer;
+  layout: LayoutConfig;
+  brand?: BrandElement;
+  profile?: ProjectProfileSnapshot;
+  post_caption?: string;
+  internal_prompt?: string;
+  output_path?: string;
+}
+
+export interface ComposeResult {
+  ok: boolean;
+  output_path: string;
+  width: number;
+  height: number;
+  project_key: VisualProjectKey;
+  visual_mode: VisualMode;
+  layout_variant: string;
+  warnings: string[];
+}
+
+export interface RenderContext {
+  repoRoot: string;
+  composerRoot: string;
+  outputPath: string;
+  warnings: string[];
+}
+
+export interface ProjectProfileSnapshot {
+  project_key: VisualProjectKey;
+  project_name: string;
+  default_mode: string;
+  allowed_modes: string[];
+  text_style_rules: string;
+  image_style_rules: string;
+  composition_rules: string;
+  negative_rules: string;
+  asset_rules: string;
+  layout_presets: string[];
+  output_formats: string[];
+  revision_commands: string[];
+  telegram_examples: string[];
+  quality_check_rules: string[];
+}

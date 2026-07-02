@@ -1,0 +1,18 @@
+{
+  "job_id": "replace-with-produce-job-id",
+  "target": "background",
+  "instruction": "используй эту картинку как фон",
+  "uploaded_assets": [
+    {
+      "id": "local-bg-example",
+      "type": "background",
+      "source": "local",
+      "path": ""
+    }
+  ],
+  "options": {
+    "enable_ai": false,
+    "return_mode": "json",
+    "save_output": true
+  }
+}

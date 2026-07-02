@@ -1,0 +1,106 @@
+﻿import path from "node:path";
+import { getVisualAiProvider } from "../ai";
+import { loadDefaultAssetManifest } from "../assets/assetResolver";
+import { loadProjectProfile } from "../profiles/profileLoader";
+import type { VisualJob } from "../types";
+import { detectProject } from "./detectProject";
+import { detectOutputFormat, detectVisualMode } from "./detectVisualMode";
+import { extractTextLayerParts } from "./extractTextLayer";
+import { buildCasperJob } from "./buildCasperJob";
+import { buildGorillaHockeyJob } from "./buildGorillaHockeyJob";
+import { buildMonopolyJob } from "./buildMonopolyJob";
+import { buildMonopolyPayJob } from "./buildMonopolyPayJob";
+import type { BuildVisualJobInput, VisualJobBuildResult } from "./types";
+
+export async function buildVisualJobFromCommand(input: BuildVisualJobInput): Promise<VisualJobBuildResult> {
+  const warnings: string[] = [];
+  const commandText = input.command_text?.trim();
+  if (!commandText) throw new Error("command_text is required.");
+
+  const projectKey = detectProject(commandText, input.project_key);
+  const profile = input.profile || loadProjectProfile(projectKey);
+  const visualMode = detectVisualMode(commandText, projectKey, input.uploaded_assets || [], input.visual_mode);
+  const outputFormat = detectOutputFormat(commandText, projectKey, visualMode, input.output_format);
+  const provider = getVisualAiProvider(Boolean(input.options?.enable_ai));
+  const text = extractTextLayerParts(commandText, projectKey, visualMode);
+  const assetManifest = input.asset_manifest || loadAssetManifestFromEnv() || loadDefaultAssetManifest();
+
+  if (input.options?.enable_ai && !process.env.OPENAI_API_KEY) {
+    warnings.push("enable_ai=true requested, but OPENAI_API_KEY is missing. Using safe fallback layer generation.");
+  }
+
+  const aiInput = { command_text: commandText, project_key: projectKey, visual_mode: visualMode, profile, enable_ai: input.options?.enable_ai };
+  const [aiText, aiIllustration, aiBackground] = await Promise.all([
+    provider.generateTextLayer(aiInput),
+    provider.generateIllustrationLayer(aiInput),
+    provider.generateBackgroundLayer(aiInput),
+  ]);
+
+  const buildInput: BuildVisualJobInput = {
+    ...input,
+    command_text: commandText,
+    project_key: projectKey,
+    visual_mode: visualMode,
+    output_format: outputFormat,
+    asset_manifest: assetManifest,
+    profile,
+  };
+
+  let visualJob: VisualJob;
+  if (projectKey === "monopoly") visualJob = buildMonopolyJob(buildInput, text, warnings);
+  else if (projectKey === "monopoly_pay") visualJob = buildMonopolyPayJob(buildInput, text, warnings);
+  else if (projectKey === "casper") visualJob = buildCasperJob(buildInput, text, warnings);
+  else if (projectKey === "gorilla_hockey") visualJob = buildGorillaHockeyJob(buildInput, text, visualMode, warnings);
+  else {
+    warnings.push("Project is not visual-specific; using DNK default overlay fallback.");
+    visualJob = buildCasperJob({ ...buildInput, project_key: "casper", profile: loadProjectProfile("dnk") }, text, warnings);
+    visualJob.project_key = "dnk";
+  }
+
+  visualJob.profile = profile;
+  visualJob.text_layer = {
+    ...(visualJob.text_layer || { enabled: true }),
+    ...definedOnly(aiText),
+    enabled: visualJob.text_layer?.enabled ?? true,
+    post_caption: text.post_caption || aiText.post_caption,
+  };
+  visualJob.post_caption = text.post_caption || aiText.post_caption || buildDefaultPostCaption(commandText, projectKey);
+  visualJob.internal_prompt = [profile.image_style_rules, profile.composition_rules, profile.negative_rules, commandText].filter(Boolean).join("\n");
+  if (!visualJob.illustration_layer?.asset_path && aiIllustration.asset_path) {
+    visualJob.illustration_layer = { enabled: true, ...visualJob.illustration_layer, ...aiIllustration };
+  }
+  if (!visualJob.background_layer?.asset_path && aiBackground.asset_path) {
+    visualJob.background_layer = { enabled: true, ...visualJob.background_layer, ...aiBackground };
+  }
+
+  return {
+    ok: true,
+    visual_job: visualJob,
+    detected: {
+      project_key: projectKey,
+      visual_mode: visualMode,
+      output_format: outputFormat,
+    },
+    warnings,
+  };
+}
+
+function loadAssetManifestFromEnv() {
+  const manifestPath = process.env.VISUAL_ASSET_MANIFEST_PATH;
+  if (!manifestPath) return null;
+  try {
+    return require(path.resolve(manifestPath));
+  } catch {
+    return null;
+  }
+}
+
+function definedOnly<T extends Record<string, unknown>>(value: T): Partial<T> {
+  return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined && item !== "")) as Partial<T>;
+}
+
+function buildDefaultPostCaption(commandText: string, projectKey: string): string {
+  return `${projectKey}: ${commandText}`;
+}
+
+export type { BuildVisualJobInput, VisualJobBuildResult, UploadedAsset } from "./types";

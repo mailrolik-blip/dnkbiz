@@ -1,0 +1,38 @@
+{
+  "job_type": "visual_production",
+  "project_key": "casper",
+  "visual_mode": "style_generation",
+  "source_text": "будь на связи и берегись фишинга",
+  "output_format": "square",
+  "text_layer": {
+    "enabled": true,
+    "text": "БЕРЕГИСЬ ФИШИНГА",
+    "subtitle": "CASPER НА СВЯЗИ",
+    "position": "bottom",
+    "locked": false
+  },
+  "illustration_layer": {
+    "enabled": true,
+    "asset_path": "examples/assets/casper-generated.png",
+    "position": "cover",
+    "locked": false
+  },
+  "background_layer": {
+    "enabled": false,
+    "asset_path": "",
+    "locked": false
+  },
+  "layout": {
+    "variant": "simple_overlay",
+    "width": 1080,
+    "height": 1080,
+    "safe_area": 64
+  },
+  "brand": {
+    "colors": {
+      "primary": "#38BDF8",
+      "accent": "#A7F3D0",
+      "dark": "#0F172A"
+    }
+  }
+}

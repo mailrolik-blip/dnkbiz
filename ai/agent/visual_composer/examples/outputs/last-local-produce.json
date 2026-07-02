@@ -1,0 +1,18 @@
+{
+  "ok": true,
+  "job_id": "c24f0985-dfb9-41bf-b4c3-1460c5ffd518",
+  "output_path": "C:\\Gorilla\\dnkbiz\\public\\generated\\visual\\1782986770894-monopoly-composer-c24f0985-dfb9-41bf-b4c3-1460c5ffd518.png",
+  "output_url": "/generated/visual/1782986770894-monopoly-composer-c24f0985-dfb9-41bf-b4c3-1460c5ffd518.png",
+  "detected": {
+    "project_key": "monopoly",
+    "visual_mode": "composer",
+    "output_format": "square"
+  },
+  "warnings": [
+    "No safe asset found for monopoly/background; composer placeholder will be used.",
+    "No safe asset found for monopoly/illustration; composer placeholder will be used.",
+    "No background asset_path supplied, using generated placeholder.",
+    "No illustration asset_path supplied, using generated placeholder.",
+    "No logo asset_path supplied, using generated placeholder."
+  ]
+}

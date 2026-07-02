@@ -1,0 +1,10 @@
+{
+  "command_text": "сделай хоккейную афишу набор детей на тренировку",
+  "uploaded_assets": [],
+  "options": {
+    "enable_ai": false,
+    "return_mode": "json",
+    "save_output": true,
+    "layout_variant": "auto"
+  }
+}

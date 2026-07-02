@@ -1,0 +1,16 @@
+{
+  "project_key": "casper",
+  "project_name": "Casper",
+  "default_mode": "style_generation",
+  "allowed_modes": ["style_generation", "composer"],
+  "text_style_rules": "Concise Russian copy for exchange, news, warnings, subscriptions and contests. Tone is direct, trustworthy and easy to scan.",
+  "image_style_rules": "Friendly but alert ghost/exchange/news promo style, modern digital finance mood, enough contrast for overlay title.",
+  "composition_rules": "Generate or select a styled base image, then render readable Russian title/subtitle as composer overlay.",
+  "negative_rules": "Avoid fake guarantees, random finance logos, misleading charts, unreadable small text and excessive visual noise.",
+  "asset_rules": "Use saved Casper references, safe backgrounds and overlay templates. Fallback must still be styled, not plain empty background.",
+  "layout_presets": ["casper_square_news", "casper_warning", "casper_subscribe", "casper_contest"],
+  "output_formats": ["square", "vk_post", "story"],
+  "revision_commands": ["revise_text_layer", "regenerate_text_layer", "revise_illustration_layer", "regenerate_illustration_layer", "revise_background_layer", "change_composition", "change_output_format", "approve_final"],
+  "telegram_examples": ["сделай новую задачу для каспера конкурс на 3000 пользователей", "каспер будь на связи", "casper предупреждение о фишинге"],
+  "quality_check_rules": ["project_key is casper", "style base or fallback exists", "title overlay is readable", "output file exists"]
+}

@@ -1,0 +1,10 @@
+{
+  "command_text": "сделай картинку для pay яндекс-яндекс новый метод",
+  "uploaded_assets": [],
+  "options": {
+    "enable_ai": false,
+    "return_mode": "json",
+    "save_output": true,
+    "layout_variant": "auto"
+  }
+}

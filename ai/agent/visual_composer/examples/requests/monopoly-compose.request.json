@@ -1,0 +1,45 @@
+{
+  "visual_job": {
+    "job_type": "visual_production",
+    "project_key": "monopoly",
+    "visual_mode": "composer",
+    "source_text": "история знакомства",
+    "output_format": "square",
+    "text_layer": {
+      "enabled": true,
+      "text": "ИСТОРИЯ ЗНАКОМСТВА",
+      "variant": "gold_3d_title",
+      "position": "top",
+      "locked": false
+    },
+    "illustration_layer": {
+      "enabled": true,
+      "asset_path": "examples/assets/monopoly-illustration.png",
+      "position": "bottom",
+      "locked": false
+    },
+    "background_layer": {
+      "enabled": true,
+      "asset_path": "examples/assets/monopoly-bg.png",
+      "locked": false
+    },
+    "layout": {
+      "variant": "title_top_character_bottom",
+      "width": 1080,
+      "height": 1080,
+      "safe_area": 64
+    },
+    "brand": {
+      "logo_path": "",
+      "colors": {
+        "primary": "#FFD000",
+        "accent": "#FF4A00",
+        "dark": "#121A20"
+      }
+    }
+  },
+  "options": {
+    "return_mode": "json",
+    "save_output": true
+  }
+}

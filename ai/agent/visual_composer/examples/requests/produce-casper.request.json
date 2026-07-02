@@ -1,0 +1,10 @@
+{
+  "command_text": "сделай картинку для Casper будь на связи",
+  "uploaded_assets": [],
+  "options": {
+    "enable_ai": false,
+    "return_mode": "json",
+    "save_output": true,
+    "layout_variant": "auto"
+  }
+}
