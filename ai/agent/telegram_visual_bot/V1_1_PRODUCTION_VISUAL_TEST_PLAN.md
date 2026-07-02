@@ -155,3 +155,58 @@
 
 - бот отправляет `Текст поста: ...`
 - если caption не создан, пишет `Текст поста пока не создан.`
+
+## L. Asset Intake через Telegram
+
+Отправить картинку с caption:
+
+```text
+asset monopoly background tags: orange,promo,contest
+```
+
+Ожидание:
+
+- бот сохраняет файл в `ai/agent/visual_assets/manual_project_packs/monopoly/backgrounds/`
+- рядом создается `.meta.json`
+- ответ содержит `Ассет сохранён: monopoly/background`
+- после `/asset_index` asset попадает в `manifest.local.json`
+
+Другие примеры:
+
+```text
+asset pay icon tags: bank,pay
+asset casper reference tags: warning,news
+asset hockey logo tags: main
+```
+
+## M. Debug Job
+
+После генерации отправить:
+
+```text
+/debug_job
+```
+
+Ожидание:
+
+- бот показывает `job_id`, project, mode, layout, versions count
+- показывает background/illustration/logo refs
+- показывает fallback/quality/AI diagnostic logs без секретов
+
+## N. AI Mode
+
+Локально AI выключен. Для production-проверки:
+
+```env
+VISUAL_BOT_ENABLE_AI=true
+OPENAI_API_KEY=
+OPENAI_IMAGE_MODEL=
+OPENAI_TEXT_MODEL=
+VISUAL_AI_MAX_IMAGES_PER_REQUEST=1
+```
+
+Ожидание:
+
+- если ключа нет или provider недоступен, бот не падает и использует fallback
+- AI генерирует только illustration/background/base layer
+- composer рендерит кириллицу сам

@@ -15,6 +15,7 @@ interface CliOptions {
   indexAssets?: boolean;
   projectSmoke?: boolean;
   qualityCheck?: boolean;
+  contactSheet?: boolean;
 }
 
 function parseArgs(argv: string[]): CliOptions {
@@ -32,6 +33,7 @@ function parseArgs(argv: string[]): CliOptions {
     if (arg === "--index-assets") options.indexAssets = true;
     if (arg === "--project-smoke") options.projectSmoke = true;
     if (arg === "--quality-check") options.qualityCheck = true;
+    if (arg === "--contact-sheet") options.contactSheet = true;
   }
   return options;
 }
@@ -192,6 +194,10 @@ async function indexAssets(): Promise<void> {
 
 async function runProjectSmoke(): Promise<void> {
   const { produceVisualFromCommand } = await import("./production");
+  const { safeFilename } = await import("./utils/safeFilename");
+  const { getComposerRoot } = await import("./compose");
+  const outputDir = path.join(getComposerRoot(), "examples", "outputs", "project-smoke");
+  await fs.mkdir(outputDir, { recursive: true });
   const scenarios = [
     { name: "monopoly story acquaintance", command_text: "сделай новую картинку для монополии история знакомства" },
     { name: "monopoly_pay yandex-yandex", command_text: "для монополии пэй нужна новая картинка с текстом Яндекс-Яндекс" },
@@ -210,8 +216,42 @@ async function runProjectSmoke(): Promise<void> {
       uploaded_assets: scenario.uploaded_assets || [],
       options: { enable_ai: false },
     });
-    console.log(`OK ${scenario.name} -> ${result.detected.project_key}/${result.detected.visual_mode} ${result.output_path}`);
+    const copiedPath = path.join(outputDir, `${safeFilename(scenario.name)}.${result.detected.project_key}.${result.detected.visual_mode}.png`);
+    await fs.copyFile(result.output_path, copiedPath);
+    console.log(`OK ${scenario.name} -> ${result.detected.project_key}/${result.detected.visual_mode} ${copiedPath}`);
   }
+}
+
+async function runContactSheet(): Promise<void> {
+  const sharpModule = await import("sharp");
+  const sharp = sharpModule.default;
+  const { getComposerRoot } = await import("./compose");
+  const outputDir = path.join(getComposerRoot(), "examples", "outputs", "project-smoke");
+  const entries = (await fs.readdir(outputDir).catch(() => []))
+    .filter((entry) => entry.endsWith(".png") && entry !== "contact-sheet.png")
+    .sort();
+  if (!entries.length) throw new Error(`No project-smoke PNG outputs found in ${outputDir}. Run npm run visual:project-smoke first.`);
+  const thumbWidth = 360;
+  const thumbHeight = 450;
+  const gap = 24;
+  const columns = 3;
+  const rows = Math.ceil(entries.length / columns);
+  const width = columns * thumbWidth + (columns + 1) * gap;
+  const height = rows * thumbHeight + (rows + 1) * gap;
+  const composites = [];
+  for (let index = 0; index < entries.length; index += 1) {
+    const filePath = path.join(outputDir, entries[index]);
+    const left = gap + (index % columns) * (thumbWidth + gap);
+    const top = gap + Math.floor(index / columns) * (thumbHeight + gap);
+    composites.push({
+      input: await sharp(filePath).resize(thumbWidth, thumbHeight, { fit: "contain", background: "#101820" }).png().toBuffer(),
+      left,
+      top,
+    });
+  }
+  const outputPath = path.join(outputDir, "contact-sheet.png");
+  await sharp({ create: { width, height, channels: 4, background: "#0B1117" } }).composite(composites).png().toFile(outputPath);
+  console.log(outputPath);
 }
 
 async function runQualityCheck(): Promise<void> {
@@ -266,6 +306,11 @@ async function main(): Promise<void> {
 
   if (options.qualityCheck) {
     await runQualityCheck();
+    return;
+  }
+
+  if (options.contactSheet) {
+    await runContactSheet();
     return;
   }
 

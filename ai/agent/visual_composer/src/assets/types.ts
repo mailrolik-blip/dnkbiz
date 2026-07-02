@@ -8,7 +8,8 @@ export type VisualAssetType =
   | "template"
   | "photo"
   | "qr"
-  | "icon";
+  | "icon"
+  | "print";
 
 export interface VisualAsset {
   id: string;
@@ -19,6 +20,9 @@ export interface VisualAsset {
   usage: string;
   description: string;
   safe_for_auto_use: boolean;
+  priority?: number;
+  recommended_modes?: VisualMode[];
+  notes?: string;
   created_at?: string;
 }
 
@@ -41,4 +45,5 @@ export interface AssetSelectionResult {
   asset_path: string;
   is_placeholder: boolean;
   warnings: string[];
+  selection_log?: string[];
 }

@@ -17,7 +17,9 @@ export function buildGorillaHockeyJob(
     tags: [visualMode, format],
     manifest: input.asset_manifest,
   });
-  warnings.push(...bg.warnings);
+  const logo = resolveVisualAsset({ project_key: "gorilla_hockey", visual_mode: visualMode, asset_type: "logo", tags: ["main"], manifest: input.asset_manifest });
+  const qr = resolveVisualAsset({ project_key: "gorilla_hockey", visual_mode: visualMode, asset_type: "qr", tags: ["main"], manifest: input.asset_manifest });
+  warnings.push(...(bg.selection_log || []), ...(logo.selection_log || []), ...(qr.selection_log || []), ...bg.warnings);
   const isPrint = visualMode === "hockey_print_layout";
   const layout = chooseLayout(input, text, visualMode, format);
   const size = sizeFor(format, visualMode);
@@ -58,8 +60,8 @@ export function buildGorillaHockeyJob(
       safe_area: isPrint ? 180 : 64,
     },
     brand: {
-      logo_path: "",
-      qr_path: "",
+      logo_path: logo.asset_path,
+      qr_path: qr.asset_path,
       website: "gorillahockey.ru",
       contacts: text.contacts,
       colors: {

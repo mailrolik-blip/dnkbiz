@@ -233,6 +233,8 @@
 Start Stage 1 stabilization in a separate pass: fix Data Table filters, normalize callback names, repair `revise_text`/`revise_image` routing, and switch draft output parsing to stable JSON/ASCII markers before adding the Visual Router.
 # v1.1 Production Visual Layer
 
+- Manual status note: v1.1 was checked manually in Telegram before v1.2 work. Monopoly, Monopoly Pay, Casper and Gorilla Hockey generation worked; revision buttons worked; text revision worked; project detection worked.
+
 - Added production profile schema for Monopoly, Monopoly Pay, Casper and Gorilla Hockey.
 - Fixed project detection for Hockey commands.
 - Added manual project packs and asset indexing support.
@@ -241,3 +243,14 @@ Start Stage 1 stabilization in a separate pass: fix Data Table filters, normaliz
 - Added Telegram UX callbacks for text, illustration, background, composition, new variant, post text and close.
 - Added uploaded photo pending flow for Hockey photo templates.
 - Added visual quality checks and smoke scripts.
+
+# v1.2 Real Assets, AI Mode and Telegram Asset Intake
+
+- Manual project packs now support `backgrounds`, `illustrations`, `logos`, `references`, `templates`, `icons`, `photos`, `print` and `qr`.
+- Asset manifest records now support `priority`, `recommended_modes`, `notes` and mode-aware safe auto-selection.
+- Telegram asset intake commands added: `/asset_help`, `/asset_status`, `/asset_index`, `/asset_mode_on`, `/asset_mode_off`.
+- Telegram caption intake supports `asset <project> <type> tags: tag1,tag2`.
+- Added `/debug_job` for active job diagnostics.
+- Added project-specific AI prompt builders and production OpenAI provider isolation with fallback.
+- Added project-smoke output copies under `examples/outputs/project-smoke/`.
+- Added `visual:contact-sheet`.

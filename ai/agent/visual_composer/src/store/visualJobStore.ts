@@ -34,6 +34,10 @@ export function createVisualJobRecord(input: {
     },
     post_caption: input.visual_job.post_caption || input.visual_job.text_layer?.post_caption,
     internal_prompt: input.visual_job.internal_prompt || input.visual_job.text_layer?.internal_prompt,
+    quality_warnings: [],
+    asset_selection_log: [],
+    ai_generation_log: [],
+    compose_log: [],
     outputs: [input.output],
     layers: {
       text: { locked: Boolean(input.visual_job.text_layer?.locked), last_updated_at: now },

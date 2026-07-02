@@ -156,3 +156,36 @@ npm run telegram:visual:delete-webhook
 # v1.1 update
 
 Use `V1_1_PRODUCTION_VISUAL_TEST_PLAN.md` for the current production visual scenarios across Monopoly, Monopoly Pay, Casper and Gorilla Hockey. v1.1 adds uploaded photo handling, post text callback, new variant callback and project-aware fallback visuals.
+
+# v1.2 update
+
+Asset intake:
+
+```text
+/asset_help
+asset monopoly background tags: orange,promo,contest
+/asset_index
+/asset_status
+```
+
+Debug active job:
+
+```text
+/debug_job
+```
+
+AI mode remains opt-in:
+
+```env
+VISUAL_BOT_ENABLE_AI=true
+OPENAI_API_KEY=
+OPENAI_IMAGE_MODEL=
+OPENAI_TEXT_MODEL=
+```
+
+For visual review:
+
+```bash
+npm run visual:project-smoke
+npm run visual:contact-sheet
+```

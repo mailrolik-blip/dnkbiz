@@ -86,6 +86,14 @@ export async function produceVisualFromCommand(input: ProduceVisualInput): Promi
     message: "Produced visual from command.",
   });
   await new FileVisualJobStore().save({ record });
+  record.quality_warnings = [...quality.warnings, ...quality.critical];
+  record.asset_selection_log = buildResult.warnings.filter((warning) => warning.includes("asset") || warning.includes("Asset") || warning.includes("selected=") || warning.includes("candidates="));
+  record.ai_generation_log = [
+    input.options?.enable_ai ? "AI requested" : "AI skipped: VISUAL_BOT_ENABLE_AI=false",
+    process.env.OPENAI_API_KEY ? "OPENAI_API_KEY present" : "OPENAI_API_KEY missing",
+  ];
+  record.compose_log = [`layout=${record.visual_job.layout.variant}`, `output=${composeResult.output_path}`, `size=${composeResult.width}x${composeResult.height}`];
+  await new FileVisualJobStore().update(record);
 
   return {
     ok: true,

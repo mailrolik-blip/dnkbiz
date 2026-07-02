@@ -6,7 +6,8 @@ export function buildMonopolyJob(input: BuildVisualJobInput, text: TextLayerPart
   const tags = tagsFor(input.output_format || "square", "promo");
   const bg = resolveVisualAsset({ project_key: "monopoly", visual_mode: "composer", asset_type: "background", tags, manifest: input.asset_manifest });
   const illustration = resolveVisualAsset({ project_key: "monopoly", visual_mode: "composer", asset_type: "illustration", tags: ["character"], manifest: input.asset_manifest });
-  warnings.push(...bg.warnings, ...illustration.warnings);
+  const logo = resolveVisualAsset({ project_key: "monopoly", visual_mode: "composer", asset_type: "logo", tags: ["main"], manifest: input.asset_manifest });
+  warnings.push(...(bg.selection_log || []), ...(illustration.selection_log || []), ...(logo.selection_log || []), ...bg.warnings, ...illustration.warnings);
   const layout = chooseLayout(input, text);
   const size = sizeFor(input.output_format || "square");
 
@@ -46,7 +47,7 @@ export function buildMonopolyJob(input: BuildVisualJobInput, text: TextLayerPart
       safe_area: 64,
     },
     brand: {
-      logo_path: "",
+      logo_path: logo.asset_path,
       colors: {
         primary: "#FFD000",
         accent: "#FF4A00",

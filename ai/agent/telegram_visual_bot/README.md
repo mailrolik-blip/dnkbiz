@@ -139,3 +139,22 @@ Run local checks:
 npm run telegram:visual:smoke
 npm run visual:project-smoke
 ```
+
+## Asset Intake
+
+Send a photo/document with caption:
+
+```text
+asset monopoly background tags: orange,promo,contest
+asset pay icon tags: bank,pay
+asset casper reference tags: warning,news
+asset hockey logo tags: main
+```
+
+Then run `/asset_index` in Telegram or `npm run visual:assets:index` locally.
+
+Diagnostics:
+
+```text
+/debug_job
+```

@@ -288,4 +288,16 @@ Still requires real production inputs:
 - `VISUAL_BOT_ENABLE_AI=true` plus provider setup for generated illustration/background assets;
 - final brand logos, QR and contact data for Hockey print layouts.
 
+Project smoke outputs are copied to:
+
+```text
+ai/agent/visual_composer/examples/outputs/project-smoke/
+```
+
+Run a contact sheet:
+
+```bash
+npm run visual:contact-sheet
+```
+
 AI mode is disabled by default. Enable it with `VISUAL_BOT_ENABLE_AI=true` and `OPENAI_API_KEY`, with model names supplied through `OPENAI_IMAGE_MODEL` and `OPENAI_TEXT_MODEL`. The adapter is safe-fallback first and composer renders Cyrillic text itself.

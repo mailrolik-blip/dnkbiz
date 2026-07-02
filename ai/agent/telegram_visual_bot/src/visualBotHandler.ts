@@ -1,11 +1,14 @@
 ﻿import path from "node:path";
+import fs from "node:fs/promises";
 import { produceVisualFromCommand, reviseProducedVisual } from "../../visual_composer/src/production";
 import { FileVisualJobStore } from "../../visual_composer/src/store";
+import { indexVisualAssets } from "../../visual_composer/src/assets/indexAssets";
 import type { RevisionTarget } from "../../visual_composer/src/revision";
 import type { UploadedAsset } from "../../visual_composer/src/jobBuilder";
 import { TelegramStateStore } from "./telegramStateStore";
 import type { TelegramClient, TelegramMessage, TelegramUpdate, UploadedTelegramAsset, VisualRevisionTarget } from "./types";
 import { getLargestPhoto, getMessageText, getUpdateChatId, getUpdateUserId } from "./telegramUpdate";
+import { parseAssetCaption, saveTelegramAssetFromMessage } from "./assetIntake";
 
 export interface VisualBotHandlerDeps {
   telegram: TelegramClient;
@@ -80,6 +83,17 @@ export async function handleVisualBotUpdate(update: TelegramUpdate, deps: Visual
     return { ok: true, handled: true };
   }
 
+  const stateBeforeUpload = await stateStore.getChatState(chatId);
+  const parsedAsset = parseAssetCaption(text);
+  if ((message.photo?.length || message.document) && (parsedAsset || /^asset\b/i.test(text) || stateBeforeUpload.asset_intake_enabled)) {
+    if (!parsedAsset) {
+      await deps.telegram.sendMessage(chatId, "Не распознал asset caption. Напиши: asset monopoly background tags: promo,orange");
+      return { ok: true, handled: true };
+    }
+    await handleAssetUpload(chatId, message, parsedAsset, deps.telegram);
+    return { ok: true, handled: true };
+  }
+
   const uploadedAsset = await maybeDownloadPhotoAsset(chatId, message, deps, stateStore);
   if (!text && uploadedAsset) {
     if (uploadedAsset.path) await deps.telegram.sendMessage(chatId, "Фото получил. Теперь напиши, что с ним сделать.");
@@ -117,7 +131,46 @@ async function handleCommand(chatId: string, text: string, telegram: TelegramCli
       "сделай новую задачу для каспера конкурс на 3000 пользователей",
       "задача для хоккея набор детей на тренировку",
       "можно отправить фото с caption: сделай хоккейную афишу набор детей",
+      "для ассетов: /asset_help",
     ].join("\n"));
+    return;
+  }
+  if (command === "/asset_help") {
+    await telegram.sendMessage(chatId, [
+      "Asset intake:",
+      "Отправь картинку с caption:",
+      "asset monopoly background tags: orange,promo,contest",
+      "asset pay icon tags: bank,pay",
+      "asset casper reference tags: warning,news",
+      "asset hockey logo tags: main",
+      "После загрузки: /asset_index",
+    ].join("\n"));
+    return;
+  }
+  if (command === "/asset_status") {
+    const state = await stateStore.getChatState(chatId);
+    await telegram.sendMessage(chatId, `asset_intake_enabled: ${state.asset_intake_enabled ? "true" : "false"}`);
+    return;
+  }
+  if (command === "/asset_mode_on") {
+    await stateStore.setAssetIntakeMode(chatId, true);
+    await telegram.sendMessage(chatId, "Asset intake mode включен. Отправляй картинки с caption: asset monopoly background tags: promo,orange");
+    return;
+  }
+  if (command === "/asset_mode_off") {
+    await stateStore.setAssetIntakeMode(chatId, false);
+    await telegram.sendMessage(chatId, "Asset intake mode выключен.");
+    return;
+  }
+  if (command === "/asset_index") {
+    const manifest = await indexVisualAssets();
+    const outputPath = path.join(process.cwd(), "ai", "agent", "visual_assets", "manifest.local.json");
+    await fs.writeFile(outputPath, JSON.stringify(manifest, null, 2), "utf8");
+    await telegram.sendMessage(chatId, `Asset manifest обновлен. Ассетов: ${manifest.assets.length}`);
+    return;
+  }
+  if (command === "/debug_job") {
+    await sendDebugJob(chatId, telegram, stateStore);
     return;
   }
   if (command === "/health") {
@@ -137,14 +190,16 @@ async function handleCommand(chatId: string, text: string, telegram: TelegramCli
   await telegram.sendMessage(chatId, "Не знаю такую команду. Напиши /help.");
 }
 
-async function handleCallback(
-  callbackQueryId: string,
-  chatId: string,
-  userId: string | undefined,
-  data: string,
-  deps: VisualBotHandlerDeps,
-  stateStore: TelegramStateStore,
-) {
+async function handleAssetUpload(chatId: string, message: TelegramMessage, parsed: NonNullable<ReturnType<typeof parseAssetCaption>>, telegram: TelegramClient) {
+  try {
+    const saved = await saveTelegramAssetFromMessage({ telegram, message, parsed });
+    await telegram.sendMessage(chatId, `Ассет сохранён: ${parsed.project_key}/${parsed.type}, tags: ${parsed.tags.join(",") || "-"}\n${saved.relative_asset_path}\nЗапусти /asset_index для обновления manifest.`);
+  } catch (error) {
+    await telegram.sendMessage(chatId, `Не удалось сохранить ассет: ${error instanceof Error ? error.message : "unknown error"}`);
+  }
+}
+
+async function handleCallback(callbackQueryId: string, chatId: string, userId: string | undefined, data: string, deps: VisualBotHandlerDeps, stateStore: TelegramStateStore) {
   const state = await stateStore.getChatState(chatId);
   if (data === "visual:close") {
     await deps.telegram.answerCallbackQuery(callbackQueryId, "Закрыто");
@@ -225,7 +280,9 @@ async function regenerateActiveJob(chatId: string, userId: string | undefined, a
     await deps.telegram.sendMessage(chatId, "Не нашел job record для нового варианта.");
     return;
   }
-  const result = await reviseProducedVisual({ job_id: activeJobId, target: "layout", instruction: "new variant другая композиция", uploaded_assets: [], options: { enable_ai: Boolean(deps.enableAi) } });
+  const target: RevisionTarget = deps.enableAi && record.detected.project_key !== "gorilla_hockey" ? "illustration" : "layout";
+  const instruction = target === "illustration" ? "new variant regenerate illustration" : "new variant другая композиция";
+  const result = await reviseProducedVisual({ job_id: activeJobId, target, instruction, uploaded_assets: [], options: { enable_ai: Boolean(deps.enableAi) } });
   await deps.telegram.sendPhotoFromFile(chatId, result.output_path, `✅ Новый вариант\nВерсия: ${result.version}\nJob: ${result.job_id}`, visualRevisionKeyboard());
   await stateStore.setActiveJob({ chat_id: chatId, user_id: userId, active_job_id: result.job_id, active_output_path: result.output_path, active_output_url: result.output_url });
 }
@@ -236,8 +293,35 @@ async function sendPostText(chatId: string, activeJobId: string | undefined, tel
     return;
   }
   const record = await new FileVisualJobStore().get(activeJobId);
-  const postText = record?.post_caption || record?.visual_job.post_caption || record?.visual_job.text_layer?.post_caption;
+  const postText = record?.post_caption || record?.visual_job.post_caption || record?.visual_job.text_layer?.post_caption || (record ? `${record.detected.project_key}: ${record.source.command_text}` : "");
   await telegram.sendMessage(chatId, postText ? `Текст поста:\n${postText}` : "Текст поста пока не создан.");
+}
+
+async function sendDebugJob(chatId: string, telegram: TelegramClient, stateStore: TelegramStateStore) {
+  const state = await stateStore.getChatState(chatId);
+  if (!state.active_job_id) {
+    await telegram.sendMessage(chatId, "Нет активного job для debug.");
+    return;
+  }
+  const record = await new FileVisualJobStore().get(state.active_job_id);
+  if (!record) {
+    await telegram.sendMessage(chatId, "Job record не найден.");
+    return;
+  }
+  const job = record.visual_job;
+  await telegram.sendMessage(chatId, [
+    `job_id: ${record.job_id}`,
+    `project: ${record.detected.project_key}`,
+    `mode: ${record.detected.visual_mode}`,
+    `layout: ${job.layout.variant}`,
+    `versions: ${record.outputs.length}`,
+    `background: ${job.background_layer?.asset_path || "-"}`,
+    `illustration: ${job.illustration_layer?.asset_path || "-"}`,
+    `logo: ${job.brand?.logo_path || "-"}`,
+    `quality_warnings: ${(record.quality_warnings || []).join("; ") || "-"}`,
+    `asset_selection: ${(record.asset_selection_log || []).slice(-6).join("; ") || "-"}`,
+    `ai_generation: ${(record.ai_generation_log || []).slice(-6).join("; ") || "-"}`,
+  ].join("\n"));
 }
 
 async function handleVoice(chatId: string, message: TelegramMessage, deps: VisualBotHandlerDeps, stateStore: TelegramStateStore) {

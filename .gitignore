@@ -70,10 +70,13 @@ prisma/dev.db
 /ai/agent/telegram_visual_bot/dist/
 /ai/agent/visual_composer/.cache/
 /ai/agent/visual_composer/examples/outputs/*.png
+/ai/agent/visual_composer/examples/outputs/project-smoke/*.png
 /ai/agent/visual_composer/examples/outputs/jobs/*.json
+/ai/agent/visual_composer/examples/outputs/jobs/**/*.json
 /ai/agent/visual_assets/manifest.local.json
-/ai/agent/visual_assets/manual_project_packs/*
+/ai/agent/visual_assets/manual_project_packs/**/*
 !/ai/agent/visual_assets/manual_project_packs/README.md
+!/ai/agent/visual_assets/manual_project_packs/**/
 !/ai/agent/visual_assets/manual_project_packs/**/.gitkeep
 /.storage/
 /public/generated/visual/*

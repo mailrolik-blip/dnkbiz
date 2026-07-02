@@ -10,8 +10,10 @@ const typeByDir: Record<string, VisualAssetType> = {
   logos: "logo",
   references: "reference",
   templates: "template",
+  icons: "icon",
   photos: "photo",
-  print: "template",
+  print: "print",
+  qr: "qr",
 };
 
 export async function indexVisualAssets(rootDir = path.join(process.cwd(), "ai", "agent", "visual_assets")): Promise<ProjectAssetManifest> {
@@ -38,6 +40,9 @@ export async function indexVisualAssets(rootDir = path.join(process.cwd(), "ai",
           usage: meta.usage || type,
           description: meta.description || "",
           safe_for_auto_use: meta.safe_for_auto_use ?? true,
+          priority: meta.priority || 0,
+          recommended_modes: meta.recommended_modes || [],
+          notes: meta.notes || "",
           created_at: meta.created_at,
         });
       }

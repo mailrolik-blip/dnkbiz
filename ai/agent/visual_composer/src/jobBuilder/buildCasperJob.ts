@@ -6,7 +6,8 @@ export function buildCasperJob(input: BuildVisualJobInput, text: TextLayerParts,
   const format = input.output_format || "square";
   const illustration = resolveVisualAsset({ project_key: "casper", visual_mode: "style_generation", asset_type: "illustration", tags: ["generated"], manifest: input.asset_manifest });
   const background = resolveVisualAsset({ project_key: "casper", visual_mode: "style_generation", asset_type: "background", tags: ["base"], manifest: input.asset_manifest });
-  warnings.push(...illustration.warnings, ...background.warnings);
+  const reference = resolveVisualAsset({ project_key: "casper", visual_mode: "style_generation", asset_type: "reference", tags: ["base"], manifest: input.asset_manifest });
+  warnings.push(...(illustration.selection_log || []), ...(background.selection_log || []), ...(reference.selection_log || []), ...illustration.warnings, ...background.warnings);
   const layout = chooseLayout(input, text);
   const size = sizeFor(format);
 
@@ -27,7 +28,7 @@ export function buildCasperJob(input: BuildVisualJobInput, text: TextLayerParts,
     },
     illustration_layer: {
       enabled: true,
-      asset_path: illustration.asset_path || background.asset_path,
+      asset_path: illustration.asset_path || reference.asset_path || background.asset_path,
       position: "cover",
       locked: false,
     },

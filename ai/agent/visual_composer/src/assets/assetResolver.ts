@@ -16,10 +16,12 @@ const placeholderByType: Record<string, string> = {
   photo: "",
   qr: "",
   icon: "",
+  print: "",
 };
 
 export function resolveVisualAsset(request: AssetSelectionRequest): AssetSelectionResult {
   const warnings: string[] = [];
+  const selectionLog: string[] = [];
   const manifest = request.manifest || EMPTY_ASSET_MANIFEST;
   const tags = request.tags || [];
   const candidates = manifest.assets.filter(
@@ -27,8 +29,10 @@ export function resolveVisualAsset(request: AssetSelectionRequest): AssetSelecti
       asset.project_key === request.project_key &&
       asset.type === request.asset_type &&
       asset.safe_for_auto_use &&
+      (!request.visual_mode || !asset.recommended_modes?.length || asset.recommended_modes.includes(request.visual_mode)) &&
       tags.every((tag) => asset.tags.includes(tag)),
   );
+  selectionLog.push(`candidates=${candidates.length} project=${request.project_key} type=${request.asset_type} mode=${request.visual_mode || "-"}`);
 
   const asset = chooseBestAsset(candidates, tags);
   if (!asset) {
@@ -41,8 +45,10 @@ export function resolveVisualAsset(request: AssetSelectionRequest): AssetSelecti
       asset_path: placeholderByType[request.asset_type] || "",
       is_placeholder: true,
       warnings,
+      selection_log: selectionLog,
     };
   }
+  selectionLog.push(`selected=${asset.id} priority=${asset.priority || 0} tags=${asset.tags.join(",")}`);
 
   return {
     ok: true,
@@ -50,6 +56,7 @@ export function resolveVisualAsset(request: AssetSelectionRequest): AssetSelecti
     asset_path: asset.path,
     is_placeholder: false,
     warnings,
+    selection_log: selectionLog,
   };
 }
 
@@ -72,5 +79,5 @@ function chooseBestAsset(assets: VisualAsset[], tags: string[]): VisualAsset | n
 }
 
 function scoreAsset(asset: VisualAsset, tags: string[]) {
-  return tags.reduce((score, tag) => score + (asset.tags.includes(tag) ? 1 : 0), 0);
+  return (asset.priority || 0) * 10 + tags.reduce((score, tag) => score + (asset.tags.includes(tag) ? 1 : 0), 0);
 }

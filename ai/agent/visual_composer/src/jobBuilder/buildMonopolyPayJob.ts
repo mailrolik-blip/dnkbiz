@@ -6,7 +6,9 @@ export function buildMonopolyPayJob(input: BuildVisualJobInput, text: TextLayerP
   const format = input.output_format || "square";
   const bg = resolveVisualAsset({ project_key: "monopoly_pay", visual_mode: "composer", asset_type: "background", tags: tagsFor(format, "fintech"), manifest: input.asset_manifest });
   const illustration = resolveVisualAsset({ project_key: "monopoly_pay", visual_mode: "composer", asset_type: "illustration", tags: ["payment"], manifest: input.asset_manifest });
-  warnings.push(...bg.warnings, ...illustration.warnings);
+  const icon = resolveVisualAsset({ project_key: "monopoly_pay", visual_mode: "composer", asset_type: "icon", tags: ["payment"], manifest: input.asset_manifest });
+  const logo = resolveVisualAsset({ project_key: "monopoly_pay", visual_mode: "composer", asset_type: "logo", tags: ["main"], manifest: input.asset_manifest });
+  warnings.push(...(bg.selection_log || []), ...(illustration.selection_log || []), ...(icon.selection_log || []), ...(logo.selection_log || []), ...bg.warnings, ...illustration.warnings);
   const layout = chooseLayout(input, text);
   const size = sizeFor(format);
 
@@ -29,7 +31,7 @@ export function buildMonopolyPayJob(input: BuildVisualJobInput, text: TextLayerP
     },
     illustration_layer: {
       enabled: true,
-      asset_path: illustration.asset_path,
+      asset_path: illustration.asset_path || icon.asset_path,
       position: "center",
       locked: false,
     },
@@ -45,7 +47,7 @@ export function buildMonopolyPayJob(input: BuildVisualJobInput, text: TextLayerP
       safe_area: 64,
     },
     brand: {
-      logo_path: "",
+      logo_path: logo.asset_path,
       colors: {
         primary: "#19D47B",
         accent: "#006DFF",

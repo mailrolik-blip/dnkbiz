@@ -1,10 +1,14 @@
-﻿import type { BackgroundLayer, IllustrationLayer, ProjectProfileSnapshot, TextLayer, VisualProjectKey, VisualMode } from "../types";
+﻿import type { BackgroundLayer, IllustrationLayer, ProjectProfileSnapshot, TextLayer, VisualJob, VisualProjectKey, VisualMode } from "../types";
+import type { VisualAsset } from "../assets/types";
 
 export interface AiLayerInput {
   command_text: string;
   project_key: VisualProjectKey;
   visual_mode: VisualMode;
   profile?: ProjectProfileSnapshot;
+  visual_job?: VisualJob;
+  selected_assets?: VisualAsset[];
+  revision_target?: "text" | "illustration" | "background" | "layout" | "format";
   enable_ai?: boolean;
 }
 

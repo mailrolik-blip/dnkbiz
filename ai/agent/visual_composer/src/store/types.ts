@@ -42,6 +42,10 @@ export interface VisualJobRecord {
   };
   post_caption?: string;
   internal_prompt?: string;
+  quality_warnings?: string[];
+  asset_selection_log?: string[];
+  ai_generation_log?: string[];
+  compose_log?: string[];
   outputs: VisualJobOutputRecord[];
   layers: {
     text: VisualJobLayerState;

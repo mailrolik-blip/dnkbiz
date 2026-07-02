@@ -72,6 +72,12 @@ export async function reviseProducedVisual(input: ReviseProducedVisualInput): Pr
   };
   record.post_caption = record.visual_job.post_caption || record.visual_job.text_layer?.post_caption || record.post_caption;
   record.internal_prompt = record.visual_job.internal_prompt || record.visual_job.text_layer?.internal_prompt || record.internal_prompt;
+  record.quality_warnings = [...(record.quality_warnings || []), ...quality.warnings, ...quality.critical];
+  record.ai_generation_log = [
+    ...(record.ai_generation_log || []),
+    input.options?.enable_ai ? `AI requested for ${input.target}` : `AI skipped for ${input.target}: VISUAL_BOT_ENABLE_AI=false`,
+  ];
+  record.compose_log = [...(record.compose_log || []), `v${version} layout=${record.visual_job.layout.variant} output=${composeResult.output_path}`];
   record.outputs.push({
     version,
     output_path: composeResult.output_path,
