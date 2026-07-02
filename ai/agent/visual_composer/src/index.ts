@@ -16,6 +16,9 @@ interface CliOptions {
   projectSmoke?: boolean;
   qualityCheck?: boolean;
   contactSheet?: boolean;
+  aiSmoke?: boolean;
+  image?: boolean;
+  project?: string;
 }
 
 function parseArgs(argv: string[]): CliOptions {
@@ -34,6 +37,9 @@ function parseArgs(argv: string[]): CliOptions {
     if (arg === "--project-smoke") options.projectSmoke = true;
     if (arg === "--quality-check") options.qualityCheck = true;
     if (arg === "--contact-sheet") options.contactSheet = true;
+    if (arg === "--ai-smoke") options.aiSmoke = true;
+    if (arg === "--image") options.image = true;
+    if (arg === "--project") options.project = argv[index + 1];
   }
   return options;
 }
@@ -243,8 +249,14 @@ async function runContactSheet(): Promise<void> {
     const filePath = path.join(outputDir, entries[index]);
     const left = gap + (index % columns) * (thumbWidth + gap);
     const top = gap + Math.floor(index / columns) * (thumbHeight + gap);
+    const parts = entries[index].replace(/\.png$/, "").split(".");
+    const label = `${parts[1] || "project"} / ${parts[2] || "mode"} / fallback`;
     composites.push({
-      input: await sharp(filePath).resize(thumbWidth, thumbHeight, { fit: "contain", background: "#101820" }).png().toBuffer(),
+      input: await sharp(filePath)
+        .resize(thumbWidth, thumbHeight, { fit: "contain", background: "#101820" })
+        .composite([{ input: Buffer.from(`<svg width="${thumbWidth}" height="56" xmlns="http://www.w3.org/2000/svg"><rect width="${thumbWidth}" height="56" fill="#000000" opacity="0.72"/><text x="14" y="24" font-family="Arial" font-size="18" font-weight="800" fill="#ffffff">${escapeXml(label)}</text><text x="14" y="46" font-family="Arial" font-size="14" fill="#A7F3D0">${escapeXml(parts[0] || entries[index])}</text></svg>`), left: 0, top: thumbHeight - 56 }])
+        .png()
+        .toBuffer(),
       left,
       top,
     });
@@ -252,6 +264,41 @@ async function runContactSheet(): Promise<void> {
   const outputPath = path.join(outputDir, "contact-sheet.png");
   await sharp({ create: { width, height, channels: 4, background: "#0B1117" } }).composite(composites).png().toFile(outputPath);
   console.log(outputPath);
+}
+
+function escapeXml(value: string): string {
+  return value.replace(/[<>&'"]/g, (char) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "'": "&apos;", '"': "&quot;" })[char] || char);
+}
+
+async function runAiSmoke(options: CliOptions): Promise<void> {
+  if (process.env.VISUAL_BOT_ENABLE_AI !== "true") {
+    console.log("AI smoke skipped: VISUAL_BOT_ENABLE_AI is not true.");
+    return;
+  }
+  if (!process.env.OPENAI_API_KEY) {
+    console.log("AI smoke skipped: OPENAI_API_KEY is missing.");
+    return;
+  }
+  const { getVisualAiProvider } = await import("./ai");
+  const { loadProjectProfile } = await import("./profiles/profileLoader");
+  const project = (options.project || "monopoly") as import("./types").VisualProjectKey;
+  const profile = loadProjectProfile(project);
+  const provider = getVisualAiProvider(true);
+  const input = {
+    command_text: "AI smoke test: новая промо картинка без текста внутри изображения",
+    project_key: project,
+    visual_mode: project === "casper" ? "style_generation" as const : project === "gorilla_hockey" ? "hockey_generated_poster" as const : "composer" as const,
+    profile,
+    enable_ai: true,
+  };
+  const text = await provider.generateTextLayer(input);
+  console.log(JSON.stringify({ ok: true, type: "text", title: text.text, post_caption: text.post_caption, warnings: text.warnings || [] }, null, 2));
+  if (options.image) {
+    const image = await provider.generateIllustrationLayer(input);
+    console.log(JSON.stringify({ ok: true, type: "image", asset_path: image.asset_path, model: image.model, warnings: image.warnings || [] }, null, 2));
+  } else {
+    console.log("Image generation skipped. Run with: npm run visual:ai-smoke -- --image --project monopoly");
+  }
 }
 
 async function runQualityCheck(): Promise<void> {
@@ -311,6 +358,11 @@ async function main(): Promise<void> {
 
   if (options.contactSheet) {
     await runContactSheet();
+    return;
+  }
+
+  if (options.aiSmoke) {
+    await runAiSmoke(options);
     return;
   }
 

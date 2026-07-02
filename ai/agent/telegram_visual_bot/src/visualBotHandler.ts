@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import { produceVisualFromCommand, reviseProducedVisual } from "../../visual_composer/src/production";
 import { FileVisualJobStore } from "../../visual_composer/src/store";
 import { indexVisualAssets } from "../../visual_composer/src/assets/indexAssets";
+import { getUsageSummary } from "../../visual_composer/src/ai/usageGuard";
 import type { RevisionTarget } from "../../visual_composer/src/revision";
 import type { UploadedAsset } from "../../visual_composer/src/jobBuilder";
 import { TelegramStateStore } from "./telegramStateStore";
@@ -55,6 +56,7 @@ export function visualRevisionKeyboard() {
 
 export async function handleVisualBotUpdate(update: TelegramUpdate, deps: VisualBotHandlerDeps): Promise<VisualBotHandleResult> {
   const stateStore = deps.stateStore || new TelegramStateStore();
+  const effectiveDeps = { ...deps, enableAi: await resolveAiEnabled(deps.enableAi) };
   const chatId = getUpdateChatId(update);
   const userId = getUpdateUserId(update);
   if (!chatId) return { ok: true, handled: false, reason: "missing_chat_id" };
@@ -65,7 +67,7 @@ export async function handleVisualBotUpdate(update: TelegramUpdate, deps: Visual
   }
 
   if (update.callback_query?.data) {
-    await handleCallback(update.callback_query.id, chatId, userId || undefined, update.callback_query.data, deps, stateStore);
+    await handleCallback(update.callback_query.id, chatId, userId || undefined, update.callback_query.data, effectiveDeps, stateStore);
     return { ok: true, handled: true };
   }
 
@@ -94,7 +96,7 @@ export async function handleVisualBotUpdate(update: TelegramUpdate, deps: Visual
     return { ok: true, handled: true };
   }
 
-  const uploadedAsset = await maybeDownloadPhotoAsset(chatId, message, deps, stateStore);
+  const uploadedAsset = await maybeDownloadPhotoAsset(chatId, message, effectiveDeps, stateStore);
   if (!text && uploadedAsset) {
     if (uploadedAsset.path) await deps.telegram.sendMessage(chatId, "Фото получил. Теперь напиши, что с ним сделать.");
     else await deps.telegram.sendMessage(chatId, "Фото получил, но скачать файл не удалось. Можно продолжить текстом, но фото не попадет в макет.");
@@ -103,7 +105,7 @@ export async function handleVisualBotUpdate(update: TelegramUpdate, deps: Visual
 
   const state = await stateStore.getChatState(chatId);
   if (state.mode === "awaiting_visual_revision") {
-    await handleRevisionMessage(chatId, userId || undefined, text, state.revision_target, state.active_job_id, deps, stateStore);
+    await handleRevisionMessage(chatId, userId || undefined, text, state.revision_target, state.active_job_id, effectiveDeps, stateStore);
     return { ok: true, handled: true };
   }
 
@@ -113,7 +115,7 @@ export async function handleVisualBotUpdate(update: TelegramUpdate, deps: Visual
   }
 
   const pendingAsset = uploadedAsset || state.pending_uploaded_asset;
-  await handleNewVisualTask(chatId, userId || undefined, text, pendingAsset, deps, stateStore);
+  await handleNewVisualTask(chatId, userId || undefined, text, pendingAsset, effectiveDeps, stateStore);
   return { ok: true, handled: true };
 }
 
@@ -171,6 +173,20 @@ async function handleCommand(chatId: string, text: string, telegram: TelegramCli
   }
   if (command === "/debug_job") {
     await sendDebugJob(chatId, telegram, stateStore);
+    return;
+  }
+  if (command === "/ai_status") {
+    await sendAiStatus(chatId, telegram);
+    return;
+  }
+  if (command === "/ai_on") {
+    await setAiOverride(true);
+    await telegram.sendMessage(chatId, "AI runtime override: on. Env default не изменён.");
+    return;
+  }
+  if (command === "/ai_off") {
+    await setAiOverride(false);
+    await telegram.sendMessage(chatId, "AI runtime override: off. Env default не изменён.");
     return;
   }
   if (command === "/health") {
@@ -321,7 +337,49 @@ async function sendDebugJob(chatId: string, telegram: TelegramClient, stateStore
     `quality_warnings: ${(record.quality_warnings || []).join("; ") || "-"}`,
     `asset_selection: ${(record.asset_selection_log || []).slice(-6).join("; ") || "-"}`,
     `ai_generation: ${(record.ai_generation_log || []).slice(-6).join("; ") || "-"}`,
+    `prompt: ${record.visual_job.illustration_layer?.prompt_used?.slice(0, 220) || record.visual_job.background_layer?.prompt_used?.slice(0, 220) || "-"}`,
   ].join("\n"));
+}
+
+async function sendAiStatus(chatId: string, telegram: TelegramClient) {
+  const override = await readAiOverride();
+  const enabled = await resolveAiEnabled(process.env.VISUAL_BOT_ENABLE_AI === "true");
+  const usage = await getUsageSummary();
+  await telegram.sendMessage(chatId, [
+    `AI enabled: ${enabled ? "yes" : "no"}`,
+    `runtime override: ${override === null ? "null" : override ? "true" : "false"}`,
+    `key present: ${process.env.OPENAI_API_KEY ? "yes" : "no"}`,
+    `text model: ${process.env.OPENAI_TEXT_MODEL || "gpt-5-mini"}`,
+    `image model: ${process.env.OPENAI_IMAGE_MODEL || "gpt-image-1"}`,
+    `image quality: ${process.env.OPENAI_IMAGE_QUALITY || process.env.VISUAL_OUTPUT_QUALITY || "medium"}`,
+    `image size: ${process.env.OPENAI_IMAGE_SIZE || "1024x1024"}`,
+    `daily limit: ${usage.daily_limit}`,
+    `usage today: images=${usage.image_generations_count}, text=${usage.text_generations_count}, failed=${usage.failed_generations_count}`,
+  ].join("\n"));
+}
+
+async function resolveAiEnabled(envDefault?: boolean): Promise<boolean> {
+  const override = await readAiOverride();
+  if (override !== null) return override;
+  return Boolean(envDefault);
+}
+
+async function readAiOverride(): Promise<boolean | null> {
+  try {
+    const parsed = JSON.parse(await fs.readFile(aiConfigPath(), "utf8")) as { ai_enabled_override?: boolean | null };
+    return typeof parsed.ai_enabled_override === "boolean" ? parsed.ai_enabled_override : null;
+  } catch {
+    return null;
+  }
+}
+
+async function setAiOverride(value: boolean | null): Promise<void> {
+  await fs.mkdir(path.dirname(aiConfigPath()), { recursive: true });
+  await fs.writeFile(aiConfigPath(), JSON.stringify({ ai_enabled_override: value }, null, 2), "utf8");
+}
+
+function aiConfigPath(): string {
+  return path.join(process.cwd(), ".storage", "telegram_visual_bot", "config.json");
 }
 
 async function handleVoice(chatId: string, message: TelegramMessage, deps: VisualBotHandlerDeps, stateStore: TelegramStateStore) {

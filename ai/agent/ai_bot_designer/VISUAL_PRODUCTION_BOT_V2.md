@@ -552,6 +552,7 @@ v1.1 moves the bot from placeholder-only output to project-aware production fall
 - Gorilla Hockey supports generated poster, uploaded photo template and print A4/A5 layouts.
 - Profiles are loaded from `profiles/*.profile.json` and drive layouts, prompt rules, asset rules and quality checks.
 - AI remains optional. With AI disabled or unavailable, the composer renders safe styled fallbacks.
+- v1.3 connects OpenAI text/image provider behind `VISUAL_BOT_ENABLE_AI=true`, with usage guard and fallback on provider errors.
 - Real client assets should be placed only under `ai/agent/visual_assets/manual_project_packs/` and indexed with `npm run visual:assets:index`.
 
 n8n remains as an optional integration layer, not the primary path.

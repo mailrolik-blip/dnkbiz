@@ -91,6 +91,10 @@ export async function produceVisualFromCommand(input: ProduceVisualInput): Promi
   record.ai_generation_log = [
     input.options?.enable_ai ? "AI requested" : "AI skipped: VISUAL_BOT_ENABLE_AI=false",
     process.env.OPENAI_API_KEY ? "OPENAI_API_KEY present" : "OPENAI_API_KEY missing",
+    buildResult.visual_job.illustration_layer?.generated_by_ai ? `illustration AI model=${buildResult.visual_job.illustration_layer.model || "-"}` : "illustration fallback/manual",
+    buildResult.visual_job.background_layer?.generated_by_ai ? `background AI model=${buildResult.visual_job.background_layer.model || "-"}` : "background fallback/manual",
+    buildResult.visual_job.illustration_layer?.warnings?.join("; ") || "",
+    buildResult.visual_job.background_layer?.warnings?.join("; ") || "",
   ];
   record.compose_log = [`layout=${record.visual_job.layout.variant}`, `output=${composeResult.output_path}`, `size=${composeResult.width}x${composeResult.height}`];
   await new FileVisualJobStore().update(record);

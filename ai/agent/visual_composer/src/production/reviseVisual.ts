@@ -1,5 +1,6 @@
 import path from "node:path";
 import { composeVisualJob } from "../compose";
+import { getVisualAiProvider } from "../ai";
 import { reviseVisualJob, type RevisionTarget } from "../revision";
 import { FileVisualJobStore, nextOutputVersion } from "../store";
 import { safeFilename } from "../utils/safeFilename";
@@ -53,6 +54,40 @@ export async function reviseProducedVisual(input: ReviseProducedVisualInput): Pr
       enable_ai: Boolean(input.options?.enable_ai),
     },
   });
+  if (input.options?.enable_ai && input.target !== "layout" && input.target !== "format") {
+    const provider = getVisualAiProvider(true);
+    const aiInput = {
+      command_text: `${record.source.command_text}\nRevision: ${input.instruction}`,
+      project_key: record.detected.project_key,
+      visual_mode: record.detected.visual_mode,
+      profile: record.visual_job.profile,
+      visual_job: revision.visual_job,
+      revision_target: input.target,
+      enable_ai: true,
+    };
+    if (input.target === "illustration" && record.detected.visual_mode !== "hockey_photo_template") {
+      const aiLayer = await provider.generateIllustrationLayer(aiInput);
+      if (aiLayer.asset_path) revision.visual_job.illustration_layer = { enabled: true, ...revision.visual_job.illustration_layer, ...aiLayer };
+      if (aiLayer.warnings?.length) revision.warnings.push(...aiLayer.warnings);
+    }
+    if (input.target === "background" && record.detected.visual_mode !== "hockey_photo_template") {
+      const aiLayer = record.detected.project_key === "casper"
+        ? await (provider.generateStyleBaseImage?.(aiInput) || provider.generateBackgroundLayer(aiInput))
+        : await provider.generateBackgroundLayer(aiInput);
+      if (aiLayer.asset_path) revision.visual_job.background_layer = { enabled: true, ...revision.visual_job.background_layer, ...aiLayer };
+      if (aiLayer.warnings?.length) revision.warnings.push(...aiLayer.warnings);
+    }
+    if (input.target === "text" && shouldUseAiForText(input.instruction)) {
+      const aiText = await provider.generateTextLayer(aiInput);
+      revision.visual_job.text_layer = {
+        ...(revision.visual_job.text_layer || { enabled: true }),
+        ...aiText,
+        enabled: true,
+      };
+      revision.visual_job.post_caption = aiText.post_caption || revision.visual_job.post_caption;
+      if (aiText.warnings?.length) revision.warnings.push(...aiText.warnings);
+    }
+  }
   const previousJob = structuredClone(record.visual_job);
   const { outputPath, outputUrl } = outputFor(input.job_id, input.target, version);
   const composeResult = await composeVisualJob({ ...revision.visual_job, output_path: outputPath });
@@ -107,4 +142,8 @@ export async function reviseProducedVisual(input: ReviseProducedVisualInput): Pr
     post_caption: record.post_caption,
     warnings: [...revision.warnings, ...composeResult.warnings, ...quality.warnings, ...quality.critical],
   };
+}
+
+function shouldUseAiForText(instruction: string): boolean {
+  return /продающ|смешн|короч|лучше|вариант|перепиши|улучши/iu.test(instruction);
 }

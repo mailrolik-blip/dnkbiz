@@ -190,6 +190,13 @@ Implemented in this sprint:
 Next production work:
 
 - add approved real assets per project;
-- replace safe OpenAI placeholder adapter with real image generation calls after provider policy/setup review;
+- run manual OpenAI staging checks with `npm run visual:ai-smoke` and one image generation;
 - add PDF/sendDocument path for large print outputs;
 - add visual regression snapshots for final client templates.
+
+v1.3 AI implementation:
+
+- OpenAI text/image provider is connected behind env flags.
+- Usage guard prevents accidental image spend.
+- Revisions can regenerate illustration/background layers when AI is enabled.
+- Production composer still owns Russian text rendering.

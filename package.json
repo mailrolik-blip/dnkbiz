@@ -20,6 +20,7 @@
     "visual:project-smoke": "npm run visual:build --silent && node ai/agent/visual_composer/dist/index.js --project-smoke",
     "visual:quality-check": "npm run visual:build --silent && node ai/agent/visual_composer/dist/index.js --quality-check",
     "visual:contact-sheet": "npm run visual:build --silent && node ai/agent/visual_composer/dist/index.js --contact-sheet",
+    "visual:ai-smoke": "npm run visual:build --silent && node ai/agent/visual_composer/dist/index.js --ai-smoke",
     "visual:api:test": "node ai/agent/visual_composer/scripts/test-api-compose.mjs",
     "visual:produce:test": "node ai/agent/visual_composer/scripts/test-api-produce.mjs",
     "visual:produce:local": "npm run visual:build --silent && node ai/agent/visual_composer/scripts/produce-local.mjs",

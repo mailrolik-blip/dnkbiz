@@ -29,13 +29,6 @@ export async function buildVisualJobFromCommand(input: BuildVisualJobInput): Pro
     warnings.push("enable_ai=true requested, but OPENAI_API_KEY is missing. Using safe fallback layer generation.");
   }
 
-  const aiInput = { command_text: commandText, project_key: projectKey, visual_mode: visualMode, profile, enable_ai: input.options?.enable_ai };
-  const [aiText, aiIllustration, aiBackground] = await Promise.all([
-    provider.generateTextLayer(aiInput),
-    provider.generateIllustrationLayer(aiInput),
-    provider.generateBackgroundLayer(aiInput),
-  ]);
-
   const buildInput: BuildVisualJobInput = {
     ...input,
     command_text: commandText,
@@ -58,6 +51,8 @@ export async function buildVisualJobFromCommand(input: BuildVisualJobInput): Pro
   }
 
   visualJob.profile = profile;
+  const aiInput = { command_text: commandText, project_key: projectKey, visual_mode: visualMode, profile, visual_job: visualJob, enable_ai: input.options?.enable_ai };
+  const aiText = await provider.generateTextLayer(aiInput);
   visualJob.text_layer = {
     ...(visualJob.text_layer || { enabled: true }),
     ...definedOnly(aiText),
@@ -66,21 +61,26 @@ export async function buildVisualJobFromCommand(input: BuildVisualJobInput): Pro
   };
   visualJob.post_caption = text.post_caption || aiText.post_caption || buildDefaultPostCaption(commandText, projectKey);
   visualJob.internal_prompt = [profile.image_style_rules, profile.composition_rules, profile.negative_rules, commandText].filter(Boolean).join("\n");
-  if (!visualJob.illustration_layer?.asset_path && aiIllustration.asset_path) {
-    visualJob.illustration_layer = { enabled: true, ...visualJob.illustration_layer, ...aiIllustration };
-  }
-  if (!visualJob.background_layer?.asset_path && aiBackground.asset_path) {
-    visualJob.background_layer = { enabled: true, ...visualJob.background_layer, ...aiBackground };
+
+  if (input.options?.enable_ai) {
+    if (!visualJob.illustration_layer?.asset_path && visualMode !== "hockey_photo_template") {
+      const aiIllustration = await provider.generateIllustrationLayer({ ...aiInput, visual_job: visualJob });
+      if (aiIllustration.asset_path) visualJob.illustration_layer = { enabled: true, ...visualJob.illustration_layer, ...aiIllustration };
+      if (aiIllustration.warnings?.length) warnings.push(...aiIllustration.warnings);
+    }
+    if (!visualJob.background_layer?.asset_path && visualMode !== "hockey_photo_template") {
+      const aiBackground = projectKey === "casper"
+        ? await (provider.generateStyleBaseImage?.({ ...aiInput, visual_job: visualJob }) || provider.generateBackgroundLayer({ ...aiInput, visual_job: visualJob }))
+        : await provider.generateBackgroundLayer({ ...aiInput, visual_job: visualJob });
+      if (aiBackground.asset_path) visualJob.background_layer = { enabled: true, ...visualJob.background_layer, ...aiBackground };
+      if (aiBackground.warnings?.length) warnings.push(...aiBackground.warnings);
+    }
   }
 
   return {
     ok: true,
     visual_job: visualJob,
-    detected: {
-      project_key: projectKey,
-      visual_mode: visualMode,
-      output_format: outputFormat,
-    },
+    detected: { project_key: projectKey, visual_mode: visualMode, output_format: outputFormat },
     warnings,
   };
 }

@@ -254,3 +254,14 @@ Start Stage 1 stabilization in a separate pass: fix Data Table filters, normaliz
 - Added project-specific AI prompt builders and production OpenAI provider isolation with fallback.
 - Added project-smoke output copies under `examples/outputs/project-smoke/`.
 - Added `visual:contact-sheet`.
+
+# v1.3 OpenAI Provider and AI Guard
+
+- Added file-based AI usage guard under `.storage/visual_ai_usage/`.
+- Added real OpenAI text provider path through the Responses API with structured JSON output.
+- Added real OpenAI image provider path for illustration/background/style-base layers.
+- Added `OPENAI_IMAGE_QUALITY`, `OPENAI_IMAGE_SIZE`, `VISUAL_AI_DAILY_LIMIT` and `VISUAL_AI_COST_GUARD`.
+- Integrated AI layer generation into produce and revision flows while keeping composer-rendered Cyrillic text.
+- Added Telegram `/ai_status`, `/ai_on`, `/ai_off`.
+- Added `npm run visual:ai-smoke` with image generation opt-in via `-- --image`.
+- Added `V1_3_AI_TEST_PLAN.md`.

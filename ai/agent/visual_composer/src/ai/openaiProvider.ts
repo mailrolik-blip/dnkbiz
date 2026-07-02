@@ -1,93 +1,133 @@
 ﻿import fs from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
-import type { VisualAiProvider } from "./types";
-import { buildImagePrompt } from "./prompts";
+import type { AiLayerInput, VisualAiProvider } from "./types";
+import { buildStructuredImagePrompt } from "./prompts/buildImagePrompt";
+import { buildTextPrompt } from "./prompts/buildTextPrompt";
+import { canGenerateImage, recordImageGeneration, recordTextGeneration } from "./usageGuard";
 
 export function createOpenAiProvider(): VisualAiProvider {
   return {
     async generateTextLayer(input) {
-      const prompt = [
-        input.profile?.text_style_rules,
-        "Return compact JSON with optional title, subtitle, sticker, post_caption. Do not include secrets.",
-        input.command_text,
-      ].filter(Boolean).join("\n");
+      const prompt = buildTextPrompt(input);
       try {
         const json = await callOpenAiText(prompt);
+        await recordTextGeneration(true);
         return {
           text: typeof json.title === "string" ? json.title.toUpperCase().slice(0, 72) : undefined,
           subtitle: typeof json.subtitle === "string" ? json.subtitle.toUpperCase().slice(0, 48) : undefined,
           sticker: typeof json.sticker === "string" ? json.sticker.toUpperCase().slice(0, 32) : undefined,
+          cta: typeof json.cta === "string" ? json.cta.toUpperCase().slice(0, 48) : undefined,
           post_caption: typeof json.post_caption === "string" ? json.post_caption : `${input.profile?.project_name || input.project_key}: ${input.command_text}`,
-          internal_prompt: prompt,
+          internal_prompt: prompt.user,
           locked: false,
         };
-      } catch {
+      } catch (error) {
+        await recordTextGeneration(false);
         return {
           locked: false,
-          internal_prompt: prompt,
+          internal_prompt: `${prompt.user}\nFallback reason: ${error instanceof Error ? error.message : "unknown text provider error"}`,
           post_caption: `${input.profile?.project_name || input.project_key}: ${input.command_text}`,
+          warnings: [`OpenAI text fallback: ${error instanceof Error ? error.message : "unknown error"}`],
         };
       }
     },
     async generateIllustrationLayer(input) {
-      return generateImageOrFallback(input.project_key, "illustration", buildImagePrompt(input, "illustration"));
+      return generateImageOrFallback(input, "illustration");
     },
     async generateBackgroundLayer(input) {
-      return generateImageOrFallback(input.project_key, "background", buildImagePrompt(input, "background"));
+      if (input.visual_mode === "hockey_photo_template") {
+        return { enabled: true, asset_path: "", locked: false, warnings: ["AI background skipped: uploaded photo template mode."] };
+      }
+      return generateImageOrFallback(input, "background");
     },
     async generateStyleBaseImage(input) {
-      return generateImageOrFallback(input.project_key, "style_base", buildImagePrompt(input, "style_base"));
+      return generateImageOrFallback(input, "style_base");
     },
   };
 }
 
-async function callOpenAiText(prompt: string): Promise<Record<string, unknown>> {
+async function callOpenAiText(prompt: ReturnType<typeof buildTextPrompt>): Promise<Record<string, unknown>> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY missing");
-  const model = process.env.OPENAI_TEXT_MODEL || "gpt-4.1-mini";
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+  const model = process.env.OPENAI_TEXT_MODEL || "gpt-5-mini";
+  const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({
       model,
-      messages: [
-        { role: "system", content: "You create short Russian promo copy for a visual composer. Output JSON only." },
-        { role: "user", content: prompt },
+      input: [
+        { role: "system", content: prompt.system },
+        { role: "user", content: `${prompt.user}\n\nOutput expectation:\n${prompt.output_expectations}` },
       ],
-      response_format: { type: "json_object" },
+      text: {
+        format: {
+          type: "json_schema",
+          name: "visual_text_layer",
+          strict: false,
+          schema: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              title: { type: "string" },
+              subtitle: { type: "string" },
+              sticker: { type: "string" },
+              cta: { type: "string" },
+              post_caption: { type: "string" },
+              internal_prompt: { type: "string" },
+              warnings: { type: "array", items: { type: "string" } },
+            },
+            required: ["title", "post_caption"],
+          },
+        },
+      },
     }),
   });
   if (!response.ok) throw new Error(`OpenAI text failed: ${response.status}`);
-  const payload = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
-  return JSON.parse(payload.choices?.[0]?.message?.content || "{}");
+  const payload = await response.json() as { output_text?: string; output?: Array<{ content?: Array<{ text?: string }> }> };
+  const text = payload.output_text || payload.output?.flatMap((item) => item.content || []).map((content) => content.text || "").join("\n") || "{}";
+  return parseJsonObject(text);
 }
 
-async function generateImageOrFallback(projectKey: string, kind: string, prompt: string) {
+async function generateImageOrFallback(input: AiLayerInput, kind: "illustration" | "background" | "style_base") {
+  const prompt = buildStructuredImagePrompt(input, kind);
+  const promptText = [prompt.system, prompt.user, `Negative rules: ${prompt.negative_rules}`, `Output: ${prompt.output_expectations}`].join("\n\n");
+  const model = process.env.OPENAI_IMAGE_MODEL || "gpt-image-1";
   try {
-    const assetPath = await callOpenAiImage(projectKey, kind, prompt);
-    return { enabled: true, asset_path: assetPath, locked: false };
-  } catch {
-    return createSafeGeneratedPlaceholder(projectKey, kind, prompt);
+    const guard = await canGenerateImage();
+    if (!guard.ok) throw new Error(guard.reason || "AI image usage guard blocked generation.");
+    const assetPath = await callOpenAiImage(input.project_key, kind, promptText, model);
+    await recordImageGeneration(true);
+    return { enabled: true, asset_path: assetPath, locked: false, generated_by_ai: true, prompt_used: promptText, model };
+  } catch (error) {
+    await recordImageGeneration(false);
+    const fallback = await createSafeGeneratedPlaceholder(input.project_key, kind, promptText);
+    return {
+      ...fallback,
+      generated_by_ai: false,
+      prompt_used: promptText,
+      model,
+      warnings: [`OpenAI image fallback: ${error instanceof Error ? error.message : "unknown error"}`],
+    };
   }
 }
 
-async function callOpenAiImage(projectKey: string, kind: string, prompt: string): Promise<string> {
+async function callOpenAiImage(projectKey: string, kind: string, prompt: string, model: string): Promise<string> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY missing");
-  const model = process.env.OPENAI_IMAGE_MODEL || "gpt-image-1";
-  const quality = process.env.VISUAL_OUTPUT_QUALITY || "standard";
+  const quality = process.env.OPENAI_IMAGE_QUALITY || process.env.VISUAL_OUTPUT_QUALITY || "medium";
+  const size = process.env.OPENAI_IMAGE_SIZE || "1024x1024";
   const n = Math.max(1, Math.min(Number(process.env.VISUAL_AI_MAX_IMAGES_PER_REQUEST || "1"), 1));
   const response = await fetch("https://api.openai.com/v1/images/generations", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({ model, prompt, n, size: "1024x1024", quality, response_format: "b64_json" }),
+    body: JSON.stringify({ model, prompt, n, size, quality }),
   });
   if (!response.ok) throw new Error(`OpenAI image failed: ${response.status}`);
   const payload = await response.json() as { data?: Array<{ b64_json?: string; url?: string }> };
   const b64 = payload.data?.[0]?.b64_json;
   if (!b64) throw new Error("OpenAI image response has no b64_json");
-  const dir = path.join(process.cwd(), ".storage", "visual_generated_assets", projectKey);
+  const dir = path.join(process.cwd(), ".storage", "visual_generated_assets", projectKey, new Date().toISOString().slice(0, 10));
   await fs.mkdir(dir, { recursive: true });
   const filePath = path.join(dir, `${Date.now()}-${kind}-openai.png`);
   await fs.writeFile(filePath, Buffer.from(b64, "base64"));
@@ -96,7 +136,7 @@ async function callOpenAiImage(projectKey: string, kind: string, prompt: string)
 }
 
 async function createSafeGeneratedPlaceholder(projectKey: string, kind: string, prompt: string) {
-  const dir = path.join(process.cwd(), ".storage", "visual_generated_assets", projectKey);
+  const dir = path.join(process.cwd(), ".storage", "visual_generated_assets", projectKey, new Date().toISOString().slice(0, 10));
   await fs.mkdir(dir, { recursive: true });
   const filePath = path.join(dir, `${Date.now()}-${kind}.png`);
   const label = `${projectKey} ${kind}`;
@@ -104,6 +144,20 @@ async function createSafeGeneratedPlaceholder(projectKey: string, kind: string, 
   await sharp(Buffer.from(svg)).png().toFile(filePath);
   await fs.writeFile(filePath.replace(/\.png$/, ".prompt.txt"), prompt, "utf8");
   return { enabled: true, asset_path: filePath, locked: false };
+}
+
+function parseJsonObject(value: string): Record<string, unknown> {
+  try {
+    return JSON.parse(value) as Record<string, unknown>;
+  } catch {
+    const match = value.match(/\{[\s\S]*\}/);
+    if (!match) return {};
+    try {
+      return JSON.parse(match[0]) as Record<string, unknown>;
+    } catch {
+      return {};
+    }
+  }
 }
 
 function escapeXml(value: string): string {

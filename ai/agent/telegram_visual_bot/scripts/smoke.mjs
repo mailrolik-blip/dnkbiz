@@ -52,6 +52,7 @@ await handleVisualBotUpdate({ update_id: 4, callback_query: { id: "callback-smok
 await handleVisualBotUpdate({ update_id: 5, callback_query: { id: "callback-smoke-3", from: { id: userId, username: "smoke" }, message: { message_id: 5, chat: { id: chatId, type: "private" } }, data: "visual:regenerate" } }, deps);
 await handleVisualBotUpdate({ update_id: 6, message: { message_id: 6, from: { id: userId, username: "smoke" }, chat: { id: chatId, type: "private" }, text: "задача для хоккея набор детей" } }, deps);
 await handleVisualBotUpdate({ update_id: 7, message: { message_id: 7, from: { id: userId, username: "smoke" }, chat: { id: chatId, type: "private" }, text: "/debug_job" } }, deps);
+await handleVisualBotUpdate({ update_id: 8, message: { message_id: 8, from: { id: userId, username: "smoke" }, chat: { id: chatId, type: "private" }, text: "/ai_status" } }, deps);
 
 state = await stateStore.getChatState(String(chatId));
 if (state.last_project_key !== "gorilla_hockey") throw new Error("Smoke failed: hockey project was not detected.");
@@ -59,5 +60,6 @@ const photoCalls = telegram.calls.filter((call) => call.method === "sendPhotoFro
 if (photoCalls.length < 4) throw new Error("Smoke failed: expected produce, revision, regenerate and hockey photo sends.");
 if (!telegram.calls.some((call) => call.method === "sendMessage" && String(call.text).includes("Текст поста"))) throw new Error("Smoke failed: post text was not shown.");
 if (!telegram.calls.some((call) => call.method === "sendMessage" && String(call.text).includes("job_id:"))) throw new Error("Smoke failed: debug job was not shown.");
+if (!telegram.calls.some((call) => call.method === "sendMessage" && String(call.text).includes("AI enabled:"))) throw new Error("Smoke failed: AI status was not shown.");
 
 console.log(JSON.stringify({ ok: true, job_id: state.active_job_id, output_path: state.active_output_path, telegram_calls: telegram.calls.map((call) => call.method) }, null, 2));

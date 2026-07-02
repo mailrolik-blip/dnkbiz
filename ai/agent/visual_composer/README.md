@@ -301,3 +301,11 @@ npm run visual:contact-sheet
 ```
 
 AI mode is disabled by default. Enable it with `VISUAL_BOT_ENABLE_AI=true` and `OPENAI_API_KEY`, with model names supplied through `OPENAI_IMAGE_MODEL` and `OPENAI_TEXT_MODEL`. The adapter is safe-fallback first and composer renders Cyrillic text itself.
+
+v1.3 OpenAI provider:
+
+- text generation uses a structured JSON response path;
+- image generation saves assets to `.storage/visual_generated_assets/<project>/<date>/`;
+- image prompts explicitly request no text/letters/watermarks;
+- `VISUAL_AI_COST_GUARD=true` and `VISUAL_AI_DAILY_LIMIT` protect image spend;
+- `npm run visual:ai-smoke` is text-only unless `-- --image` is passed.

@@ -20,6 +20,7 @@ export interface TextLayer {
   contacts?: string;
   post_caption?: string;
   internal_prompt?: string;
+  warnings?: string[];
   variant?: string;
   position?: "top" | "bottom" | "center" | "overlay";
   locked?: boolean;
@@ -30,12 +31,20 @@ export interface IllustrationLayer {
   asset_path?: string;
   position?: "center" | "bottom" | "top" | "cover";
   locked?: boolean;
+  generated_by_ai?: boolean;
+  prompt_used?: string;
+  model?: string;
+  warnings?: string[];
 }
 
 export interface BackgroundLayer {
   enabled: boolean;
   asset_path?: string;
   locked?: boolean;
+  generated_by_ai?: boolean;
+  prompt_used?: string;
+  model?: string;
+  warnings?: string[];
 }
 
 export interface LayoutConfig {

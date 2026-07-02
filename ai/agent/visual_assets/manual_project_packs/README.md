@@ -11,6 +11,10 @@ ai/agent/visual_assets/manual_project_packs/monopoly/
   logos/
   references/
   templates/
+  icons/
+  photos/
+  print/
+  qr/
 
 ai/agent/visual_assets/manual_project_packs/monopoly_pay/
   backgrounds/
@@ -18,6 +22,10 @@ ai/agent/visual_assets/manual_project_packs/monopoly_pay/
   logos/
   references/
   templates/
+  icons/
+  photos/
+  print/
+  qr/
 
 ai/agent/visual_assets/manual_project_packs/casper/
   backgrounds/
@@ -25,6 +33,10 @@ ai/agent/visual_assets/manual_project_packs/casper/
   logos/
   references/
   templates/
+  icons/
+  photos/
+  print/
+  qr/
 
 ai/agent/visual_assets/manual_project_packs/gorilla_hockey/
   backgrounds/
@@ -34,6 +46,7 @@ ai/agent/visual_assets/manual_project_packs/gorilla_hockey/
   templates/
   photos/
   print/
+  qr/
 ```
 
 Как добавить ассет:
@@ -50,8 +63,20 @@ ai/agent/visual_assets/manual_project_packs/gorilla_hockey/
   "tags": ["promo", "dark", "contest"],
   "usage": "background",
   "safe_for_auto_use": true,
-  "description": "Approved promo background"
+  "description": "Approved promo background",
+  "priority": 10,
+  "project_key": "monopoly",
+  "recommended_modes": ["composer"],
+  "notes": ""
 }
 ```
 
 Для автоматического выбора полезны теги: `square`, `story`, `vk_post`, `promo`, `fintech`, `payment`, `character`, `base`, `hockey_generated_poster`, `hockey_photo_template`, `print_a4`, `print_a5`.
+
+Ассеты можно добавлять и через Telegram caption:
+
+```text
+asset monopoly background tags: orange,promo,contest
+asset pay icon tags: bank,pay
+asset hockey logo tags: main
+```

@@ -189,3 +189,23 @@ For visual review:
 npm run visual:project-smoke
 npm run visual:contact-sheet
 ```
+
+# v1.3 update
+
+AI manual checks:
+
+```bash
+npm run visual:ai-smoke
+npm run visual:ai-smoke -- --image --project monopoly
+```
+
+Telegram commands:
+
+```text
+/ai_status
+/ai_on
+/ai_off
+/debug_job
+```
+
+Full plan: `V1_3_AI_TEST_PLAN.md`.

@@ -158,3 +158,28 @@ Diagnostics:
 ```text
 /debug_job
 ```
+
+## AI Mode
+
+AI is off by default. Enable through env:
+
+```env
+VISUAL_BOT_ENABLE_AI=true
+OPENAI_API_KEY=
+OPENAI_TEXT_MODEL=
+OPENAI_IMAGE_MODEL=
+OPENAI_IMAGE_QUALITY=medium
+OPENAI_IMAGE_SIZE=1024x1024
+VISUAL_AI_DAILY_LIMIT=20
+VISUAL_AI_COST_GUARD=true
+```
+
+Telegram commands:
+
+```text
+/ai_status
+/ai_on
+/ai_off
+```
+
+`/ai_on` and `/ai_off` set runtime override in `.storage/telegram_visual_bot/config.json`; they do not edit env files.
