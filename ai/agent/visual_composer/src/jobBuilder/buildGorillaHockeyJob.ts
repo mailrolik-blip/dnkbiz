@@ -9,7 +9,7 @@ export function buildGorillaHockeyJob(
   warnings: string[],
 ): VisualJob {
   const uploadedPhoto = findUploaded(input.uploaded_assets || [], "photo");
-  const format = input.output_format || (visualMode === "hockey_print_layout" ? "print_a4" : "vk_post");
+  const format = input.output_format || (visualMode === "hockey_print_layout" ? "print_a4" : "square_1024x1024");
   const bg = resolveVisualAsset({
     project_key: "gorilla_hockey",
     visual_mode: visualMode,
@@ -98,8 +98,10 @@ function chooseLayout(input: BuildVisualJobInput, text: TextLayerParts, visualMo
 function sizeFor(format: OutputFormat, visualMode: VisualMode) {
   if (visualMode === "hockey_print_layout" && format === "print_a5") return { width: 1748, height: 2480 };
   if (visualMode === "hockey_print_layout") return { width: 2480, height: 3508 };
-  if (format === "story") return { width: 1080, height: 1920 };
-  if (format === "square") return { width: 1080, height: 1080 };
+  if (format === "story" || format === "story_1080x1920") return { width: 1080, height: 1920 };
+  if (format === "square_1024x1024") return { width: 1024, height: 1024 };
+  if (format === "square" || format === "square_1080x1080") return { width: 1080, height: 1080 };
+  if (format === "vertical_1080x1350" || format === "vk_post") return { width: 1080, height: 1350 };
   return { width: 1080, height: 1350 };
 }
 

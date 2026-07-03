@@ -19,6 +19,9 @@ interface CliOptions {
   aiSmoke?: boolean;
   stylePackSmoke?: boolean;
   assetSelectionSmoke?: boolean;
+  qualitySheet?: boolean;
+  layeredSmoke?: boolean;
+  layerPackSmoke?: boolean;
   aiUsage?: boolean;
   aiUsageReset?: boolean;
   yes?: boolean;
@@ -45,6 +48,9 @@ function parseArgs(argv: string[]): CliOptions {
     if (arg === "--ai-smoke") options.aiSmoke = true;
     if (arg === "--style-pack-smoke") options.stylePackSmoke = true;
     if (arg === "--asset-selection-smoke") options.assetSelectionSmoke = true;
+    if (arg === "--quality-sheet") options.qualitySheet = true;
+    if (arg === "--layered-smoke") options.layeredSmoke = true;
+    if (arg === "--layer-pack-smoke") options.layerPackSmoke = true;
     if (arg === "--ai-usage") options.aiUsage = true;
     if (arg === "--ai-usage-reset") options.aiUsageReset = true;
     if (arg === "--yes") options.yes = true;
@@ -297,6 +303,63 @@ async function runContactSheet(): Promise<void> {
   console.log(outputPath);
 }
 
+async function runQualitySheet(): Promise<void> {
+  const sharpModule = await import("sharp");
+  const sharp = sharpModule.default;
+  const { buildVisualJobFromCommand } = await import("./jobBuilder");
+  const { composeVisualJob, getComposerRoot } = await import("./compose");
+  const { safeFilename } = await import("./utils/safeFilename");
+  const outputDir = path.join(getComposerRoot(), "examples", "outputs", "quality-sheet");
+  await fs.mkdir(outputDir, { recursive: true });
+  const scenarios = [
+    { project: "monopoly", title: "ИСТОРИЯ ЗНАКОМСТВА", command_text: "сделай новую картинку для монополии история знакомства", variants: ["character_center_title_top", "character_right_title_left", "poster_sticker_style"] },
+    { project: "monopoly", title: "РЕЗУЛЬТАТЫ КОНКУРСА", command_text: "сделай новую картинку для монополии результаты конкурса", variants: ["character_center_bottom"] },
+    { project: "monopoly_pay", title: "ЯНДЕКС-ЯНДЕКС", command_text: "для монополии пэй нужна новая картинка с текстом Яндекс-Яндекс", variants: ["pay_method_card", "pay_character_right"] },
+    { project: "monopoly_pay", title: "НОВЫЕ ТРИГГЕРЫ БАНКОВ", command_text: "сделай новую картинку для пэй новые триггеры банков", variants: ["pay_alert_bank", "pay_character_center"] },
+    { project: "gorilla_hockey", title: "НАБОР ДЕТЕЙ", command_text: "задача для хоккея набор детей", variants: ["hockey_training_recruitment"] },
+  ];
+  const entries: Array<{ filePath: string; label: string; warnings: number }> = [];
+  for (const scenario of scenarios) {
+    for (const variant of scenario.variants) {
+      const built = await buildVisualJobFromCommand({
+        command_text: scenario.command_text,
+        options: { enable_ai: false, layout_variant: variant },
+      });
+      const outputPath = path.join(outputDir, `${safeFilename(scenario.project)}.${safeFilename(variant)}.${safeFilename(scenario.title)}.png`);
+      const composed = await composeVisualJob({ ...built.visual_job, output_path: outputPath });
+      const usage = composed.warnings.find((warning) => warning.startsWith("composer_usage")) || "";
+      const background = usage.includes("background=asset") ? "asset" : "fallback";
+      const character = usage.includes("character=asset") ? "asset" : usage.includes("character=illustration_asset") ? "asset" : "fallback";
+      entries.push({ filePath: outputPath, label: `${scenario.project} / ${variant} / ${composed.width}x${composed.height} / ${scenario.title} / bg:${background} char:${character}`, warnings: composed.warnings.filter((warning) => warning.includes("quality_warning")).length });
+    }
+  }
+  const thumbWidth = 360;
+  const thumbHeight = 450;
+  const gap = 24;
+  const columns = 3;
+  const rows = Math.ceil(entries.length / columns);
+  const width = columns * thumbWidth + (columns + 1) * gap;
+  const height = rows * thumbHeight + (rows + 1) * gap;
+  const composites = [];
+  for (let index = 0; index < entries.length; index += 1) {
+    const left = gap + (index % columns) * (thumbWidth + gap);
+    const top = gap + Math.floor(index / columns) * (thumbHeight + gap);
+    const label = `${entries[index].label} / warn:${entries[index].warnings}`;
+    composites.push({
+      input: await sharp(entries[index].filePath)
+        .resize(thumbWidth, thumbHeight, { fit: "contain", background: "#101820" })
+        .composite([{ input: Buffer.from(`<svg width="${thumbWidth}" height="64" xmlns="http://www.w3.org/2000/svg"><rect width="${thumbWidth}" height="64" fill="#000000" opacity="0.76"/><text x="12" y="24" font-family="Arial" font-size="15" font-weight="800" fill="#ffffff">${escapeXml(label.slice(0, 54))}</text><text x="12" y="48" font-family="Arial" font-size="13" fill="#A7F3D0">${escapeXml(label.slice(54, 108))}</text></svg>`), left: 0, top: thumbHeight - 64 }])
+        .png()
+        .toBuffer(),
+      left,
+      top,
+    });
+  }
+  const sheetPath = path.join(outputDir, "contact-sheet.png");
+  await sharp({ create: { width, height, channels: 4, background: "#0B1117" } }).composite(composites).png().toFile(sheetPath);
+  console.log(sheetPath);
+}
+
 function escapeXml(value: string): string {
   return value.replace(/[<>&'"]/g, (char) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "'": "&apos;", '"': "&quot;" })[char] || char);
 }
@@ -428,7 +491,7 @@ async function runAssetSelectionSmoke(): Promise<void> {
   assertEqual(pay.visual_job.background_layer?.asset_path, payBackground, "Pay background selected");
   assertEqual(pay.visual_job.style_assets?.icon, payIcon, "Pay icon selected");
   const payCompose = await composeVisualJob(pay.visual_job);
-  assertIncludes(payCompose.warnings.join("; "), "composer_usage background=asset character=asset logo=asset icon=asset", "Pay composer used assets");
+  assertIncludes(payCompose.warnings.join("; "), "composer_usage background=asset character=asset title=composer_fallback logo=asset icon=asset", "Pay composer used assets");
 
   console.log([
     "ASSET SELECTION SMOKE OK",
@@ -440,6 +503,64 @@ async function runAssetSelectionSmoke(): Promise<void> {
     `Pay background: ${pay.visual_job.background_layer?.asset_path}`,
     `Pay icon: ${pay.visual_job.style_assets?.icon}`,
   ].join("\n"));
+}
+
+async function createLayeredSmokeManifest(root: string) {
+  const sharpModule = await import("sharp");
+  const sharp = sharpModule.default;
+  await fs.mkdir(root, { recursive: true });
+  async function asset(fileName: string, color: string): Promise<string> {
+    const filePath = path.join(root, fileName);
+    await sharp({ create: { width: 480, height: 480, channels: 4, background: color } }).png().toFile(filePath);
+    return filePath;
+  }
+  return {
+    version: "layered-smoke",
+    assets: [
+      fakeAsset("monopoly-character", "monopoly", "character", await asset("monopoly-ded.png", "#f6c453"), "main_character", "locked", ["ded", "main"], 100),
+      fakeAsset("monopoly-background", "monopoly", "background", await asset("monopoly-bg.png", "#f97316"), "background", "replaceable", ["wide", "promo"], 50),
+      fakeAsset("monopoly-title", "monopoly", "reference", await asset("monopoly-ref.png", "#facc15"), "style_reference", "reference_only", ["promo", "style"], 20),
+      fakeAsset("pay-logo", "monopoly_pay", "logo", await asset("pay-logo.png", "#18d47b"), "brand_logo", "locked", ["main", "pay"], 100),
+      fakeAsset("pay-character", "monopoly_pay", "character", await asset("pay-character.png", "#38bdf8"), "main_character", "locked", ["main", "pay"], 100),
+      fakeAsset("pay-background", "monopoly_pay", "background", await asset("pay-bg.png", "#0f172a"), "background", "replaceable", ["wide", "pay"], 50),
+    ],
+  };
+}
+
+async function runLayeredSmoke(): Promise<void> {
+  const { buildVisualJobFromCommand } = await import("./jobBuilder");
+  const { composeVisualJob } = await import("./compose");
+  const manifest = await createLayeredSmokeManifest(path.join(process.cwd(), ".storage", "visual_layered_smoke"));
+  const monopoly = await buildVisualJobFromCommand({ command_text: "сделай 1920x1080 картинку для монополии история знакомства", asset_manifest: manifest as never, options: { enable_ai: false } });
+  if (monopoly.visual_job.layout.width !== 1920 || monopoly.visual_job.layout.height !== 1080) throw new Error("Monopoly layered smoke expected 1920x1080.");
+  if (!monopoly.visual_job.character_layer?.asset_path || !monopoly.visual_job.background_layer?.asset_path) throw new Error("Monopoly layered smoke missing background/character layer.");
+  if (!monopoly.visual_job.title_image_layer?.enabled) throw new Error("Monopoly title_image_layer missing.");
+  const monopolyOut = await composeVisualJob(monopoly.visual_job);
+  if (monopolyOut.width !== 1920 || monopolyOut.height !== 1080) throw new Error("Monopoly final output expected 1920x1080.");
+
+  const pay = await buildVisualJobFromCommand({ command_text: "для монополии пэй нужна новая картинка с текстом Яндекс-Яндекс", asset_manifest: manifest as never, options: { enable_ai: false } });
+  const payOut = await composeVisualJob(pay.visual_job);
+  if (payOut.width !== 1920 || payOut.height !== 1080) throw new Error("Pay final output expected 1920x1080.");
+  if (!pay.visual_job.character_layer?.asset_path || !pay.visual_job.logo_layer?.asset_path) throw new Error("Pay layered smoke missing character/logo layer.");
+
+  const hockey = await buildVisualJobFromCommand({ command_text: "задача для хоккея набор детей", options: { enable_ai: false } });
+  if (hockey.visual_job.layout.width !== 1024 || hockey.visual_job.layout.height !== 1024) throw new Error(`Hockey default expected 1024x1024, got ${hockey.visual_job.layout.width}x${hockey.visual_job.layout.height}.`);
+  console.log(JSON.stringify({ ok: true, monopoly: `${monopolyOut.width}x${monopolyOut.height}`, pay: `${payOut.width}x${payOut.height}`, hockey: `${hockey.visual_job.layout.width}x${hockey.visual_job.layout.height}` }, null, 2));
+}
+
+async function runLayerPackSmoke(): Promise<void> {
+  const { buildVisualJobFromCommand } = await import("./jobBuilder");
+  const { composeVisualJob } = await import("./compose");
+  const { exportLayerPack } = await import("./layerPack/exportLayerPack");
+  const manifest = await createLayeredSmokeManifest(path.join(process.cwd(), ".storage", "visual_layer_pack_smoke"));
+  const built = await buildVisualJobFromCommand({ command_text: "сделай картинку для монополии история знакомства", asset_manifest: manifest as never, options: { enable_ai: false } });
+  const composed = await composeVisualJob(built.visual_job);
+  const pack = await exportLayerPack({ job_id: "layer-pack-smoke", visual_job: built.visual_job, final_output_path: composed.output_path, manifest });
+  const finalExists = await fs.stat(path.join(pack.folder_path, "final.png")).then((stat) => stat.isFile()).catch(() => false);
+  const jobExists = await fs.stat(path.join(pack.folder_path, "visual_job.json")).then((stat) => stat.isFile()).catch(() => false);
+  const zipExists = await fs.stat(pack.zip_path).then((stat) => stat.isFile() && stat.size > 0).catch(() => false);
+  if (!finalExists || !jobExists || !zipExists) throw new Error("Layer pack smoke missing final.png, visual_job.json or zip.");
+  console.log(JSON.stringify({ ok: true, folder_path: pack.folder_path, zip_path: pack.zip_path }, null, 2));
 }
 
 function fakeAsset(
@@ -537,6 +658,11 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (options.qualitySheet) {
+    await runQualitySheet();
+    return;
+  }
+
   if (options.aiSmoke) {
     await runAiSmoke(options);
     return;
@@ -549,6 +675,16 @@ async function main(): Promise<void> {
 
   if (options.assetSelectionSmoke) {
     await runAssetSelectionSmoke();
+    return;
+  }
+
+  if (options.layeredSmoke) {
+    await runLayeredSmoke();
+    return;
+  }
+
+  if (options.layerPackSmoke) {
+    await runLayerPackSmoke();
     return;
   }
 

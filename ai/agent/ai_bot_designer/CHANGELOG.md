@@ -2,6 +2,23 @@
 
 ## 2026-07-03
 
+### DNK MVP 1.47 layered visual pipeline
+
+- Added Photoshop-like layers for Monopoly/Pay: background, character, title image, logo, decor and final composite.
+- Added project output presets: Monopoly/Pay/Casper default to `1920x1080`, Hockey defaults to `1024x1024`.
+- Added Telegram document delivery for original PNG and layer-pack ZIP export.
+- Added `visual:layered-smoke` and `visual:layer-pack-smoke`.
+- Added `V1_6_LAYERED_PIPELINE_TEST_PLAN.md`.
+
+### DNK MVP 1.45 Monopoly/Pay visual quality pass
+
+- Added auto-fit text rendering metadata for final font size, line count, shrink and truncation.
+- Reworked Monopoly layouts around locked character placement, safe title areas, real background usage and no fake logo when logo asset is absent.
+- Reworked Monopoly Pay layouts around Pay character/logo/background, readable title zones, icons/pills fallback and CTA fit.
+- Added production layout variants for Monopoly and Pay and updated layout revision cycling.
+- Added `visual:quality-sheet` for local Monopoly/Pay manual quality review.
+- Added `V1_5_VISUAL_QUALITY_TEST_PLAN.md`.
+
 ### DNK Visual Bot v1.5.1 debug/webhook hardening
 
 - `/debug_job` now sends a compact Telegram-safe summary.

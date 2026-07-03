@@ -1,6 +1,7 @@
 ﻿import type { OutputFormat, VisualMode, VisualProjectKey } from "../types";
 import type { UploadedAsset } from "./types";
 import { hasAny } from "./detectProject";
+import { defaultOutputFormatByProject } from "./outputPresets";
 
 export function detectVisualMode(
   commandText: string,
@@ -34,12 +35,14 @@ export function detectOutputFormat(
 
   if (hasStandaloneToken(text, "a4") || hasStandaloneToken(text, "а4")) return "print_a4";
   if (hasStandaloneToken(text, "a5") || hasStandaloneToken(text, "а5")) return "print_a5";
-  if (hasAny(text, ["сторис", "story", "1080x1920"])) return "story";
-  if (hasStandaloneToken(text, "vk") || hasStandaloneToken(text, "вк") || hasAny(text, ["1080x1350"])) return "vk_post";
+  if (hasAny(text, ["1920x1080", "1920х1080", "широк", "горизонт"])) return "wide_1920x1080";
+  if (hasAny(text, ["1024x1024", "1024х1024"])) return "square_1024x1024";
+  if (hasAny(text, ["1080x1080", "1080х1080", "квадрат"])) return "square_1080x1080";
+  if (hasAny(text, ["сторис", "story", "1080x1920", "1080х1920"])) return "story_1080x1920";
+  if (hasStandaloneToken(text, "vk") || hasStandaloneToken(text, "вк") || hasAny(text, ["1080x1350", "1080х1350"])) return "vertical_1080x1350";
 
   if (visualMode === "hockey_print_layout") return "print_a4";
-  if (projectKey === "gorilla_hockey") return "vk_post";
-  return "square";
+  return defaultOutputFormatByProject[projectKey] || "wide_1920x1080";
 }
 
 function hasStandaloneToken(text: string, token: string): boolean {

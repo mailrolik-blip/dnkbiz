@@ -1,5 +1,28 @@
 # DNK Visual Composer MVP
 
+## DNK MVP 1.47 layered pipeline
+
+Monopoly and Monopoly Pay now use a Photoshop-like layer model:
+
+```text
+background_layer -> character_layer -> title_image_layer -> logo_layer -> decor_layer -> final_composite
+```
+
+Default output presets:
+
+- Monopoly / Monopoly Pay / Casper: `wide_1920x1080`
+- Gorilla Hockey: `square_1024x1024`
+
+Layer pack export writes local ZIP files under `.storage/visual_layer_packs/`.
+
+Local checks:
+
+```bash
+npm run visual:layered-smoke
+npm run visual:layer-pack-smoke
+npm run visual:quality-sheet
+```
+
 Local backend composer for Visual Production Bot v2.2.
 
 It accepts a `visual_job` JSON, assembles image layers with `sharp`, and writes a PNG. It does not call external APIs, n8n, Telegram, or image generation services.

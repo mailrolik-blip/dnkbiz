@@ -200,3 +200,15 @@ v1.3 AI implementation:
 - Usage guard prevents accidental image spend.
 - Revisions can regenerate illustration/background layers when AI is enabled.
 - Production composer still owns Russian text rendering.
+# DNK MVP 1.47 layered visual pipeline note
+
+Native Telegram visual bot now treats Monopoly and Monopoly Pay as layered production jobs:
+
+- background layer;
+- character/ded layer;
+- title image layer;
+- logo layer;
+- decor layer;
+- final composite.
+
+Original PNG delivery uses Telegram `sendDocument`; layer packs are exported as ZIP files under `.storage/visual_layer_packs/`.

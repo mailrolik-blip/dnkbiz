@@ -71,6 +71,7 @@ prisma/dev.db
 /ai/agent/visual_composer/.cache/
 /ai/agent/visual_composer/examples/outputs/*.png
 /ai/agent/visual_composer/examples/outputs/project-smoke/*.png
+/ai/agent/visual_composer/examples/outputs/quality-sheet/*.png
 /ai/agent/visual_composer/examples/outputs/jobs/*.json
 /ai/agent/visual_composer/examples/outputs/jobs/**/*.json
 /ai/agent/visual_assets/manifest.local.json
@@ -81,5 +82,6 @@ prisma/dev.db
 !/ai/agent/visual_assets/manual_project_packs/**/.gitkeep
 !/ai/agent/visual_assets/manual_project_packs/**/*.example.json
 /.storage/
+/ai/agent/visual_composer/examples/outputs/quality-sheet/
 /public/generated/visual/*
 !/public/generated/visual/.gitkeep

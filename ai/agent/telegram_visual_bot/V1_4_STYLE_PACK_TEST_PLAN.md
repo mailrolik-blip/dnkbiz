@@ -153,3 +153,13 @@ composer: composer_usage background=asset character=asset logo=asset
 ```
 
 If AI image limit is reached, `/debug_job` should show `AI skipped reason: daily_limit`; this must not hide asset selection lines.
+
+# v1.5 visual quality follow-up
+
+After style-pack selection passes, run:
+
+```bash
+npm run visual:quality-sheet
+```
+
+Then use `V1_5_VISUAL_QUALITY_TEST_PLAN.md` for manual Telegram checks covering Monopoly title fit, locked character placement, Pay logo/background/character usage and `Новый вариант` layout cycling.

@@ -16,6 +16,11 @@ class MockTelegramClient {
     return { ok: true };
   }
 
+  async sendDocumentFromFile(chatId, filePath, caption, replyMarkup) {
+    this.calls.push({ method: "sendDocumentFromFile", chatId, filePath, caption, replyMarkup });
+    return { ok: true };
+  }
+
   async answerCallbackQuery(callbackQueryId, text) {
     this.calls.push({ method: "answerCallbackQuery", callbackQueryId, text });
     return { ok: true };

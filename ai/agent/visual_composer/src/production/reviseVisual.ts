@@ -65,10 +65,14 @@ export async function reviseProducedVisual(input: ReviseProducedVisualInput): Pr
       revision_target: input.target,
       enable_ai: true,
     };
-    if (input.target === "illustration" && record.detected.visual_mode !== "hockey_photo_template") {
+    if ((input.target === "illustration" || input.target === "character") && record.detected.visual_mode !== "hockey_photo_template") {
+      if (input.target === "character" && revision.visual_job.character_layer?.locked) {
+        revision.warnings.push("Новая поза персонажа требует image reference/edit flow. Сейчас сохраняю locked character и меняю композицию/окружение.");
+      } else {
       const aiLayer = await provider.generateIllustrationLayer(aiInput);
       if (aiLayer.asset_path) revision.visual_job.illustration_layer = { enabled: true, ...revision.visual_job.illustration_layer, ...aiLayer };
       if (aiLayer.warnings?.length) revision.warnings.push(...aiLayer.warnings);
+      }
     }
     if (input.target === "background" && record.detected.visual_mode !== "hockey_photo_template") {
       const aiLayer = record.detected.project_key === "casper"
@@ -77,7 +81,7 @@ export async function reviseProducedVisual(input: ReviseProducedVisualInput): Pr
       if (aiLayer.asset_path) revision.visual_job.background_layer = { enabled: true, ...revision.visual_job.background_layer, ...aiLayer };
       if (aiLayer.warnings?.length) revision.warnings.push(...aiLayer.warnings);
     }
-    if (input.target === "text" && shouldUseAiForText(input.instruction)) {
+    if ((input.target === "text" || input.target === "title_image") && shouldUseAiForText(input.instruction)) {
       const aiText = await provider.generateTextLayer(aiInput);
       revision.visual_job.text_layer = {
         ...(revision.visual_job.text_layer || { enabled: true }),
@@ -121,7 +125,8 @@ export async function reviseProducedVisual(input: ReviseProducedVisualInput): Pr
     height: composeResult.height,
     created_at: now,
   });
-  record.layers[input.target === "format" ? "layout" : input.target].last_updated_at = now;
+  const layerKey = input.target === "format" ? "layout" : input.target === "title_image" ? "text" : input.target === "character" ? "illustration" : input.target;
+  record.layers[layerKey].last_updated_at = now;
   record.history.push({
     type: "revised",
     message: `${input.target}: ${input.instruction}`,

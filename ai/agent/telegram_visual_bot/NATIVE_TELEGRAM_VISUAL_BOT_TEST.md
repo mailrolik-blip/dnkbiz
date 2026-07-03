@@ -274,3 +274,32 @@ Run the no-network debug chunking smoke:
 ```bash
 npm run telegram:visual:debug-smoke
 ```
+
+# v1.5 visual quality pass
+
+Manual quality plan:
+
+```text
+ai/agent/telegram_visual_bot/V1_5_VISUAL_QUALITY_TEST_PLAN.md
+```
+
+Generate local Monopoly/Pay quality sheet:
+
+```bash
+npm run visual:quality-sheet
+```
+
+# v1.47 layered pipeline
+
+Manual plan:
+
+```text
+ai/agent/telegram_visual_bot/V1_6_LAYERED_PIPELINE_TEST_PLAN.md
+```
+
+Check original delivery buttons:
+
+```text
+PNG без сжатия
+Слои ZIP
+```

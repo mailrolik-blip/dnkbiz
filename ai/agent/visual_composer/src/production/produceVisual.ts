@@ -57,6 +57,14 @@ export async function produceVisualFromCommand(input: ProduceVisualInput): Promi
     jobId,
   );
   const composeResult = await composeVisualJob({ ...buildResult.visual_job, output_path: outputPath });
+  buildResult.visual_job.final_composite = {
+    ...(buildResult.visual_job.final_composite || {}),
+    output_path: composeResult.output_path,
+    output_url: relativeUrl,
+    width: composeResult.width,
+    height: composeResult.height,
+    delivery_mode: buildResult.visual_job.output_format === "print_a4" || buildResult.visual_job.output_format === "print_a5" ? "document" : "preview",
+  };
   const quality = qualityCheckVisual({
     visual_job: buildResult.visual_job,
     compose_result: composeResult,

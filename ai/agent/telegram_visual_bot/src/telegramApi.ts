@@ -43,6 +43,17 @@ export class TelegramApi implements TelegramClient {
     return this.parseTelegramResponse(response);
   }
 
+  async sendDocumentFromFile(chatId: string | number, filePath: string, caption?: string, replyMarkup?: TelegramReplyMarkup): Promise<unknown> {
+    const file = await fs.readFile(filePath);
+    const form = new FormData();
+    form.append("chat_id", String(chatId));
+    form.append("document", new Blob([new Uint8Array(file)], { type: "application/octet-stream" }), path.basename(filePath));
+    if (caption) form.append("caption", caption);
+    if (replyMarkup) form.append("reply_markup", JSON.stringify(replyMarkup));
+    const response = await fetch(`${this.apiBase}/sendDocument`, { method: "POST", body: form });
+    return this.parseTelegramResponse(response);
+  }
+
   async answerCallbackQuery(callbackQueryId: string, text?: string): Promise<unknown> {
     return this.postJson("answerCallbackQuery", {
       callback_query_id: callbackQueryId,

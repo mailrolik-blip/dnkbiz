@@ -15,7 +15,7 @@ export interface AiLayerInput {
     description?: string;
   }>;
   locked_assets?: string[];
-  revision_target?: "text" | "illustration" | "background" | "layout" | "format";
+  revision_target?: "text" | "title_image" | "character" | "illustration" | "background" | "layout" | "format";
   enable_ai?: boolean;
 }
 

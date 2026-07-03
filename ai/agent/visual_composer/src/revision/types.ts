@@ -1,7 +1,7 @@
 import type { OutputFormat, VisualJob } from "../types";
 import type { UploadedAsset } from "../jobBuilder";
 
-export type RevisionTarget = "text" | "illustration" | "background" | "layout" | "format";
+export type RevisionTarget = "text" | "title_image" | "character" | "illustration" | "background" | "layout" | "format";
 
 export interface ReviseVisualJobInput {
   visual_job: VisualJob;

@@ -72,7 +72,8 @@ function chooseLayout(input: BuildVisualJobInput, text: TextLayerParts): string 
 }
 
 function sizeFor(format: OutputFormat) {
-  if (format === "story") return { width: 1080, height: 1920 };
-  if (format === "vk_post") return { width: 1080, height: 1350 };
-  return { width: 1080, height: 1080 };
+  if (format === "story" || format === "story_1080x1920") return { width: 1080, height: 1920 };
+  if (format === "vk_post" || format === "vertical_1080x1350") return { width: 1080, height: 1350 };
+  if (format === "square" || format === "square_1080x1080") return { width: 1080, height: 1080 };
+  return { width: 1920, height: 1080 };
 }

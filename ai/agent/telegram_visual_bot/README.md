@@ -202,3 +202,23 @@ Local check:
 ```bash
 npm run telegram:visual:debug-smoke
 ```
+
+## DNK MVP 1.47 layered delivery
+
+Generation buttons include:
+
+```text
+PNG без сжатия
+Слои ZIP
+```
+
+`PNG без сжатия` sends the current output through Telegram `sendDocument`.
+`Слои ZIP` exports the current layered job to `.storage/visual_layer_packs/` and sends the ZIP as a document.
+
+Monopoly and Pay default to `1920x1080`; Hockey defaults to `1024x1024`.
+
+Manual plan:
+
+```text
+ai/agent/telegram_visual_bot/V1_6_LAYERED_PIPELINE_TEST_PLAN.md
+```

@@ -30,6 +30,8 @@ export interface VisualBotHandleResult {
 
 const REVISION_LABELS: Record<RevisionTarget, string> = {
   text: "текст",
+  title_image: "текст",
+  character: "деда/персонажа",
   illustration: "иллюстрацию",
   background: "фон",
   layout: "композицию",
@@ -41,7 +43,7 @@ export function visualRevisionKeyboard() {
     inline_keyboard: [
       [
         { text: "✏️ Текст", callback_data: "visual:revise:text" },
-        { text: "Иллюстрация", callback_data: "visual:revise:illustration" },
+        { text: "Дед/персонаж", callback_data: "visual:revise:character" },
       ],
       [
         { text: "Фон", callback_data: "visual:revise:background" },
@@ -50,6 +52,10 @@ export function visualRevisionKeyboard() {
       [
         { text: "Новый вариант", callback_data: "visual:regenerate" },
         { text: "Текст поста", callback_data: "visual:show_post_text" },
+      ],
+      [
+        { text: "PNG без сжатия", callback_data: "visual:send_original" },
+        { text: "Слои ZIP", callback_data: "visual:send_layer_pack" },
       ],
       [{ text: "❌ Закрыть", callback_data: "visual:close" }],
     ],
@@ -255,13 +261,24 @@ async function handleCallback(callbackQueryId: string, chatId: string, userId: s
     await sendPostText(chatId, state.active_job_id, deps.telegram);
     return;
   }
+  if (data === "visual:send_original") {
+    await deps.telegram.answerCallbackQuery(callbackQueryId, "Отправляю PNG");
+    await sendOriginalPng(chatId, state.active_job_id, deps.telegram);
+    return;
+  }
+  if (data === "visual:send_layer_pack") {
+    await deps.telegram.answerCallbackQuery(callbackQueryId, "Собираю ZIP");
+    await sendLayerPack(chatId, state.active_job_id, deps.telegram);
+    return;
+  }
   if (data === "visual:regenerate") {
     await deps.telegram.answerCallbackQuery(callbackQueryId, "Собираю новый вариант");
     await regenerateActiveJob(chatId, userId, state.active_job_id, deps, stateStore);
     return;
   }
-  const target = data.replace("visual:revise:", "") as VisualRevisionTarget;
-  if (!["text", "illustration", "background", "layout"].includes(target)) {
+  let target = data.replace("visual:revise:", "") as VisualRevisionTarget;
+  if (target === "illustration" && state.last_project_key && ["monopoly", "monopoly_pay"].includes(state.last_project_key)) target = "character";
+  if (!["text", "title_image", "character", "illustration", "background", "layout"].includes(target)) {
     await deps.telegram.answerCallbackQuery(callbackQueryId, "Неизвестное действие");
     return;
   }
@@ -275,6 +292,8 @@ async function handleCallback(callbackQueryId: string, chatId: string, userId: s
   await stateStore.setAwaitingRevision(chatId, target);
   const prompts: Record<string, string> = {
     text: "✏️ Напиши новый текст или правку текста.\nНапример: поменяй текст на НОВЫЙ СПОСОБ ОПЛАТЫ",
+    title_image: "✏️ Напиши новый заголовок. Для Monopoly/Pay будет пересобран только title image layer.",
+    character: "Напиши, что изменить у деда/персонажа. Например: дед держит кубок. Locked character сохраняется без explicit unlock.",
     illustration: "Напиши, что изменить в иллюстрации.\nНапример: сделай другую иллюстрацию / замени персонажа",
     background: "Напиши, что изменить в фоне.\nНапример: сделай фон темнее / замени фон",
     layout: "Напиши, как поменять композицию.\nНапример: сделай другую композицию / текст вниз",
@@ -290,7 +309,15 @@ async function handleNewVisualTask(chatId: string, userId: string | undefined, t
     source: { chat_id: chatId, user_id: userId },
     options: { enable_ai: Boolean(deps.enableAi) },
   });
-  await deps.telegram.sendPhotoFromFile(chatId, result.output_path, buildProducedCaption(result), visualRevisionKeyboard());
+  if ((result.visual_job.output_format === "print_a4" || result.visual_job.output_format === "print_a5") && deps.telegram.sendDocumentFromFile) {
+    await deps.telegram.sendPhotoFromFile(chatId, result.output_path, buildProducedCaption(result), visualRevisionKeyboard());
+    await deps.telegram.sendDocumentFromFile(chatId, result.output_path, "PNG без сжатия");
+  } else {
+    await deps.telegram.sendPhotoFromFile(chatId, result.output_path, buildProducedCaption(result), visualRevisionKeyboard());
+  }
+  if (process.env.VISUAL_BOT_AUTO_SEND_ORIGINAL === "true" && deps.telegram.sendDocumentFromFile) {
+    await deps.telegram.sendDocumentFromFile(chatId, result.output_path, "PNG без сжатия");
+  }
   if (deps.sendPostText && result.post_caption) await deps.telegram.sendMessage(chatId, `Текст поста:\n${result.post_caption}`);
   await stateStore.setActiveJob({ chat_id: chatId, user_id: userId, active_job_id: result.job_id, active_output_path: result.output_path, active_output_url: result.output_url, last_project_key: result.detected.project_key, last_visual_mode: result.detected.visual_mode });
 }
@@ -340,6 +367,45 @@ async function sendPostText(chatId: string, activeJobId: string | undefined, tel
   await telegram.sendMessage(chatId, postText ? `Текст поста:\n${postText}` : "Текст поста пока не создан.");
 }
 
+async function sendOriginalPng(chatId: string, activeJobId: string | undefined, telegram: TelegramClient) {
+  if (!activeJobId) {
+    await telegram.sendMessage(chatId, "Нет активной картинки для отправки PNG.");
+    return;
+  }
+  const record = await new FileVisualJobStore().get(activeJobId);
+  const outputPath = record?.outputs.at(-1)?.output_path || record?.visual_job.output_path;
+  if (!record || !outputPath) {
+    await telegram.sendMessage(chatId, "Не нашел output_path для PNG.");
+    return;
+  }
+  if (!telegram.sendDocumentFromFile) {
+    await telegram.sendMessage(chatId, `PNG без сжатия: ${outputPath}`);
+    return;
+  }
+  await telegram.sendDocumentFromFile(chatId, outputPath, "PNG без сжатия");
+}
+
+async function sendLayerPack(chatId: string, activeJobId: string | undefined, telegram: TelegramClient) {
+  if (!activeJobId) {
+    await telegram.sendMessage(chatId, "Нет активной картинки для ZIP слоёв.");
+    return;
+  }
+  const record = await new FileVisualJobStore().get(activeJobId);
+  const outputPath = record?.outputs.at(-1)?.output_path || record?.visual_job.output_path;
+  if (!record || !outputPath) {
+    await telegram.sendMessage(chatId, "Не нашел output_path для ZIP слоёв.");
+    return;
+  }
+  const { exportLayerPack } = await import("../../visual_composer/src/layerPack/exportLayerPack");
+  const { loadDefaultAssetManifest } = await import("../../visual_composer/src/assets/assetResolver");
+  const pack = await exportLayerPack({ job_id: activeJobId, visual_job: record.visual_job, final_output_path: outputPath, manifest: loadDefaultAssetManifest() });
+  if (!telegram.sendDocumentFromFile) {
+    await telegram.sendMessage(chatId, `ZIP слоёв: ${pack.zip_path}`);
+    return;
+  }
+  await telegram.sendDocumentFromFile(chatId, pack.zip_path, "Слои ZIP");
+}
+
 async function safeSendDebugJob(chatId: string, telegram: TelegramClient, stateStore: TelegramStateStore, full: boolean) {
   try {
     await sendDebugJob(chatId, telegram, stateStore, full);
@@ -379,6 +445,7 @@ async function sendDebugJob(chatId: string, telegram: TelegramClient, stateStore
     `project: ${record.detected.project_key}`,
     `mode: ${record.detected.visual_mode}`,
     `layout: ${job.layout.variant}`,
+    `resolved_size: ${job.layout.width || job.final_composite?.width || "-"}x${job.layout.height || job.final_composite?.height || "-"}`,
     `versions: ${record.outputs.length}`,
     `title: ${job.text_layer?.text || "-"}`,
     `post_caption: ${record.post_caption ? "yes" : "no"}`,
@@ -392,6 +459,8 @@ async function sendDebugJob(chatId: string, telegram: TelegramClient, stateStore
     `AI image attempted: ${(record.ai_generation_log || []).some((line) => line.includes("AI requested")) ? "yes" : "no"}`,
     `AI skipped reason: ${aiSkippedReason}`,
     `background: ${job.background_layer?.asset_path || "-"}`,
+    `character_layer: ${job.character_layer?.asset_path || job.illustration_layer?.asset_path || "-"}`,
+    `title_image_layer: source=${job.title_image_layer?.source || "-"} path=${job.title_image_layer?.asset_path || job.title_image_layer?.generated_asset_path || "-"} transparent=${job.title_image_layer?.transparent_background ? "yes" : "no"} text=${job.title_image_layer?.text || "-"}`,
     `illustration: ${job.illustration_layer?.asset_path || "-"}`,
     `logo: ${job.brand?.logo_path || "-"}`,
     `main_character: ${job.style_assets?.main_character || "-"}`,

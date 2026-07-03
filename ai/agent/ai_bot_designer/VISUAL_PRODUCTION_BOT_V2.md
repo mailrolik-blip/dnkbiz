@@ -556,3 +556,12 @@ v1.1 moves the bot from placeholder-only output to project-aware production fall
 - Real client assets should be placed only under `ai/agent/visual_assets/manual_project_packs/` and indexed with `npm run visual:assets:index`.
 
 n8n remains as an optional integration layer, not the primary path.
+# DNK MVP 1.47 layered visual pipeline note
+
+For Monopoly and Monopoly Pay, the production path is now Photoshop-like:
+
+```text
+background_layer -> character_layer -> title_image_layer -> logo_layer -> decor_layer -> final_composite
+```
+
+Telegram can send a compressed preview plus original PNG as document, and can export a ZIP layer pack for manual Photoshop editing.

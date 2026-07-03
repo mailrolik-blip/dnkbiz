@@ -9,7 +9,7 @@ export interface QualityCheckInput {
     uploaded_photo_required?: boolean;
   };
   previous_job?: VisualJob;
-  revision_target?: "text" | "illustration" | "background" | "layout" | "format";
+  revision_target?: "text" | "title_image" | "character" | "illustration" | "background" | "layout" | "format";
 }
 
 export interface QualityCheckResult {

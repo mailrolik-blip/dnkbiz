@@ -1,61 +1,141 @@
-﻿import path from "node:path";
+import path from "node:path";
 import sharp from "sharp";
 import { VisualJob, ComposeResult, RenderContext } from "../types";
 import { loadImageOrPlaceholder } from "../utils/loadImage";
-import { renderPillSvg, renderTextSvg } from "../utils/renderText";
+import { renderFittedTextSvg, renderPillSvg } from "../utils/renderText";
+
+interface Box {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
 
 export async function renderMonopolySquare(job: VisualJob, context: RenderContext): Promise<ComposeResult> {
   const width = job.layout.width || 1080;
   const height = job.layout.height || 1080;
-  const safe = job.layout.safe_area || 64;
+  const safe = Math.max(48, job.layout.safe_area || 64);
   const colors = {
     primary: job.brand?.colors?.primary || "#FFD000",
     accent: job.brand?.colors?.accent || "#FF4A00",
     dark: job.brand?.colors?.dark || "#121A20",
     light: job.brand?.colors?.light || "#FFF3C4",
   };
-  const variant = job.layout.variant || "monopoly_square_title_top";
-  const headline = job.text_layer?.text || job.source_text || "MONOPOLY VISUAL";
-  const subtitle = job.text_layer?.subtitle || job.text_layer?.sticker || "";
+  const variant = normalizeMonopolyVariant(job.layout.variant || "character_center_title_top");
+  const headline = cleanMonopolyHeadline(job.text_layer?.text || job.source_text || "MONOPOLY VISUAL");
+  const sticker = job.text_layer?.sticker || "";
   const isStory = height > width * 1.3;
 
   const background = await loadImageOrPlaceholder({ assetPath: job.background_layer?.asset_path, repoRoot: context.repoRoot, composerRoot: context.composerRoot, width, height, label: "Monopoly background", kind: "background", colors, warnings: context.warnings });
-  const illustration = await loadImageOrPlaceholder({ assetPath: job.illustration_layer?.asset_path, repoRoot: context.repoRoot, composerRoot: context.composerRoot, width: Math.round(width * 0.72), height: Math.round(height * 0.52), label: "Monopoly illustration", kind: "illustration", colors, warnings: context.warnings });
-  const logo = await loadImageOrPlaceholder({ assetPath: job.brand?.logo_path, repoRoot: context.repoRoot, composerRoot: context.composerRoot, width: 220, height: 96, label: "DNK", kind: "logo", colors, warnings: context.warnings });
-  context.warnings.push(`composer_usage background=${background.existed ? "asset" : "fallback"} character=${illustration.existed && job.illustration_layer?.locked ? "asset" : illustration.existed ? "illustration_asset" : "fallback"} logo=${logo.existed ? "asset" : "fallback"}`);
+  const character = await loadImageOrPlaceholder({ assetPath: job.character_layer?.asset_path || job.illustration_layer?.asset_path, repoRoot: context.repoRoot, composerRoot: context.composerRoot, width: Math.round(width * 0.55), height: Math.round(height * 0.55), label: "Monopoly character", kind: "illustration", colors, warnings: context.warnings });
+  const titleImage = job.title_image_layer?.asset_path || job.title_image_layer?.generated_asset_path
+    ? await loadImageOrPlaceholder({ assetPath: job.title_image_layer.asset_path || job.title_image_layer.generated_asset_path, repoRoot: context.repoRoot, composerRoot: context.composerRoot, width: Math.round(width * 0.58), height: Math.round(height * 0.25), label: "Monopoly title", kind: "illustration", colors, warnings: context.warnings })
+    : null;
+  const logo = job.brand?.logo_path
+    ? await loadImageOrPlaceholder({ assetPath: job.brand.logo_path, repoRoot: context.repoRoot, composerRoot: context.composerRoot, width: 220, height: 96, label: "Logo", kind: "logo", colors, warnings: context.warnings })
+    : null;
+  context.warnings.push(`composer_usage background=${background.existed ? "asset" : "fallback"} character=${character.existed && (job.character_layer?.locked || job.illustration_layer?.locked) ? "asset" : character.existed ? "illustration_asset" : "fallback"} title=${titleImage?.existed ? "asset" : "composer_fallback"} logo=${logo?.existed ? "asset" : "none"}`);
+  if (!background.existed) context.warnings.push("quality_warning background missing; fallback background used.");
+  if (!character.existed) context.warnings.push("quality_warning character missing; fallback illustration used.");
 
-  const composites: sharp.OverlayOptions[] = [];
-  composites.push({ input: await sharp(background.input).resize(width, height, { fit: "cover" }).png().toBuffer(), left: 0, top: 0 });
-  composites.push({ input: Buffer.from(`<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg"><rect width="${width}" height="${height}" fill="#000000" opacity="0.10"/><circle cx="${width * 0.14}" cy="${height * 0.12}" r="${width * 0.15}" fill="#ffffff" opacity="0.12"/><circle cx="${width * 0.88}" cy="${height * 0.75}" r="${width * 0.2}" fill="#ffffff" opacity="0.1"/></svg>`), left: 0, top: 0 });
-  composites.push({ input: await sharp(logo.input).resize(190, 84, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } }).png().toBuffer(), left: safe, top: safe });
+  const layout = monopolyLayout(variant, width, height, safe, isStory);
+  const composites: sharp.OverlayOptions[] = [
+    { input: await sharp(background.input).resize(width, height, { fit: "cover" }).png().toBuffer(), left: 0, top: 0 },
+    { input: readableOverlay(width, height, colors.dark, variant), left: 0, top: 0 },
+  ];
 
-  const titleAtBottom = variant === "monopoly_square_title_bottom" || variant === "monopoly_square_character_center";
-  const stickerStyle = variant === "monopoly_sticker_style";
-  const titleTop = isStory ? 220 : titleAtBottom ? Math.round(height * 0.74) : stickerStyle ? 142 : 205;
-  const titleHeight = isStory ? 260 : 190;
-  const illustrationWidth = Math.round(width * (variant === "monopoly_square_character_center" ? 0.78 : 0.72));
-  const illustrationHeight = Math.round(height * (isStory ? 0.48 : 0.54));
-  const illustrationTop = titleAtBottom ? Math.round(height * 0.18) : isStory ? Math.round(height * 0.42) : Math.round(height * 0.38);
-
-  composites.push({ input: await sharp(illustration.input).resize(illustrationWidth, illustrationHeight, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } }).png().toBuffer(), left: Math.round((width - illustrationWidth) / 2), top: illustrationTop });
-
-  if (stickerStyle || job.text_layer?.sticker) {
-    composites.push({ input: renderPillSvg(430, 76, job.text_layer?.sticker || "НОВОСТЬ", colors.accent), left: width - safe - 430, top: safe + 12 });
+  if (logo?.existed) {
+    composites.push({ input: await sharp(logo.input).resize(180, 80, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } }).png().toBuffer(), left: safe, top: safe });
   }
 
-  composites.push({ input: pseudo3dTitle(width - safe * 2, titleHeight, headline, colors.primary, colors.accent, colors.dark), left: safe, top: titleTop });
+  composites.push({
+    input: await sharp(character.input).resize(layout.character.width, layout.character.height, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } }).png().toBuffer(),
+    left: layout.character.x,
+    top: layout.character.y,
+  });
 
-  if (subtitle && !job.text_layer?.sticker) {
-    composites.push({ input: renderPillSvg(500, 74, subtitle, colors.dark), left: Math.round((width - 500) / 2), top: Math.min(height - 120, titleTop + titleHeight + 16) });
+  if (sticker || variant === "poster_sticker_style") {
+    const stickerText = sticker || "НОВЫЙ ПОСТ";
+    composites.push({ input: renderPillSvg(360, 72, stickerText, colors.accent), left: layout.sticker.x, top: layout.sticker.y });
+  }
+
+  if (titleImage?.existed) {
+    composites.push({ input: await sharp(titleImage.input).resize(layout.title.width, layout.title.height, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } }).png().toBuffer(), left: layout.title.x, top: layout.title.y });
+  } else {
+  const title = renderFittedTextSvg({
+    width: layout.title.width,
+    height: layout.title.height,
+    text: headline,
+    fontSize: layout.titleFontSize,
+    minFontSize: 46,
+    fill: colors.primary,
+    stroke: colors.dark,
+    strokeWidth: 12,
+    shadow: true,
+    uppercase: true,
+    maxLines: 2,
+    lineHeight: Math.round(layout.titleFontSize * 1.02),
+    align: layout.titleAlign,
+  });
+  if (title.wasShrunk) context.warnings.push(`quality_warning title resized to ${title.finalFontSize}.`);
+  if (title.wasTruncated) context.warnings.push("quality_warning title too long; truncated.");
+  const overlap = overlapRatio(layout.title, layout.character);
+  if (overlap > 0.08) context.warnings.push(`quality_warning title/character overlap ratio=${overlap.toFixed(2)}.`);
+  composites.push({ input: title.buffer, left: layout.title.x, top: layout.title.y });
   }
 
   await sharp({ create: { width, height, channels: 4, background: "#00000000" } }).composite(composites).png().toFile(context.outputPath);
   return { ok: true, output_path: path.resolve(context.outputPath), width, height, project_key: job.project_key, visual_mode: job.visual_mode, layout_variant: variant, warnings: context.warnings };
 }
 
-function pseudo3dTitle(width: number, height: number, text: string, primary: string, accent: string, dark: string): Buffer {
-  const fontSize = height > 220 ? 92 : 72;
-  const shadow = renderTextSvg({ width, height, text, fontSize, fill: accent, stroke: dark, strokeWidth: 14, shadow: true, uppercase: true, maxLines: 2 });
-  const front = renderTextSvg({ width, height, text, fontSize, fill: primary, stroke: "#ffffff", strokeWidth: 5, uppercase: true, maxLines: 2 });
-  return Buffer.from(`<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg"><image href="data:image/svg+xml;base64,${shadow.toString("base64")}" x="10" y="12" width="${width}" height="${height}"/><image href="data:image/svg+xml;base64,${front.toString("base64")}" x="0" y="0" width="${width}" height="${height}"/></svg>`);
+function normalizeMonopolyVariant(value: string): string {
+  const aliases: Record<string, string> = {
+    monopoly_square_title_top: "character_center_title_top",
+    monopoly_square_title_bottom: "character_center_bottom",
+    monopoly_square_character_center: "character_center_bottom",
+    monopoly_sticker_style: "poster_sticker_style",
+    monopoly_story_vertical: "character_center_title_top",
+  };
+  return aliases[value] || value;
+}
+
+function monopolyLayout(variant: string, width: number, height: number, safe: number, isStory: boolean) {
+  const titleTop = isStory ? Math.round(height * 0.12) : safe + 128;
+  const characterHeight = Math.round(height * (isStory ? 0.46 : 0.48));
+  const characterWidth = Math.round(width * 0.55);
+  const titleFull: Box = { x: safe, y: titleTop, width: width - safe * 2, height: isStory ? 280 : 220 };
+  const sticker = { x: width - safe - 360, y: safe + 10 };
+
+  if (variant === "character_right_title_left") {
+    return { title: { x: safe, y: Math.round(height * 0.18), width: Math.round(width * 0.55), height: 310 }, titleFontSize: 84, titleAlign: "left" as const, character: { x: Math.round(width * 0.48), y: Math.round(height * 0.28), width: Math.round(width * 0.46), height: characterHeight }, sticker };
+  }
+  if (variant === "character_left_title_right") {
+    return { title: { x: Math.round(width * 0.42), y: Math.round(height * 0.18), width: Math.round(width * 0.52), height: 310 }, titleFontSize: 80, titleAlign: "right" as const, character: { x: safe, y: Math.round(height * 0.28), width: Math.round(width * 0.46), height: characterHeight }, sticker: { x: safe, y: safe + 10 } };
+  }
+  if (variant === "character_center_bottom") {
+    return { title: { x: safe, y: Math.round(height * 0.70), width: width - safe * 2, height: 230 }, titleFontSize: 78, titleAlign: "center" as const, character: { x: Math.round((width - characterWidth) / 2), y: Math.round(height * 0.19), width: characterWidth, height: Math.round(height * 0.50) }, sticker };
+  }
+  if (variant === "poster_sticker_style") {
+    return { title: { x: safe, y: Math.round(height * 0.15), width: Math.round(width * 0.72), height: 240 }, titleFontSize: 78, titleAlign: "left" as const, character: { x: Math.round(width * 0.30), y: Math.round(height * 0.33), width: Math.round(width * 0.58), height: Math.round(height * 0.48) }, sticker };
+  }
+  return { title: titleFull, titleFontSize: 86, titleAlign: "center" as const, character: { x: Math.round((width - characterWidth) / 2), y: isStory ? Math.round(height * 0.42) : Math.round(height * 0.38), width: characterWidth, height: characterHeight }, sticker };
+}
+
+function cleanMonopolyHeadline(value: string): string {
+  return value.replace(/^МОНОПОЛ(ИЯ|ИИ)\s*[:\-]\s*/i, "").replace(/^MONOPOLY\s*[:\-]\s*/i, "").trim().toUpperCase();
+}
+
+function readableOverlay(width: number, height: number, dark: string, variant: string): Buffer {
+  const sideGradient = variant === "character_right_title_left"
+    ? `<linearGradient id="side" x1="0" x2="1"><stop stop-color="${dark}" stop-opacity="0.62"/><stop offset="0.62" stop-color="${dark}" stop-opacity="0.10"/><stop offset="1" stop-color="${dark}" stop-opacity="0"/></linearGradient><rect width="${width}" height="${height}" fill="url(#side)"/>`
+    : variant === "character_left_title_right"
+      ? `<linearGradient id="side" x1="1" x2="0"><stop stop-color="${dark}" stop-opacity="0.62"/><stop offset="0.62" stop-color="${dark}" stop-opacity="0.10"/><stop offset="1" stop-color="${dark}" stop-opacity="0"/></linearGradient><rect width="${width}" height="${height}" fill="url(#side)"/>`
+      : "";
+  return Buffer.from(`<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg"><defs>${sideGradient}<linearGradient id="v" x1="0" y1="0" x2="0" y2="1"><stop stop-color="${dark}" stop-opacity="0.48"/><stop offset="0.38" stop-color="${dark}" stop-opacity="0.05"/><stop offset="1" stop-color="${dark}" stop-opacity="0.46"/></linearGradient></defs><rect width="${width}" height="${height}" fill="${dark}" opacity="0.18"/><rect width="${width}" height="${height}" fill="url(#v)"/></svg>`);
+}
+
+function overlapRatio(a: Box, b: Box): number {
+  const x = Math.max(0, Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x));
+  const y = Math.max(0, Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y));
+  return (x * y) / Math.max(1, Math.min(a.width * a.height, b.width * b.height));
 }

@@ -77,6 +77,7 @@ export interface TelegramClient {
   sendMessage(chatId: string | number, text: string, replyMarkup?: TelegramReplyMarkup): Promise<unknown>;
   sendLongMessage?(chatId: string | number, text: string, replyMarkup?: TelegramReplyMarkup): Promise<unknown[]>;
   sendPhotoFromFile(chatId: string | number, filePath: string, caption?: string, replyMarkup?: TelegramReplyMarkup): Promise<unknown>;
+  sendDocumentFromFile?(chatId: string | number, filePath: string, caption?: string, replyMarkup?: TelegramReplyMarkup): Promise<unknown>;
   answerCallbackQuery(callbackQueryId: string, text?: string): Promise<unknown>;
   getFile(fileId: string): Promise<TelegramFileInfo>;
   downloadFile(filePath: string, destinationPath: string): Promise<string>;
