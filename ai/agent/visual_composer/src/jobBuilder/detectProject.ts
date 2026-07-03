@@ -4,6 +4,9 @@ export function detectProject(commandText: string, explicit?: VisualProjectKey |
   if (explicit) return explicit;
 
   const text = commandText.toLowerCase();
+  const hasExplicitMonopoly = hasAny(text, ["монопол", "monopoly"]);
+  const hasExplicitCasper = hasAny(text, ["casper", "каспер", "каспера"]);
+  const hasExplicitHockey = hasAny(text, ["хоккей", "хоккея", "хоккейную", "gorilla hockey", "горилла"]);
   if (
     hasAny(text, [
       "monopoly pay",
@@ -25,11 +28,14 @@ export function detectProject(commandText: string, explicit?: VisualProjectKey |
   ) {
     return "monopoly_pay";
   }
-  if (hasAny(text, ["хоккей", "хоккея", "хоккейную", "gorilla hockey", "горилла", "тренировка", "набор детей", "афиша", "листовка"])) {
+  if (hasExplicitCasper) return "casper";
+  if (hasExplicitMonopoly) return "monopoly";
+  if (
+    hasExplicitHockey ||
+    (!hasExplicitMonopoly && !hasExplicitCasper && hasAny(text, ["тренировка", "тренировку", "набор детей", "афиша для хоккея", "пост для хоккея", "задача для хоккея"]))
+  ) {
     return "gorilla_hockey";
   }
-  if (hasAny(text, ["casper", "каспер", "каспера"])) return "casper";
-  if (hasAny(text, ["монопол", "monopoly"])) return "monopoly";
 
   return "dnk";
 }

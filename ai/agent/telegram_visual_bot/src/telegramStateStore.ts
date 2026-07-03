@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { UploadedTelegramAsset, VisualRevisionTarget } from "./types";
+import type { VisualProjectKey } from "../../visual_composer/src/types";
 
 export type TelegramVisualBotMode = "idle" | "awaiting_visual_revision";
 
@@ -16,6 +17,7 @@ export interface TelegramVisualBotState {
   last_visual_mode?: string;
   pending_uploaded_asset?: UploadedTelegramAsset;
   asset_intake_enabled?: boolean;
+  active_asset_project?: VisualProjectKey;
   updated_at: string;
 }
 
@@ -103,6 +105,15 @@ export class TelegramStateStore {
     return this.saveChatState(chatId, {
       ...state,
       asset_intake_enabled: enabled,
+    });
+  }
+
+  async setActiveAssetProject(chatId: string, projectKey: VisualProjectKey): Promise<TelegramVisualBotState> {
+    const state = await this.getChatState(chatId);
+    return this.saveChatState(chatId, {
+      ...state,
+      asset_intake_enabled: true,
+      active_asset_project: projectKey,
     });
   }
 

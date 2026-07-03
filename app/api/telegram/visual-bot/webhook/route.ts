@@ -1,6 +1,7 @@
 import { TelegramApi } from "@/ai/agent/telegram_visual_bot/src/telegramApi";
 import { TelegramStateStore } from "@/ai/agent/telegram_visual_bot/src/telegramStateStore";
 import { handleVisualBotUpdate } from "@/ai/agent/telegram_visual_bot/src/visualBotHandler";
+import { getUpdateChatId } from "@/ai/agent/telegram_visual_bot/src/telegramUpdate";
 import type { TelegramUpdate } from "@/ai/agent/telegram_visual_bot/src/types";
 
 export const dynamic = "force-dynamic";
@@ -34,9 +35,10 @@ export async function POST(request: Request) {
     return Response.json({ ok: false, error: "INVALID_JSON" }, { status: 400 });
   }
 
+  const telegram = new TelegramApi();
   try {
     await handleVisualBotUpdate(update, {
-      telegram: new TelegramApi(),
+      telegram,
       stateStore: new TelegramStateStore(),
       enableAi: process.env.VISUAL_BOT_ENABLE_AI === "true",
       sendPostText: process.env.VISUAL_BOT_SEND_POST_TEXT === "true",
@@ -45,15 +47,14 @@ export async function POST(request: Request) {
     return Response.json({ ok: true });
   } catch (error) {
     console.error("Telegram visual bot webhook failed", error);
-    return Response.json(
-      {
-        ok: false,
-        error: {
-          code: "VISUAL_BOT_FAILED",
-          message: error instanceof Error ? error.message : "Visual bot failed.",
-        },
-      },
-      { status: 500 },
-    );
+    const chatId = getUpdateChatId(update);
+    if (chatId) {
+      try {
+        await telegram.sendMessage(chatId, `Visual bot error: ${error instanceof Error ? error.message.slice(0, 500) : "unknown error"}`);
+      } catch (notifyError) {
+        console.error("Telegram visual bot error notification failed", notifyError);
+      }
+    }
+    return Response.json({ ok: true, handled: false, error: "VISUAL_BOT_FAILED" });
   }
 }

@@ -8,6 +8,13 @@ export interface AiLayerInput {
   profile?: ProjectProfileSnapshot;
   visual_job?: VisualJob;
   selected_assets?: VisualAsset[];
+  reference_images?: Array<{
+    path: string;
+    role?: VisualAsset["role"];
+    lock_policy?: VisualAsset["lock_policy"];
+    description?: string;
+  }>;
+  locked_assets?: string[];
   revision_target?: "text" | "illustration" | "background" | "layout" | "format";
   enable_ai?: boolean;
 }

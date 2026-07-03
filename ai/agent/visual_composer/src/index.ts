@@ -17,6 +17,11 @@ interface CliOptions {
   qualityCheck?: boolean;
   contactSheet?: boolean;
   aiSmoke?: boolean;
+  stylePackSmoke?: boolean;
+  assetSelectionSmoke?: boolean;
+  aiUsage?: boolean;
+  aiUsageReset?: boolean;
+  yes?: boolean;
   image?: boolean;
   project?: string;
 }
@@ -38,6 +43,11 @@ function parseArgs(argv: string[]): CliOptions {
     if (arg === "--quality-check") options.qualityCheck = true;
     if (arg === "--contact-sheet") options.contactSheet = true;
     if (arg === "--ai-smoke") options.aiSmoke = true;
+    if (arg === "--style-pack-smoke") options.stylePackSmoke = true;
+    if (arg === "--asset-selection-smoke") options.assetSelectionSmoke = true;
+    if (arg === "--ai-usage") options.aiUsage = true;
+    if (arg === "--ai-usage-reset") options.aiUsageReset = true;
+    if (arg === "--yes") options.yes = true;
     if (arg === "--image") options.image = true;
     if (arg === "--project") options.project = argv[index + 1];
   }
@@ -203,6 +213,8 @@ async function runProjectSmoke(): Promise<void> {
   const { safeFilename } = await import("./utils/safeFilename");
   const { getComposerRoot } = await import("./compose");
   const outputDir = path.join(getComposerRoot(), "examples", "outputs", "project-smoke");
+  const { loadDefaultAssetManifest } = await import("./assets/assetResolver");
+  const manifest = loadDefaultAssetManifest();
   await fs.mkdir(outputDir, { recursive: true });
   const scenarios = [
     { name: "monopoly story acquaintance", command_text: "сделай новую картинку для монополии история знакомства" },
@@ -216,7 +228,11 @@ async function runProjectSmoke(): Promise<void> {
       uploaded_assets: [{ type: "photo" as const, asset_path: "", id: "placeholder-photo" }],
     },
   ];
-  for (const scenario of scenarios) {
+  const normalizedScenarios = scenarios.map((scenario) => ({
+    ...scenario,
+    command_text: smokeCommandByName[scenario.name] || scenario.command_text,
+  }));
+  for (const scenario of normalizedScenarios) {
     const result = await produceVisualFromCommand({
       command_text: scenario.command_text,
       uploaded_assets: scenario.uploaded_assets || [],
@@ -228,10 +244,21 @@ async function runProjectSmoke(): Promise<void> {
   }
 }
 
+const smokeCommandByName: Record<string, string> = {
+  "monopoly story acquaintance": "сделай новую картинку для монополии история знакомства",
+  "monopoly_pay yandex-yandex": "для монополии пэй нужна новая картинка с текстом Яндекс-Яндекс",
+  "casper contest": "сделай новую задачу для каспера конкурс на 3000 пользователей",
+  "gorilla hockey training": "задача для хоккея набор детей на тренировку",
+  "gorilla hockey print A4": "хоккей печать A4 набор детей 2016-2018",
+  "hockey with placeholder uploaded photo": "сделай хоккейную афишу набор детей",
+};
+
 async function runContactSheet(): Promise<void> {
   const sharpModule = await import("sharp");
   const sharp = sharpModule.default;
   const { getComposerRoot } = await import("./compose");
+  const { loadDefaultAssetManifest } = await import("./assets/assetResolver");
+  const manifest = loadDefaultAssetManifest();
   const outputDir = path.join(getComposerRoot(), "examples", "outputs", "project-smoke");
   const entries = (await fs.readdir(outputDir).catch(() => []))
     .filter((entry) => entry.endsWith(".png") && entry !== "contact-sheet.png")
@@ -250,7 +277,11 @@ async function runContactSheet(): Promise<void> {
     const left = gap + (index % columns) * (thumbWidth + gap);
     const top = gap + Math.floor(index / columns) * (thumbHeight + gap);
     const parts = entries[index].replace(/\.png$/, "").split(".");
-    const label = `${parts[1] || "project"} / ${parts[2] || "mode"} / fallback`;
+    const project = parts[1] || "project";
+    const hasBackground = manifest.assets.some((asset) => asset.project_key === project && asset.type === "background");
+    const hasCharacter = manifest.assets.some((asset) => asset.project_key === project && asset.type === "character");
+    const hasLogo = manifest.assets.some((asset) => asset.project_key === project && asset.type === "logo");
+    const label = `${project} / ${parts[2] || "mode"} / bg:${hasBackground ? "asset" : "fallback"} char:${hasCharacter ? "asset" : "fallback"} logo:${hasLogo ? "asset" : "fallback"}`;
     composites.push({
       input: await sharp(filePath)
         .resize(thumbWidth, thumbHeight, { fit: "contain", background: "#101820" })
@@ -301,15 +332,160 @@ async function runAiSmoke(options: CliOptions): Promise<void> {
   }
 }
 
+async function runStylePackSmoke(): Promise<void> {
+  const { loadDefaultAssetManifest } = await import("./assets/assetResolver");
+  const manifest = loadDefaultAssetManifest();
+  const projects = ["monopoly", "monopoly_pay", "casper", "gorilla_hockey"];
+  for (const project of projects) {
+    const assets = manifest.assets.filter((asset) => asset.project_key === project);
+    const count = (type: string) => assets.filter((asset) => asset.type === type).length;
+    const locked = assets.filter((asset) => asset.lock_policy === "locked");
+    const required = project === "monopoly"
+      ? assets.find((asset) => asset.type === "character" && asset.role === "main_character" && asset.lock_policy === "locked")
+      : project === "gorilla_hockey"
+        ? assets.find((asset) => asset.type === "logo" && asset.lock_policy === "locked")
+        : assets.find((asset) => asset.type === "logo" && asset.lock_policy === "locked") || assets.find((asset) => asset.type === "reference");
+    console.log([
+      `PROJECT ${project}`,
+      `  required_locked: ${required ? `found ${required.path}` : "missing"}`,
+      `  backgrounds=${count("background")} characters=${count("character")} references=${count("reference")} logos=${count("logo")} templates=${count("template")}`,
+      `  safe=${assets.filter((asset) => asset.safe_for_auto_use).length} locked=${locked.length}`,
+    ].join("\n"));
+  }
+}
+
 async function runQualityCheck(): Promise<void> {
   const { buildVisualJobFromCommand } = await import("./jobBuilder");
   const { composeVisualJob } = await import("./compose");
   const { qualityCheckVisual } = await import("./quality");
+  {
+    const result = await buildVisualJobFromCommand({ command_text: "задача для хоккея набор детей на тренировку", options: { enable_ai: false } });
+    const composed = await composeVisualJob(result.visual_job);
+    const quality = qualityCheckVisual({ visual_job: result.visual_job, compose_result: composed, expected: result.detected });
+    if (!quality.ok) throw new Error(`Quality check failed: ${quality.critical.join("; ")}`);
+    console.log(JSON.stringify({ ok: true, warnings: quality.warnings, output_path: composed.output_path }, null, 2));
+    return;
+  }
   const result = await buildVisualJobFromCommand({ command_text: "задача для хоккея набор детей на тренировку", options: { enable_ai: false } });
   const composed = await composeVisualJob(result.visual_job);
   const quality = qualityCheckVisual({ visual_job: result.visual_job, compose_result: composed, expected: result.detected });
   if (!quality.ok) throw new Error(`Quality check failed: ${quality.critical.join("; ")}`);
   console.log(JSON.stringify({ ok: true, warnings: quality.warnings, output_path: composed.output_path }, null, 2));
+}
+
+async function runAssetSelectionSmoke(): Promise<void> {
+  const sharpModule = await import("sharp");
+  const sharp = sharpModule.default;
+  const { buildVisualJobFromCommand } = await import("./jobBuilder");
+  const { composeVisualJob } = await import("./compose");
+  const root = path.join(process.cwd(), ".storage", "visual_asset_selection_smoke");
+  await fs.mkdir(root, { recursive: true });
+
+  async function asset(fileName: string, color: string): Promise<string> {
+    const filePath = path.join(root, fileName);
+    await sharp({ create: { width: 320, height: 320, channels: 4, background: color } }).png().toFile(filePath);
+    return filePath;
+  }
+
+  const monopolyCharacter = await asset("monopoly-ded.png", "#f6c453");
+  const monopolyBackground = await asset("monopoly-bg.png", "#f97316");
+  const monopolyReference = await asset("monopoly-ref.png", "#facc15");
+  const payLogo = await asset("pay-logo.png", "#18d47b");
+  const payCharacter = await asset("pay-character.png", "#38bdf8");
+  const payBackground = await asset("pay-bg.png", "#0f172a");
+  const payIcon = await asset("pay-icon.png", "#006dff");
+  const manifest = {
+    version: "asset-selection-smoke",
+    assets: [
+      fakeAsset("monopoly-character", "monopoly", "character", monopolyCharacter, "main_character", "locked", ["ded", "main"], 100),
+      fakeAsset("monopoly-background", "monopoly", "background", monopolyBackground, "background", "replaceable", ["orange", "promo", "contest"], 50),
+      fakeAsset("monopoly-reference", "monopoly", "reference", monopolyReference, "style_reference", "reference_only", ["promo", "style"], 20),
+      fakeAsset("pay-logo", "monopoly_pay", "logo", payLogo, "brand_logo", "locked", ["main", "pay"], 100),
+      fakeAsset("pay-character", "monopoly_pay", "character", payCharacter, "main_character", "locked", ["main", "pay"], 100),
+      fakeAsset("pay-background", "monopoly_pay", "background", payBackground, "background", "replaceable", ["pay", "fintech"], 50),
+      fakeAsset("pay-icon", "monopoly_pay", "icon", payIcon, undefined, "optional", ["bank", "card", "pay"], 20),
+    ],
+  } as const;
+
+  const monopoly = await buildVisualJobFromCommand({
+    command_text: "сделай новую картинку для монополии история знакомства",
+    asset_manifest: manifest as never,
+    options: { enable_ai: false },
+  });
+  assertEqual(monopoly.visual_job.illustration_layer?.asset_path, monopolyCharacter, "Monopoly character selected");
+  assertEqual(monopoly.visual_job.background_layer?.asset_path, monopolyBackground, "Monopoly background selected");
+  assertEqual(monopoly.visual_job.style_assets?.reference, monopolyReference, "Monopoly reference selected");
+  const monopolyCompose = await composeVisualJob(monopoly.visual_job);
+  assertIncludes(monopolyCompose.warnings.join("; "), "composer_usage background=asset character=asset", "Monopoly composer used background/character assets");
+
+  const pay = await buildVisualJobFromCommand({
+    command_text: "для монополии пэй нужна новая картинка с текстом Яндекс-Яндекс",
+    asset_manifest: manifest as never,
+    options: { enable_ai: false },
+  });
+  assertEqual(pay.visual_job.brand?.logo_path, payLogo, "Pay logo selected");
+  assertEqual(pay.visual_job.illustration_layer?.asset_path, payCharacter, "Pay character selected");
+  assertEqual(pay.visual_job.background_layer?.asset_path, payBackground, "Pay background selected");
+  assertEqual(pay.visual_job.style_assets?.icon, payIcon, "Pay icon selected");
+  const payCompose = await composeVisualJob(pay.visual_job);
+  assertIncludes(payCompose.warnings.join("; "), "composer_usage background=asset character=asset logo=asset icon=asset", "Pay composer used assets");
+
+  console.log([
+    "ASSET SELECTION SMOKE OK",
+    `Monopoly background: ${monopoly.visual_job.background_layer?.asset_path}`,
+    `Monopoly character: ${monopoly.visual_job.illustration_layer?.asset_path}`,
+    `Monopoly reference: ${monopoly.visual_job.style_assets?.reference}`,
+    `Pay logo: ${pay.visual_job.brand?.logo_path}`,
+    `Pay character: ${pay.visual_job.illustration_layer?.asset_path}`,
+    `Pay background: ${pay.visual_job.background_layer?.asset_path}`,
+    `Pay icon: ${pay.visual_job.style_assets?.icon}`,
+  ].join("\n"));
+}
+
+function fakeAsset(
+  id: string,
+  projectKey: string,
+  type: string,
+  filePath: string,
+  role: string | undefined,
+  lockPolicy: string,
+  tags: string[],
+  priority: number,
+) {
+  return {
+    id,
+    project_key: projectKey,
+    type,
+    role,
+    path: filePath,
+    tags,
+    usage: type,
+    description: "Safe generated smoke fixture",
+    safe_for_auto_use: true,
+    priority,
+    lock_policy: lockPolicy,
+    recommended_modes: [],
+    created_at: new Date().toISOString(),
+  };
+}
+
+function assertEqual(actual: string | undefined, expected: string, message: string): void {
+  if (actual !== expected) throw new Error(`${message}: expected ${expected}, got ${actual || "-"}`);
+}
+
+function assertIncludes(actual: string, expected: string, message: string): void {
+  if (!actual.includes(expected)) throw new Error(`${message}: expected to include "${expected}", got "${actual}"`);
+}
+
+async function runAiUsage(options: CliOptions): Promise<void> {
+  const { getUsageSummary, resetLocalUsageForToday } = await import("./ai/usageGuard");
+  if (options.aiUsageReset) {
+    if (!options.yes) throw new Error("Usage reset is local-dev only. Re-run with: npm run visual:ai-usage:reset -- --yes");
+    await resetLocalUsageForToday();
+    console.log("Local AI usage for today reset.");
+  }
+  const usage = await getUsageSummary();
+  console.log(JSON.stringify(usage, null, 2));
 }
 
 async function main(): Promise<void> {
@@ -363,6 +539,21 @@ async function main(): Promise<void> {
 
   if (options.aiSmoke) {
     await runAiSmoke(options);
+    return;
+  }
+
+  if (options.stylePackSmoke) {
+    await runStylePackSmoke();
+    return;
+  }
+
+  if (options.assetSelectionSmoke) {
+    await runAssetSelectionSmoke();
+    return;
+  }
+
+  if (options.aiUsage || options.aiUsageReset) {
+    await runAiUsage(options);
     return;
   }
 

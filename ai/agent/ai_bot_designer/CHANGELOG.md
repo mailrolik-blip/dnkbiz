@@ -1,5 +1,26 @@
 # Changelog
 
+## 2026-07-03
+
+### DNK Visual Bot v1.5.1 debug/webhook hardening
+
+- `/debug_job` now sends a compact Telegram-safe summary.
+- Added `/debug_job_full` for chunked detailed diagnostics.
+- Added Telegram text chunking helper and `sendLongMessage`.
+- Webhook now logs runtime failures and returns `200` to Telegram after trying a short user notification, avoiding retry loops for message-send failures.
+- Added `telegram:visual:drop-pending` and `--drop-pending` support for set-webhook.
+- Added `telegram:visual:debug-smoke` with no external API calls.
+
+### DNK Visual Bot v1.5 asset selection fixes
+
+- Fixed visual asset resolver so optional tags are used for scoring instead of rejecting otherwise valid project assets.
+- Added verbose resolver logs: project total, type/mode/safe/lock/role counts, selected id/path and reject summaries.
+- Pay jobs now select and use Pay locked character, logo, background and icon assets.
+- Monopoly jobs now include selected style references in `style_assets`.
+- Composer layouts emit `composer_usage` diagnostics for background/character/logo/icon asset vs fallback usage.
+- `/debug_job` now separates manifest counts, selection logs, composer usage and AI skipped reason.
+- Added local `visual:asset-selection-smoke`, `visual:ai-usage` and guarded `visual:ai-usage:reset`.
+
 ## 2026-07-02
 
 ### v2.5 visual job persistence and revision engine

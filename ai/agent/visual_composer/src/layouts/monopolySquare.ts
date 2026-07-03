@@ -22,6 +22,7 @@ export async function renderMonopolySquare(job: VisualJob, context: RenderContex
   const background = await loadImageOrPlaceholder({ assetPath: job.background_layer?.asset_path, repoRoot: context.repoRoot, composerRoot: context.composerRoot, width, height, label: "Monopoly background", kind: "background", colors, warnings: context.warnings });
   const illustration = await loadImageOrPlaceholder({ assetPath: job.illustration_layer?.asset_path, repoRoot: context.repoRoot, composerRoot: context.composerRoot, width: Math.round(width * 0.72), height: Math.round(height * 0.52), label: "Monopoly illustration", kind: "illustration", colors, warnings: context.warnings });
   const logo = await loadImageOrPlaceholder({ assetPath: job.brand?.logo_path, repoRoot: context.repoRoot, composerRoot: context.composerRoot, width: 220, height: 96, label: "DNK", kind: "logo", colors, warnings: context.warnings });
+  context.warnings.push(`composer_usage background=${background.existed ? "asset" : "fallback"} character=${illustration.existed && job.illustration_layer?.locked ? "asset" : illustration.existed ? "illustration_asset" : "fallback"} logo=${logo.existed ? "asset" : "fallback"}`);
 
   const composites: sharp.OverlayOptions[] = [];
   composites.push({ input: await sharp(background.input).resize(width, height, { fit: "cover" }).png().toBuffer(), left: 0, top: 0 });

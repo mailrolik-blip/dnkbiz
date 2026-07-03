@@ -93,12 +93,15 @@ async function generateImageOrFallback(input: AiLayerInput, kind: "illustration"
   const prompt = buildStructuredImagePrompt(input, kind);
   const promptText = [prompt.system, prompt.user, `Negative rules: ${prompt.negative_rules}`, `Output: ${prompt.output_expectations}`].join("\n\n");
   const model = process.env.OPENAI_IMAGE_MODEL || "gpt-image-1";
+  const referenceWarning = hasReferenceAssets(input)
+    ? "reference assets selected but image reference input is not implemented; using prompt-only generation"
+    : "";
   try {
     const guard = await canGenerateImage();
     if (!guard.ok) throw new Error(guard.reason || "AI image usage guard blocked generation.");
     const assetPath = await callOpenAiImage(input.project_key, kind, promptText, model);
     await recordImageGeneration(true);
-    return { enabled: true, asset_path: assetPath, locked: false, generated_by_ai: true, prompt_used: promptText, model };
+    return { enabled: true, asset_path: assetPath, locked: false, generated_by_ai: true, prompt_used: promptText, model, warnings: referenceWarning ? [referenceWarning] : [] };
   } catch (error) {
     await recordImageGeneration(false);
     const fallback = await createSafeGeneratedPlaceholder(input.project_key, kind, promptText);
@@ -107,9 +110,18 @@ async function generateImageOrFallback(input: AiLayerInput, kind: "illustration"
       generated_by_ai: false,
       prompt_used: promptText,
       model,
-      warnings: [`OpenAI image fallback: ${error instanceof Error ? error.message : "unknown error"}`],
+      warnings: [referenceWarning, `OpenAI image fallback: ${error instanceof Error ? error.message : "unknown error"}`].filter(Boolean),
     };
   }
+}
+
+function hasReferenceAssets(input: AiLayerInput): boolean {
+  return Boolean(
+    input.reference_images?.length ||
+      input.visual_job?.style_assets?.reference ||
+      input.visual_job?.style_assets?.main_character ||
+      input.visual_job?.style_assets?.logo,
+  );
 }
 
 async function callOpenAiImage(projectKey: string, kind: string, prompt: string, model: string): Promise<string> {

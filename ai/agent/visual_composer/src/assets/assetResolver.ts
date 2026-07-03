@@ -9,6 +9,7 @@ export const EMPTY_ASSET_MANIFEST: ProjectAssetManifest = {
 
 const placeholderByType: Record<string, string> = {
   background: "",
+  character: "",
   illustration: "",
   logo: "",
   reference: "",
@@ -24,15 +25,37 @@ export function resolveVisualAsset(request: AssetSelectionRequest): AssetSelecti
   const selectionLog: string[] = [];
   const manifest = request.manifest || EMPTY_ASSET_MANIFEST;
   const tags = request.tags || [];
-  const candidates = manifest.assets.filter(
-    (asset) =>
-      asset.project_key === request.project_key &&
-      asset.type === request.asset_type &&
-      asset.safe_for_auto_use &&
-      (!request.visual_mode || !asset.recommended_modes?.length || asset.recommended_modes.includes(request.visual_mode)) &&
-      tags.every((tag) => asset.tags.includes(tag)),
+  const projectAssets = manifest.assets.filter((asset) => asset.project_key === request.project_key);
+  const typeAssets = projectAssets.filter((asset) => asset.type === request.asset_type);
+  const modeAssets = typeAssets.filter((asset) => modeAllowed(asset, request.visual_mode));
+  const safeAssets = modeAssets.filter((asset) => asset.safe_for_auto_use !== false);
+  const policyAssets = request.lock_policy
+    ? safeAssets.filter((asset) => asset.lock_policy === request.lock_policy)
+    : safeAssets.filter((asset) => request.asset_type !== "reference" || asset.lock_policy !== "locked");
+  const roleAssets = request.role
+    ? policyAssets.filter((asset) => !asset.role || asset.role === request.role)
+    : policyAssets;
+  const candidates = roleAssets.length ? roleAssets : policyAssets;
+  const tagMatches = candidates.filter((asset) => tags.some((tag) => asset.tags.includes(tag))).length;
+
+  selectionLog.push(
+    [
+      `selection project=${request.project_key} type=${request.asset_type} role=${request.role || "-"} lock=${request.lock_policy || "-"} mode=${request.visual_mode || "-"} tags=${tags.join(",") || "-"}`,
+      `manifest_project_total=${projectAssets.length}`,
+      `after_type=${typeAssets.length}`,
+      `after_mode=${modeAssets.length}`,
+      `after_safe=${safeAssets.length}`,
+      `after_lock=${policyAssets.length}`,
+      `after_role=${roleAssets.length}`,
+      `candidates=${candidates.length}`,
+      `tag_matches=${tagMatches}`,
+    ].join(" "),
   );
-  selectionLog.push(`candidates=${candidates.length} project=${request.project_key} type=${request.asset_type} mode=${request.visual_mode || "-"}`);
+  if (typeAssets.length && !modeAssets.length) selectionLog.push(`reject_summary mode_mismatch=${typeAssets.length} requested_mode=${request.visual_mode || "-"}`);
+  if (modeAssets.length && !safeAssets.length) selectionLog.push(`reject_summary unsafe=${modeAssets.length}`);
+  if (safeAssets.length && !policyAssets.length) selectionLog.push(`reject_summary lock_policy_mismatch=${safeAssets.length} requested_lock=${request.lock_policy || "-"}`);
+  if (request.role && policyAssets.length && !roleAssets.length) selectionLog.push(`role_optional_no_match requested=${request.role}; falling back to same project/type assets`);
+  if (tags.length && candidates.length && !tagMatches) selectionLog.push(`tag_preference_no_exact_match requested=${tags.join(",")}; selecting by priority from same project/type/mode`);
 
   const asset = chooseBestAsset(candidates, tags);
   if (!asset) {
@@ -48,7 +71,7 @@ export function resolveVisualAsset(request: AssetSelectionRequest): AssetSelecti
       selection_log: selectionLog,
     };
   }
-  selectionLog.push(`selected=${asset.id} priority=${asset.priority || 0} tags=${asset.tags.join(",")}`);
+  selectionLog.push(`selected=${asset.id} path=${asset.path} role=${asset.role || "-"} lock=${asset.lock_policy || "-"} priority=${asset.priority || 0} tags=${asset.tags.join(",")}`);
 
   return {
     ok: true,
@@ -58,6 +81,11 @@ export function resolveVisualAsset(request: AssetSelectionRequest): AssetSelecti
     warnings,
     selection_log: selectionLog,
   };
+}
+
+function modeAllowed(asset: VisualAsset, visualMode: AssetSelectionRequest["visual_mode"]): boolean {
+  if (!visualMode) return true;
+  return !asset.recommended_modes?.length || asset.recommended_modes.includes(visualMode);
 }
 
 export function loadDefaultAssetManifest(): ProjectAssetManifest {
@@ -79,5 +107,6 @@ function chooseBestAsset(assets: VisualAsset[], tags: string[]): VisualAsset | n
 }
 
 function scoreAsset(asset: VisualAsset, tags: string[]) {
-  return (asset.priority || 0) * 10 + tags.reduce((score, tag) => score + (asset.tags.includes(tag) ? 1 : 0), 0);
+  const lockScore = asset.lock_policy === "locked" ? 40 : asset.lock_policy === "replaceable" ? 20 : asset.lock_policy === "reference_only" ? 10 : 0;
+  return (asset.priority || 0) * 10 + lockScore + tags.reduce((score, tag) => score + (asset.tags.includes(tag) ? 5 : 0), 0);
 }

@@ -8,7 +8,15 @@ export function buildMonopolyPayJob(input: BuildVisualJobInput, text: TextLayerP
   const illustration = resolveVisualAsset({ project_key: "monopoly_pay", visual_mode: "composer", asset_type: "illustration", tags: ["payment"], manifest: input.asset_manifest });
   const icon = resolveVisualAsset({ project_key: "monopoly_pay", visual_mode: "composer", asset_type: "icon", tags: ["payment"], manifest: input.asset_manifest });
   const logo = resolveVisualAsset({ project_key: "monopoly_pay", visual_mode: "composer", asset_type: "logo", tags: ["main"], manifest: input.asset_manifest });
-  warnings.push(...(bg.selection_log || []), ...(illustration.selection_log || []), ...(icon.selection_log || []), ...(logo.selection_log || []), ...bg.warnings, ...illustration.warnings);
+  const payCharacter = resolveVisualAsset({ project_key: "monopoly_pay", visual_mode: "composer", asset_type: "character", role: "main_character", lock_policy: "locked", tags: ["ded", "main", "pay"], manifest: input.asset_manifest });
+  const wantsDed = /дед|нашим\s+дедом|наш\s+дед/i.test(input.command_text);
+  const monopolyCharacter = wantsDed && !payCharacter.asset_path
+    ? resolveVisualAsset({ project_key: "monopoly", visual_mode: "composer", asset_type: "character", role: "main_character", lock_policy: "locked", tags: ["ded", "main"], manifest: input.asset_manifest })
+    : undefined;
+  const characterPath = payCharacter.asset_path || monopolyCharacter?.asset_path || "";
+  warnings.push(...(bg.selection_log || []), ...(illustration.selection_log || []), ...(icon.selection_log || []), ...(logo.selection_log || []), ...(payCharacter.selection_log || []), ...(monopolyCharacter?.selection_log || []), ...bg.warnings, ...illustration.warnings);
+  if (wantsDed && !characterPath) warnings.push("Pay requested 'наш дед', but no locked Pay or Monopoly main character was found.");
+  if (wantsDed && !payCharacter.asset_path && monopolyCharacter?.asset_path) warnings.push("Pay character missing; using locked Monopoly main_character as cross-project fallback.");
   const layout = chooseLayout(input, text);
   const size = sizeFor(format);
 
@@ -31,9 +39,9 @@ export function buildMonopolyPayJob(input: BuildVisualJobInput, text: TextLayerP
     },
     illustration_layer: {
       enabled: true,
-      asset_path: illustration.asset_path || icon.asset_path,
+      asset_path: characterPath || illustration.asset_path || icon.asset_path,
       position: "center",
-      locked: false,
+      locked: Boolean(characterPath),
     },
     background_layer: {
       enabled: true,
@@ -56,8 +64,25 @@ export function buildMonopolyPayJob(input: BuildVisualJobInput, text: TextLayerP
       },
     },
     profile: input.profile,
+    style_assets: {
+      main_character: characterPath,
+      logo: logo.asset_path,
+      background: bg.asset_path,
+      icon: icon.asset_path,
+      icons: compactStrings([icon.asset_path]),
+      locked_assets: compactStrings([characterPath, logo.asset_path]),
+      warnings: compactStrings([
+        payCharacter.asset_path ? "pay locked main_character used" : "",
+        !payCharacter.asset_path && monopolyCharacter?.asset_path ? "pay uses locked monopoly main_character fallback" : "",
+        !characterPath ? "pay main_character missing" : "",
+      ]),
+    },
     post_caption: text.post_caption,
   };
+}
+
+function compactStrings(values: Array<string | undefined>): string[] {
+  return values.filter((value): value is string => Boolean(value));
 }
 
 function chooseLayout(input: BuildVisualJobInput, text: TextLayerParts): string {

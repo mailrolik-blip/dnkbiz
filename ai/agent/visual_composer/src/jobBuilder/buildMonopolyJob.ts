@@ -4,10 +4,13 @@ import type { BuildVisualJobInput, TextLayerParts } from "./types";
 
 export function buildMonopolyJob(input: BuildVisualJobInput, text: TextLayerParts, warnings: string[]): VisualJob {
   const tags = tagsFor(input.output_format || "square", "promo");
+  const character = resolveVisualAsset({ project_key: "monopoly", visual_mode: "composer", asset_type: "character", role: "main_character", lock_policy: "locked", tags: ["ded", "main"], manifest: input.asset_manifest });
   const bg = resolveVisualAsset({ project_key: "monopoly", visual_mode: "composer", asset_type: "background", tags, manifest: input.asset_manifest });
   const illustration = resolveVisualAsset({ project_key: "monopoly", visual_mode: "composer", asset_type: "illustration", tags: ["character"], manifest: input.asset_manifest });
   const logo = resolveVisualAsset({ project_key: "monopoly", visual_mode: "composer", asset_type: "logo", tags: ["main"], manifest: input.asset_manifest });
-  warnings.push(...(bg.selection_log || []), ...(illustration.selection_log || []), ...(logo.selection_log || []), ...bg.warnings, ...illustration.warnings);
+  const reference = resolveVisualAsset({ project_key: "monopoly", visual_mode: "composer", asset_type: "reference", role: "style_reference", lock_policy: "reference_only", tags: ["promo", "style"], manifest: input.asset_manifest });
+  warnings.push(...(character.selection_log || []), ...(bg.selection_log || []), ...(illustration.selection_log || []), ...(logo.selection_log || []), ...(reference.selection_log || []), ...bg.warnings, ...illustration.warnings);
+  if (!character.asset_path) warnings.push("No locked Monopoly main character found; AI generated/free fallback used.");
   const layout = chooseLayout(input, text);
   const size = sizeFor(input.output_format || "square");
 
@@ -31,9 +34,9 @@ export function buildMonopolyJob(input: BuildVisualJobInput, text: TextLayerPart
     },
     illustration_layer: {
       enabled: true,
-      asset_path: illustration.asset_path,
+      asset_path: character.asset_path || illustration.asset_path,
       position: layout.includes("character_center") ? "center" : "bottom",
-      locked: false,
+      locked: Boolean(character.asset_path),
     },
     background_layer: {
       enabled: true,
@@ -56,6 +59,15 @@ export function buildMonopolyJob(input: BuildVisualJobInput, text: TextLayerPart
       },
     },
     profile: input.profile,
+    style_assets: {
+      main_character: character.asset_path,
+      logo: logo.asset_path,
+      background: bg.asset_path,
+      reference: reference.asset_path,
+      references: [reference.asset_path].filter(Boolean),
+      locked_assets: [character.asset_path, logo.asset_path].filter(Boolean),
+      warnings: character.asset_path ? ["main_character locked asset used"] : ["main_character missing"],
+    },
     post_caption: text.post_caption,
   };
 }

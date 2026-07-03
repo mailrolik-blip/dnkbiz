@@ -18,6 +18,16 @@ export class TelegramApi implements TelegramClient {
     });
   }
 
+  async sendLongMessage(chatId: string | number, text: string, replyMarkup?: TelegramReplyMarkup): Promise<unknown[]> {
+    const chunks = splitTelegramText(text);
+    const results: unknown[] = [];
+    for (let index = 0; index < chunks.length; index += 1) {
+      const prefix = chunks.length > 1 ? `Debug details ${index + 1}/${chunks.length}\n` : "";
+      results.push(await this.sendMessage(chatId, `${prefix}${chunks[index]}`, index === 0 ? replyMarkup : undefined));
+    }
+    return results;
+  }
+
   async sendPhotoFromFile(chatId: string | number, filePath: string, caption?: string, replyMarkup?: TelegramReplyMarkup): Promise<unknown> {
     const file = await fs.readFile(filePath);
     const form = new FormData();
@@ -55,17 +65,20 @@ export class TelegramApi implements TelegramClient {
     return destinationPath;
   }
 
-  async setWebhook(baseUrl: string, secret?: string): Promise<unknown> {
+  async setWebhook(baseUrl: string, secret?: string, options: { dropPendingUpdates?: boolean } = {}): Promise<unknown> {
     const webhookUrl = `${baseUrl.replace(/\/$/, "")}/api/telegram/visual-bot/webhook`;
     return this.postJson("setWebhook", {
       url: webhookUrl,
       secret_token: secret || undefined,
       allowed_updates: ["message", "callback_query"],
+      drop_pending_updates: options.dropPendingUpdates || undefined,
     });
   }
 
-  async deleteWebhook(): Promise<unknown> {
-    return this.postJson("deleteWebhook", {});
+  async deleteWebhook(options: { dropPendingUpdates?: boolean } = {}): Promise<unknown> {
+    return this.postJson("deleteWebhook", {
+      drop_pending_updates: options.dropPendingUpdates || undefined,
+    });
   }
 
   async getWebhookInfo(): Promise<unknown> {
@@ -89,4 +102,20 @@ export class TelegramApi implements TelegramClient {
     }
     return payload;
   }
+}
+
+export function splitTelegramText(text: string, maxLength = 3500): string[] {
+  if (maxLength <= 0) throw new Error("maxLength must be positive.");
+  if (text.length <= maxLength) return [text];
+  const chunks: string[] = [];
+  let remaining = text;
+  while (remaining.length > maxLength) {
+    const hardSlice = remaining.slice(0, maxLength);
+    const breakAt = Math.max(hardSlice.lastIndexOf("\n"), hardSlice.lastIndexOf(" "));
+    const splitAt = breakAt > Math.floor(maxLength * 0.55) ? breakAt : maxLength;
+    chunks.push(remaining.slice(0, splitAt).trimEnd());
+    remaining = remaining.slice(splitAt).trimStart();
+  }
+  if (remaining) chunks.push(remaining);
+  return chunks;
 }

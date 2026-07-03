@@ -96,7 +96,12 @@ export async function produceVisualFromCommand(input: ProduceVisualInput): Promi
     buildResult.visual_job.illustration_layer?.warnings?.join("; ") || "",
     buildResult.visual_job.background_layer?.warnings?.join("; ") || "",
   ];
-  record.compose_log = [`layout=${record.visual_job.layout.variant}`, `output=${composeResult.output_path}`, `size=${composeResult.width}x${composeResult.height}`];
+  record.compose_log = [
+    `layout=${record.visual_job.layout.variant}`,
+    `output=${composeResult.output_path}`,
+    `size=${composeResult.width}x${composeResult.height}`,
+    ...composeResult.warnings.filter((warning) => warning.startsWith("composer_usage")),
+  ];
   await new FileVisualJobStore().update(record);
 
   return {

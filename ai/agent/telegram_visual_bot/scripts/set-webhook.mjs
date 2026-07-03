@@ -5,6 +5,10 @@ function readArg(name) {
   return index === -1 ? "" : process.argv[index + 1] || "";
 }
 
+function hasFlag(name) {
+  return process.argv.includes(name);
+}
+
 const baseUrl = readArg("--url") || process.env.NEXT_PUBLIC_APP_URL || "";
 if (!baseUrl) {
   console.error("Usage: npm run telegram:visual:set-webhook -- --url https://xxxxx.trycloudflare.com");
@@ -12,5 +16,7 @@ if (!baseUrl) {
 }
 
 const api = new TelegramApi();
-const result = await api.setWebhook(baseUrl, process.env.TELEGRAM_WEBHOOK_SECRET || undefined);
+const result = await api.setWebhook(baseUrl, process.env.TELEGRAM_WEBHOOK_SECRET || undefined, {
+  dropPendingUpdates: hasFlag("--drop-pending"),
+});
 console.log(JSON.stringify(result, null, 2));

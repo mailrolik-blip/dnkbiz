@@ -3,13 +3,15 @@ import fs from "node:fs/promises";
 import { produceVisualFromCommand, reviseProducedVisual } from "../../visual_composer/src/production";
 import { FileVisualJobStore } from "../../visual_composer/src/store";
 import { indexVisualAssets } from "../../visual_composer/src/assets/indexAssets";
+import { loadDefaultAssetManifest } from "../../visual_composer/src/assets/assetResolver";
 import { getUsageSummary } from "../../visual_composer/src/ai/usageGuard";
 import type { RevisionTarget } from "../../visual_composer/src/revision";
 import type { UploadedAsset } from "../../visual_composer/src/jobBuilder";
 import { TelegramStateStore } from "./telegramStateStore";
 import type { TelegramClient, TelegramMessage, TelegramUpdate, UploadedTelegramAsset, VisualRevisionTarget } from "./types";
 import { getLargestPhoto, getMessageText, getUpdateChatId, getUpdateUserId } from "./telegramUpdate";
-import { parseAssetCaption, saveTelegramAssetFromMessage } from "./assetIntake";
+import { assetProjectFromAlias, parseAssetCaption, saveTelegramAssetFromMessage } from "./assetIntake";
+import { splitTelegramText } from "./telegramApi";
 
 export interface VisualBotHandlerDeps {
   telegram: TelegramClient;
@@ -89,7 +91,9 @@ export async function handleVisualBotUpdate(update: TelegramUpdate, deps: Visual
   const parsedAsset = parseAssetCaption(text);
   if ((message.photo?.length || message.document) && (parsedAsset || /^asset\b/i.test(text) || stateBeforeUpload.asset_intake_enabled)) {
     if (!parsedAsset) {
-      await deps.telegram.sendMessage(chatId, "Не распознал asset caption. Напиши: asset monopoly background tags: promo,orange");
+      const pending = await maybeDownloadPhotoAsset(chatId, message, effectiveDeps, stateStore);
+      const projectHint = stateBeforeUpload.active_asset_project ? `\nactive project: ${stateBeforeUpload.active_asset_project}` : "";
+      await deps.telegram.sendMessage(chatId, `Файл получил как pending asset.${projectHint}\nЧтобы сохранить в style pack, отправь файл с caption: asset monopoly character role: main_character tags: ded,main lock: locked\nИли выбери проект: /asset_project monopoly`);
       return { ok: true, handled: true };
     }
     await handleAssetUpload(chatId, message, parsedAsset, deps.telegram);
@@ -142,16 +146,39 @@ async function handleCommand(chatId: string, text: string, telegram: TelegramCli
       "Asset intake:",
       "Отправь картинку с caption:",
       "asset monopoly background tags: orange,promo,contest",
+      "asset monopoly character role: main_character tags: ded,main lock: locked",
       "asset pay icon tags: bank,pay",
       "asset casper reference tags: warning,news",
       "asset hockey logo tags: main",
+      "/asset_status monopoly",
+      "/asset_list",
+      "/asset_project hockey",
       "После загрузки: /asset_index",
     ].join("\n"));
     return;
   }
   if (command === "/asset_status") {
-    const state = await stateStore.getChatState(chatId);
-    await telegram.sendMessage(chatId, `asset_intake_enabled: ${state.asset_intake_enabled ? "true" : "false"}`);
+    const projectArg = text.split(/\s+/)[1];
+    if (projectArg) {
+      await sendAssetProjectStatus(chatId, telegram, projectArg);
+    } else {
+      const state = await stateStore.getChatState(chatId);
+      await telegram.sendMessage(chatId, `asset_intake_enabled: ${state.asset_intake_enabled ? "true" : "false"}\nUse: /asset_status monopoly`);
+    }
+    return;
+  }
+  if (command === "/asset_list") {
+    await sendAssetList(chatId, telegram);
+    return;
+  }
+  if (command === "/asset_project") {
+    const project = assetProjectFromAlias(text.split(/\s+/)[1] || "");
+    if (!project) {
+      await telegram.sendMessage(chatId, "Не понял проект. Используй: /asset_project monopoly|pay|casper|hockey");
+      return;
+    }
+    await stateStore.setActiveAssetProject(chatId, project);
+    await telegram.sendMessage(chatId, `Active asset project: ${project}\nAsset intake mode включен. Теперь отправляй ассеты с caption, затем /asset_index.`);
     return;
   }
   if (command === "/asset_mode_on") {
@@ -171,11 +198,11 @@ async function handleCommand(chatId: string, text: string, telegram: TelegramCli
     await telegram.sendMessage(chatId, `Asset manifest обновлен. Ассетов: ${manifest.assets.length}`);
     return;
   }
-  if (command === "/debug_job") {
-    await sendDebugJob(chatId, telegram, stateStore);
+  if (command === "/debug_job" || command === "/debug_job_full") {
+    await safeSendDebugJob(chatId, telegram, stateStore, command === "/debug_job_full");
     return;
   }
-  if (command === "/ai_status") {
+  if (command === "/ai_status" || command === "/ai_usage") {
     await sendAiStatus(chatId, telegram);
     return;
   }
@@ -313,7 +340,20 @@ async function sendPostText(chatId: string, activeJobId: string | undefined, tel
   await telegram.sendMessage(chatId, postText ? `Текст поста:\n${postText}` : "Текст поста пока не создан.");
 }
 
-async function sendDebugJob(chatId: string, telegram: TelegramClient, stateStore: TelegramStateStore) {
+async function safeSendDebugJob(chatId: string, telegram: TelegramClient, stateStore: TelegramStateStore, full: boolean) {
+  try {
+    await sendDebugJob(chatId, telegram, stateStore, full);
+  } catch (error) {
+    console.error("Failed to send visual debug job", error);
+    await safeSendMessage(
+      telegram,
+      chatId,
+      `Debug слишком длинный или не удалось отправить. Ошибка: ${error instanceof Error ? error.message.slice(0, 500) : "unknown error"}`,
+    );
+  }
+}
+
+async function sendDebugJob(chatId: string, telegram: TelegramClient, stateStore: TelegramStateStore, full = false) {
   const state = await stateStore.getChatState(chatId);
   if (!state.active_job_id) {
     await telegram.sendMessage(chatId, "Нет активного job для debug.");
@@ -325,20 +365,123 @@ async function sendDebugJob(chatId: string, telegram: TelegramClient, stateStore
     return;
   }
   const job = record.visual_job;
-  await telegram.sendMessage(chatId, [
+  const usage = await getUsageSummary();
+  const aiUsed = Boolean(job.illustration_layer?.generated_by_ai || job.background_layer?.generated_by_ai);
+  const manifest = loadDefaultAssetManifest();
+  const projectAssets = manifest.assets.filter((asset) => asset.project_key === record.detected.project_key);
+  const count = (type: string) => projectAssets.filter((asset) => asset.type === type).length;
+  const composerUsage = (record.compose_log || []).find((line) => line.startsWith("composer_usage")) || "composer_usage background=unknown character=unknown logo=unknown";
+  const selectionLog = record.asset_selection_log || [];
+  const selectedLine = (type: string) => selectionLog.filter((line) => line.includes(`type=${type}`) || line.includes(`/${type}`)).slice(-2).join("; ") || "-";
+  const aiSkippedReason = detectAiSkippedReason(record.ai_generation_log || [], job);
+  const summary = [
     `job_id: ${record.job_id}`,
     `project: ${record.detected.project_key}`,
     `mode: ${record.detected.visual_mode}`,
     `layout: ${job.layout.variant}`,
     `versions: ${record.outputs.length}`,
+    `title: ${job.text_layer?.text || "-"}`,
+    `post_caption: ${record.post_caption ? "yes" : "no"}`,
+    `manifest_total: ${projectAssets.length}`,
+    `manifest_backgrounds: ${count("background")}`,
+    `manifest_characters: ${count("character")}`,
+    `manifest_logos: ${count("logo")}`,
+    `manifest_references: ${count("reference")}`,
+    `manifest_icons: ${count("icon")}`,
+    `AI used: ${aiUsed ? "yes" : "no"}`,
+    `AI image attempted: ${(record.ai_generation_log || []).some((line) => line.includes("AI requested")) ? "yes" : "no"}`,
+    `AI skipped reason: ${aiSkippedReason}`,
     `background: ${job.background_layer?.asset_path || "-"}`,
     `illustration: ${job.illustration_layer?.asset_path || "-"}`,
     `logo: ${job.brand?.logo_path || "-"}`,
+    `main_character: ${job.style_assets?.main_character || "-"}`,
+    `style_reference: ${job.style_assets?.reference || "-"}`,
+    `icons: ${(job.style_assets?.icons || [job.style_assets?.icon].filter(Boolean)).join(", ") || "-"}`,
+    `selection_background: ${selectedLine("background")}`,
+    `selection_character: ${selectedLine("character")}`,
+    `selection_logo: ${selectedLine("logo")}`,
+    `composer: ${composerUsage}`,
+    `usage_today: images=${usage.image_generations_count}, text=${usage.text_generations_count}, failed=${usage.failed_generations_count}`,
+    full ? "full_debug: sending details below" : "full_debug: use /debug_job_full for detailed logs",
+  ].join("\n");
+
+  const details = [
+    `template: ${job.style_assets?.template || "-"}`,
+    `locked_assets: ${(job.style_assets?.locked_assets || []).join(", ") || "-"}`,
+    `selection_reference: ${selectedLine("reference")}`,
+    `selection_icon: ${selectedLine("icon")}`,
     `quality_warnings: ${(record.quality_warnings || []).join("; ") || "-"}`,
-    `asset_selection: ${(record.asset_selection_log || []).slice(-6).join("; ") || "-"}`,
-    `ai_generation: ${(record.ai_generation_log || []).slice(-6).join("; ") || "-"}`,
+    `style_warnings: ${(job.style_assets?.warnings || []).join("; ") || "-"}`,
+    `asset_selection:\n${(record.asset_selection_log || []).join("\n") || "-"}`,
+    `ai_generation:\n${(record.ai_generation_log || []).join("\n") || "-"}`,
+    `compose_log:\n${(record.compose_log || []).join("\n") || "-"}`,
     `prompt: ${record.visual_job.illustration_layer?.prompt_used?.slice(0, 220) || record.visual_job.background_layer?.prompt_used?.slice(0, 220) || "-"}`,
+  ].join("\n");
+
+  await sendLongText(telegram, chatId, summary.slice(0, 3500));
+  if (full && details.trim()) await sendLongText(telegram, chatId, details);
+}
+
+async function sendLongText(telegram: TelegramClient, chatId: string | number, text: string): Promise<void> {
+  if (telegram.sendLongMessage) {
+    await telegram.sendLongMessage(chatId, text);
+    return;
+  }
+  const chunks = splitTelegramText(text);
+  for (let index = 0; index < chunks.length; index += 1) {
+    const prefix = chunks.length > 1 ? `Debug details ${index + 1}/${chunks.length}\n` : "";
+    await telegram.sendMessage(chatId, `${prefix}${chunks[index]}`);
+  }
+}
+
+async function safeSendMessage(telegram: TelegramClient, chatId: string | number, text: string): Promise<void> {
+  try {
+    await telegram.sendMessage(chatId, text.slice(0, 3500));
+  } catch (error) {
+    console.error("Failed to send Telegram fallback message", error);
+  }
+}
+
+function detectAiSkippedReason(aiLog: string[], job: { illustration_layer?: { generated_by_ai?: boolean }; background_layer?: { generated_by_ai?: boolean }; style_assets?: { locked_assets?: string[] } }): string {
+  const joined = aiLog.join("; ");
+  if (joined.includes("VISUAL_AI_DAILY_LIMIT")) return "daily_limit";
+  if (joined.includes("OPENAI_API_KEY missing")) return "missing_key";
+  if (joined.includes("OpenAI image fallback")) return "provider_error";
+  if (job.style_assets?.locked_assets?.length && !job.illustration_layer?.generated_by_ai && !job.background_layer?.generated_by_ai) return "asset_locked";
+  if (joined.includes("AI skipped")) return "disabled";
+  return "-";
+}
+
+async function sendAssetProjectStatus(chatId: string, telegram: TelegramClient, projectAlias: string) {
+  const project = assetProjectFromAlias(projectAlias);
+  if (!project) {
+    await telegram.sendMessage(chatId, "Не понял проект. Используй: monopoly, pay, casper, hockey.");
+    return;
+  }
+  const manifest = loadDefaultAssetManifest();
+  const assets = manifest.assets.filter((asset) => asset.project_key === project);
+  const count = (type: string) => assets.filter((asset) => asset.type === type).length;
+  const safe = assets.filter((asset) => asset.safe_for_auto_use !== false).length;
+  const locked = assets.filter((asset) => asset.lock_policy === "locked").length;
+  await telegram.sendMessage(chatId, [
+    `project: ${project}`,
+    `backgrounds: ${count("background")}`,
+    `characters: ${count("character")}`,
+    `logos: ${count("logo")}`,
+    `references: ${count("reference")}`,
+    `templates: ${count("template")}`,
+    `icons: ${count("icon")}`,
+    `safe_for_auto_use: ${safe}`,
+    `locked_assets: ${locked}`,
   ].join("\n"));
+}
+
+async function sendAssetList(chatId: string, telegram: TelegramClient) {
+  const manifest = loadDefaultAssetManifest();
+  const rows = manifest.assets
+    .slice(-20)
+    .map((asset) => `${asset.project_key}/${asset.type}/${asset.role || "-"} lock=${asset.lock_policy || "-"} tags=${asset.tags.join(",") || "-"}`);
+  await telegram.sendMessage(chatId, rows.length ? rows.join("\n") : "Asset manifest пуст. Запусти /asset_index после загрузки ассетов.");
 }
 
 async function sendAiStatus(chatId: string, telegram: TelegramClient) {

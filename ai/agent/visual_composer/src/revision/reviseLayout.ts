@@ -5,7 +5,7 @@ const variantsByProject: Record<string, string[]> = {
   monopoly: ["monopoly_square_title_top", "monopoly_square_title_bottom", "monopoly_square_character_center", "monopoly_sticker_style", "monopoly_story_vertical"],
   monopoly_pay: ["pay_square_v1", "pay_square_method_card", "pay_square_bank_alert", "pay_story_vertical"],
   gorilla_hockey: ["hockey_poster_v1", "hockey_poster_photo_v1", "hockey_training_recruitment", "hockey_print_a4_v1", "hockey_print_a5_v1"],
-  casper: ["casper_square_news", "casper_warning", "casper_subscribe", "casper_contest"],
+  casper: ["casper_news_square", "casper_warning_square", "casper_subscribe_square", "casper_contest_square"],
   dnk: ["simple_overlay"],
 };
 

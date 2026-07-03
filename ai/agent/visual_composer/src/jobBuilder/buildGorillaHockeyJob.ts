@@ -62,7 +62,7 @@ export function buildGorillaHockeyJob(
     brand: {
       logo_path: logo.asset_path,
       qr_path: qr.asset_path,
-      website: "gorillahockey.ru",
+      website: input.profile?.contacts?.site || "gorillahockey.ru",
       contacts: text.contacts,
       colors: {
         primary: "#E3202A",
@@ -72,8 +72,19 @@ export function buildGorillaHockeyJob(
       },
     },
     profile: input.profile,
+    style_assets: {
+      logo: logo.asset_path,
+      background: uploadedPhoto?.asset_path || bg.asset_path,
+      template: visualMode === "hockey_print_layout" ? bg.asset_path : undefined,
+      locked_assets: compactStrings([logo.asset_path, uploadedPhoto?.asset_path]),
+      warnings: logo.asset_path ? ["hockey locked logo used"] : ["hockey logo missing"],
+    },
     post_caption: text.post_caption,
   };
+}
+
+function compactStrings(values: Array<string | undefined>): string[] {
+  return values.filter((value): value is string => Boolean(value));
 }
 
 function chooseLayout(input: BuildVisualJobInput, text: TextLayerParts, visualMode: VisualMode, format: OutputFormat): string {

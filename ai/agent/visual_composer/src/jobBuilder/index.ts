@@ -3,6 +3,7 @@ import { getVisualAiProvider } from "../ai";
 import { loadDefaultAssetManifest } from "../assets/assetResolver";
 import { loadProjectProfile } from "../profiles/profileLoader";
 import type { VisualJob } from "../types";
+import type { ProjectAssetManifest, VisualAsset } from "../assets/types";
 import { detectProject } from "./detectProject";
 import { detectOutputFormat, detectVisualMode } from "./detectVisualMode";
 import { extractTextLayerParts } from "./extractTextLayer";
@@ -51,7 +52,20 @@ export async function buildVisualJobFromCommand(input: BuildVisualJobInput): Pro
   }
 
   visualJob.profile = profile;
-  const aiInput = { command_text: commandText, project_key: projectKey, visual_mode: visualMode, profile, visual_job: visualJob, enable_ai: input.options?.enable_ai };
+  const selectedStyleAssets = collectStyleAssets(visualJob, assetManifest);
+  const aiInput = {
+    command_text: commandText,
+    project_key: projectKey,
+    visual_mode: visualMode,
+    profile,
+    visual_job: visualJob,
+    selected_assets: selectedStyleAssets,
+    reference_images: selectedStyleAssets
+      .filter((asset) => asset.lock_policy === "reference_only" || asset.role === "style_reference" || asset.role === "composition_reference")
+      .map((asset) => ({ path: asset.path, role: asset.role, lock_policy: asset.lock_policy, description: asset.description })),
+    locked_assets: selectedStyleAssets.filter((asset) => asset.lock_policy === "locked").map((asset) => asset.path),
+    enable_ai: input.options?.enable_ai,
+  };
   const aiText = await provider.generateTextLayer(aiInput);
   visualJob.text_layer = {
     ...(visualJob.text_layer || { enabled: true }),
@@ -83,6 +97,24 @@ export async function buildVisualJobFromCommand(input: BuildVisualJobInput): Pro
     detected: { project_key: projectKey, visual_mode: visualMode, output_format: outputFormat },
     warnings,
   };
+}
+
+function collectStyleAssets(job: VisualJob, manifest: ProjectAssetManifest): VisualAsset[] {
+  const paths = new Set(
+    [
+      job.style_assets?.main_character,
+      job.style_assets?.logo,
+      job.style_assets?.background,
+      job.style_assets?.reference,
+      job.style_assets?.template,
+      job.style_assets?.icon,
+      ...(job.style_assets?.icons || []),
+      ...(job.style_assets?.references || []),
+      ...(job.style_assets?.locked_assets || []),
+    ].filter((value): value is string => Boolean(value)),
+  );
+  if (!paths.size) return [];
+  return manifest.assets.filter((asset) => paths.has(asset.path));
 }
 
 function loadAssetManifestFromEnv() {

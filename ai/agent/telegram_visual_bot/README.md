@@ -183,3 +183,22 @@ Telegram commands:
 ```
 
 `/ai_on` and `/ai_off` set runtime override in `.storage/telegram_visual_bot/config.json`; they do not edit env files.
+
+## If the bot stops responding after `/debug_job`
+
+`/debug_job` is now compact. Use `/debug_job_full` only when detailed resolver and AI logs are needed; the full output is split into Telegram-safe chunks.
+
+If Telegram is retrying an old failed update:
+
+```bash
+npm run telegram:visual:drop-pending
+npm run telegram:visual:set-webhook -- --url <public-url> --drop-pending
+```
+
+`drop-pending` calls Telegram without printing the bot token. The webhook returns `200` for handled runtime failures after logging server-side, so a long debug message should not create a retry loop.
+
+Local check:
+
+```bash
+npm run telegram:visual:debug-smoke
+```

@@ -52,6 +52,12 @@ export function buildCasperJob(input: BuildVisualJobInput, text: TextLayerParts,
       },
     },
     profile: input.profile,
+    style_assets: {
+      background: background.asset_path,
+      reference: reference.asset_path,
+      locked_assets: [],
+      warnings: reference.asset_path ? ["casper style reference selected"] : ["casper style reference missing"],
+    },
     post_caption: text.post_caption,
   };
 }
@@ -59,10 +65,10 @@ export function buildCasperJob(input: BuildVisualJobInput, text: TextLayerParts,
 function chooseLayout(input: BuildVisualJobInput, text: TextLayerParts): string {
   if (input.options?.layout_variant && input.options.layout_variant !== "auto") return input.options.layout_variant;
   const lower = `${input.command_text} ${text.title}`.toLowerCase();
-  if (lower.includes("фишинг") || lower.includes("осторожно") || lower.includes("предупреж")) return "casper_warning";
-  if (lower.includes("подпис") || lower.includes("связи")) return "casper_subscribe";
-  if (lower.includes("конкурс")) return "casper_contest";
-  return "casper_square_news";
+  if (lower.includes("фишинг") || lower.includes("осторожно") || lower.includes("предупреж")) return "casper_warning_square";
+  if (lower.includes("подпис") || lower.includes("связи")) return "casper_subscribe_square";
+  if (lower.includes("конкурс")) return "casper_contest_square";
+  return "casper_news_square";
 }
 
 function sizeFor(format: OutputFormat) {

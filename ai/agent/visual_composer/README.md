@@ -309,3 +309,36 @@ v1.3 OpenAI provider:
 - image prompts explicitly request no text/letters/watermarks;
 - `VISUAL_AI_COST_GUARD=true` and `VISUAL_AI_DAILY_LIMIT` protect image spend;
 - `npm run visual:ai-smoke` is text-only unless `-- --image` is passed.
+
+# v1.4 style packs
+
+The production path now treats `ai/agent/visual_assets/manual_project_packs/` as project style packs. Real client files remain gitignored; only README, `.gitkeep` and safe `*.example.json` templates are allowed in git.
+
+Use:
+
+```bash
+npm run visual:assets:index
+npm run visual:style-pack-smoke
+```
+
+Composer-owned layers:
+
+- text/title/sticker/CTA are always rendered by composer;
+- locked character/logo/photo assets stay as real layers;
+- AI image generation is used only for missing illustration/background layers;
+- selected reference assets are passed into the provider input and logged, but current OpenAI image generation is still prompt-only and emits a warning when references were selected.
+# v1.5 asset selection verification
+
+Asset tags are now a preference signal, not a hard rejection filter. If a project has a safe background in `manifest.local.json`, resolver should still select it even when it lacks optional tags such as `square`.
+
+Use:
+
+```bash
+npm run visual:asset-selection-smoke
+npm run visual:ai-usage
+npm run visual:ai-usage:reset -- --yes
+```
+
+`visual:asset-selection-smoke` creates safe dummy PNG files under `.storage/visual_asset_selection_smoke/` and asserts that Monopoly background/character/reference and Pay logo/character/background/icon are selected and used by composer.
+
+The reset command is local-dev only. It deletes today's local usage file under `.storage/visual_ai_usage/`; do not use it in production to bypass cost guard.

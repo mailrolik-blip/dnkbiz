@@ -12,5 +12,10 @@
   "output_formats": ["square", "vk_post", "story", "print_a4", "print_a5"],
   "revision_commands": ["revise_text_layer", "regenerate_text_layer", "revise_illustration_layer", "regenerate_illustration_layer", "revise_background_layer", "change_composition", "change_output_format", "approve_final"],
   "telegram_examples": ["сделай пост для хоккея завтра тренировка для детей надо пригласить родителей записаться", "задача для хоккея набор детей на тренировку", "хоккей печать A4 набор детей 2016-2018"],
-  "quality_check_rules": ["project_key is gorilla_hockey", "photo template uses uploaded photo", "print layouts use print dimensions", "text revision keeps photo/background unchanged"]
+  "quality_check_rules": ["project_key is gorilla_hockey", "photo template uses uploaded photo", "print layouts use print dimensions", "text revision keeps photo/background unchanged"],
+  "contacts": {
+    "site": "gorillahockey.ru",
+    "phone": "+7 900 000-00-00",
+    "city": ""
+  }
 }

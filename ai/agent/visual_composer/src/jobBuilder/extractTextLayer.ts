@@ -2,7 +2,10 @@
 import type { TextLayerParts } from "./types";
 
 export function extractTextLayerParts(commandText: string, projectKey: VisualProjectKey, visualMode: VisualMode): TextLayerParts {
-  const explicitText = extractLabeledText(commandText, ["текст", "title", "заголовок"]) || extractAfterPhrase(commandText, "с надписью");
+  const explicitText =
+    extractQuoted(commandText) ||
+    extractLabeledText(commandText, ["текст", "title", "заголовок", "тема"]) ||
+    extractAfterAnyPhrase(commandText, ["с текстом", "с надписью", "надпись", "заголовок", "тема"]);
   const cleaned = cleanCommand(commandText, projectKey);
   const titleSource = explicitText || cleaned || commandText;
 
@@ -36,6 +39,7 @@ function buildPayText(source: string): TextLayerParts {
       post_caption: "Новый способ оплаты для пользователей Monopoly Pay: Яндекс-Яндекс. Проверьте сценарий и подготовьте запуск.",
     };
   }
+  if (lower.includes("новые триггеры банков")) return withCaption("НОВЫЕ ТРИГГЕРЫ БАНКОВ", source, "PAY UPDATE");
   if (lower.includes("триггер") && lower.includes("банк")) return withCaption("НОВЫЕ ТРИГГЕРЫ БАНКОВ", source, "PAY UPDATE");
   if (lower.includes("оплата по ссылке")) return withCaption("ОПЛАТА ПО ССЫЛКЕ", source, "НОВЫЙ МЕТОД");
 
@@ -113,10 +117,17 @@ function extractLabeledText(text: string, labels: string[]): string | null {
   return null;
 }
 
-function extractAfterPhrase(text: string, phrase: string): string | null {
-  const index = text.toLowerCase().indexOf(phrase);
-  if (index < 0) return null;
-  return text.slice(index + phrase.length).trim().replace(/^["“«]|["”»]$/g, "") || null;
+function extractAfterAnyPhrase(text: string, phrases: string[]): string | null {
+  const lower = text.toLowerCase();
+  for (const phrase of phrases) {
+    const index = lower.indexOf(phrase);
+    if (index >= 0) return text.slice(index + phrase.length).trim().replace(/^[:\s"“«]+|["”»]+$/g, "") || null;
+  }
+  return null;
+}
+
+function extractQuoted(text: string): string | null {
+  return text.match(/["“«]([^"”»]{2,80})["”»]/u)?.[1]?.trim() || null;
 }
 
 export function toDisplayTitle(value: string): string {

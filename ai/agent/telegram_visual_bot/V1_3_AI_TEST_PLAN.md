@@ -80,3 +80,7 @@ Check:
 - daily limit reached.
 
 Fallback should still produce PNG.
+
+## G. v1.4 style lock note
+
+For current production checks, use `V1_4_STYLE_PACK_TEST_PLAN.md` after this AI plan. v1.4 keeps composer-rendered text, uses locked style pack assets for characters/logos/photos, and logs a warning when selected reference assets cannot yet be sent as image input.

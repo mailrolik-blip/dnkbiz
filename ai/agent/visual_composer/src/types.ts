@@ -78,6 +78,18 @@ export interface VisualJob {
   background_layer?: BackgroundLayer;
   layout: LayoutConfig;
   brand?: BrandElement;
+  style_assets?: {
+    main_character?: string;
+    logo?: string;
+    background?: string;
+    reference?: string;
+    template?: string;
+    icon?: string;
+    icons?: string[];
+    references?: string[];
+    locked_assets?: string[];
+    warnings?: string[];
+  };
   profile?: ProjectProfileSnapshot;
   post_caption?: string;
   internal_prompt?: string;
@@ -117,4 +129,9 @@ export interface ProjectProfileSnapshot {
   revision_commands: string[];
   telegram_examples: string[];
   quality_check_rules: string[];
+  contacts?: {
+    site?: string;
+    phone?: string;
+    city?: string;
+  };
 }

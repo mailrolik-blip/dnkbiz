@@ -77,7 +77,9 @@ prisma/dev.db
 /ai/agent/visual_assets/manual_project_packs/**/*
 !/ai/agent/visual_assets/manual_project_packs/README.md
 !/ai/agent/visual_assets/manual_project_packs/**/
+!/ai/agent/visual_assets/manual_project_packs/**/README.md
 !/ai/agent/visual_assets/manual_project_packs/**/.gitkeep
+!/ai/agent/visual_assets/manual_project_packs/**/*.example.json
 /.storage/
 /public/generated/visual/*
 !/public/generated/visual/.gitkeep

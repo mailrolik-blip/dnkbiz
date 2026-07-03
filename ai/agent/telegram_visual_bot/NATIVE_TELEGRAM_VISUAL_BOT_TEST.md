@@ -209,3 +209,68 @@ Telegram commands:
 ```
 
 Full plan: `V1_3_AI_TEST_PLAN.md`.
+
+# v1.4 update
+
+Style pack checks:
+
+```text
+/asset_help
+/asset_project monopoly
+asset monopoly character role: main_character tags: ded,main lock: locked
+/asset_index
+/asset_status monopoly
+сделай новую картинку для монополии история знакомства
+/debug_job
+```
+
+Expected: `/debug_job` shows `main_character`, `locked_assets`, selected assets by role, AI usage, fallback reasons and warnings. Full plan: `V1_4_STYLE_PACK_TEST_PLAN.md`.
+# v1.5 asset/debug checks
+
+Use this flow when a real uploaded asset is not visible in the final image:
+
+```text
+/asset_index
+/asset_status monopoly
+generate image
+/debug_job
+```
+
+Check `/debug_job` in this order:
+
+```text
+manifest_backgrounds: ...
+selection_background: ... selected=... path=...
+background: ...
+composer: composer_usage background=asset ...
+AI skipped reason: daily_limit|missing_key|asset_locked|provider_error|disabled|-
+```
+
+For local AI usage:
+
+```text
+/ai_usage
+```
+
+For local development reset only:
+
+```bash
+npm run visual:ai-usage:reset -- --yes
+```
+
+# v1.5.1 debug hardening
+
+Use `/debug_job` for the compact summary. Use `/debug_job_full` only when resolver logs, compose logs and AI logs are needed.
+
+If Telegram is stuck retrying an old failing debug update:
+
+```bash
+npm run telegram:visual:drop-pending
+npm run telegram:visual:set-webhook -- --url <url> --drop-pending
+```
+
+Run the no-network debug chunking smoke:
+
+```bash
+npm run telegram:visual:debug-smoke
+```

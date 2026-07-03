@@ -16,16 +16,22 @@ export async function renderMonopolyPaySquare(job: VisualJob, context: RenderCon
 
   const background = await loadImageOrPlaceholder({ assetPath: job.background_layer?.asset_path, repoRoot: context.repoRoot, composerRoot: context.composerRoot, width, height, label: "Pay background", kind: "background", colors, warnings: context.warnings });
   const illustration = await loadImageOrPlaceholder({ assetPath: job.illustration_layer?.asset_path, repoRoot: context.repoRoot, composerRoot: context.composerRoot, width: 650, height: 520, label: "Payment visual", kind: "illustration", colors, warnings: context.warnings });
+  const logo = await loadImageOrPlaceholder({ assetPath: job.brand?.logo_path, repoRoot: context.repoRoot, composerRoot: context.composerRoot, width: 240, height: 96, label: "Pay logo", kind: "logo", colors, warnings: context.warnings });
+  const icon = await loadImageOrPlaceholder({ assetPath: job.style_assets?.icon, repoRoot: context.repoRoot, composerRoot: context.composerRoot, width: 120, height: 120, label: "Pay icon", kind: "logo", colors, warnings: context.warnings });
+  context.warnings.push(`composer_usage background=${background.existed ? "asset" : "fallback"} character=${illustration.existed && job.illustration_layer?.locked ? "asset" : illustration.existed ? "illustration_asset" : "fallback"} logo=${logo.existed ? "asset" : "fallback"} icon=${icon.existed ? "asset" : "fallback"}`);
 
-  const titleTop = isStory ? 270 : variant === "pay_square_bank_alert" ? 250 : 210;
-  const illustrationTop = isStory ? 760 : variant === "pay_square_method_card" ? 410 : 380;
+  const titleTop = isStory ? 270 : variant === "pay_square_bank_alert" ? 238 : 188;
+  const illustrationTop = isStory ? 760 : variant === "pay_square_method_card" ? 438 : 405;
+  const illustrationLeft = job.illustration_layer?.locked ? Math.round(width * 0.43) : Math.round(width * 0.34);
+  const titleWidth = job.illustration_layer?.locked ? Math.round(width * 0.58) : width - safe * 2;
   const composites: sharp.OverlayOptions[] = [
     { input: await sharp(background.input).resize(width, height, { fit: "cover" }).png().toBuffer(), left: 0, top: 0 },
     { input: Buffer.from(`<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg"><rect width="${width}" height="${height}" fill="${colors.dark}" opacity="0.22"/><rect x="${safe}" y="${safe}" width="${width - safe * 2}" height="${height - safe * 2}" rx="52" fill="#ffffff" opacity="0.13"/><circle cx="${width * 0.84}" cy="${height * 0.16}" r="130" fill="${colors.primary}" opacity="0.30"/><circle cx="${width * 0.78}" cy="${height * 0.78}" r="190" fill="${colors.accent}" opacity="0.2"/></svg>`), left: 0, top: 0 },
-    { input: renderPillSvg(390, 76, sticker, variant === "pay_square_bank_alert" ? colors.accent : colors.dark), left: safe, top: safe },
-    { input: await sharp(illustration.input).resize(Math.round(width * 0.6), Math.round(height * 0.45), { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } }).png().toBuffer(), left: Math.round(width * 0.34), top: illustrationTop },
-    { input: paymentChips(colors.primary, colors.accent, colors.dark), left: safe, top: Math.min(height - 270, Math.round(height * 0.74)) },
-    { input: renderTextSvg({ width: width - safe * 2, height: isStory ? 320 : 250, text: headline, fontSize: isStory ? 98 : 92, fill: "#ffffff", stroke: colors.dark, strokeWidth: 9, shadow: true, uppercase: true, maxLines: 2 }), left: safe, top: titleTop },
+    { input: await sharp(logo.input).resize(220, 88, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } }).png().toBuffer(), left: width - safe - 220, top: safe - 6 },
+    { input: renderPillSvg(360, 70, sticker, variant === "pay_square_bank_alert" ? colors.accent : colors.dark), left: safe, top: safe },
+    { input: await sharp(illustration.input).resize(Math.round(width * (job.illustration_layer?.locked ? 0.50 : 0.6)), Math.round(height * 0.43), { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } }).png().toBuffer(), left: illustrationLeft, top: illustrationTop },
+    { input: icon.existed ? await sharp(icon.input).resize(112, 112, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } }).png().toBuffer() : paymentChips(colors.primary, colors.accent, colors.dark), left: safe, top: Math.min(height - 270, Math.round(height * 0.74)) },
+    { input: renderTextSvg({ width: titleWidth, height: isStory ? 320 : 270, text: headline, fontSize: isStory ? 98 : 82, fill: "#ffffff", stroke: colors.dark, strokeWidth: 9, shadow: true, uppercase: true, maxLines: 2 }), left: safe, top: titleTop },
   ];
 
   if (job.text_layer?.cta) composites.push({ input: renderPillSvg(500, 72, job.text_layer.cta, colors.primary), left: safe, top: height - safe - 82 });

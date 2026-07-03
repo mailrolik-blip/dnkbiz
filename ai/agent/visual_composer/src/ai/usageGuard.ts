@@ -9,6 +9,7 @@ export interface VisualAiUsageSummary {
   last_generation_at?: string;
   daily_limit: number;
   cost_guard_enabled: boolean;
+  reset_at?: string;
 }
 
 type StoredUsage = Omit<VisualAiUsageSummary, "daily_limit" | "cost_guard_enabled">;
@@ -48,7 +49,12 @@ export async function getUsageSummary(): Promise<VisualAiUsageSummary> {
     ...usage,
     daily_limit: Number(process.env.VISUAL_AI_DAILY_LIMIT || "20"),
     cost_guard_enabled: process.env.VISUAL_AI_COST_GUARD !== "false",
+    reset_at: nextResetIso(),
   };
+}
+
+export async function resetLocalUsageForToday(): Promise<void> {
+  await fs.rm(path.join(usageRoot, `${todayKey()}.json`), { force: true });
 }
 
 async function readUsage(): Promise<StoredUsage> {
@@ -79,4 +85,11 @@ async function writeUsage(usage: StoredUsage): Promise<void> {
 
 function todayKey(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+function nextResetIso(): string {
+  const next = new Date();
+  next.setUTCDate(next.getUTCDate() + 1);
+  next.setUTCHours(0, 0, 0, 0);
+  return next.toISOString();
 }
