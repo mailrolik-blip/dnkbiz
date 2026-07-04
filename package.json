@@ -25,6 +25,8 @@
     "visual:style-pack-smoke": "npm run visual:build --silent && node ai/agent/visual_composer/dist/index.js --style-pack-smoke",
     "visual:asset-selection-smoke": "npm run visual:build --silent && node ai/agent/visual_composer/dist/index.js --asset-selection-smoke",
     "visual:layered-smoke": "npm run visual:build --silent && node ai/agent/visual_composer/dist/index.js --layered-smoke",
+    "visual:title-layer-smoke": "npm run visual:build --silent && node ai/agent/visual_composer/dist/index.js --title-layer-smoke",
+    "visual:reference-flow-smoke": "npm run visual:build --silent && node ai/agent/visual_composer/dist/index.js --reference-flow-smoke",
     "visual:layer-pack-smoke": "npm run visual:build --silent && node ai/agent/visual_composer/dist/index.js --layer-pack-smoke",
     "visual:ai-usage": "npm run visual:build --silent && node ai/agent/visual_composer/dist/index.js --ai-usage",
     "visual:ai-usage:reset": "npm run visual:build --silent && node ai/agent/visual_composer/dist/index.js --ai-usage-reset",

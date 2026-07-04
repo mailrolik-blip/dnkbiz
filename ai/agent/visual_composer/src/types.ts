@@ -169,6 +169,7 @@ export interface VisualJob {
     logo?: string;
     background?: string;
     reference?: string;
+    title_style_reference?: string;
     template?: string;
     icon?: string;
     icons?: string[];

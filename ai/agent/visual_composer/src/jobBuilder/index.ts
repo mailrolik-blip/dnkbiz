@@ -61,7 +61,7 @@ export async function buildVisualJobFromCommand(input: BuildVisualJobInput): Pro
     visual_job: visualJob,
     selected_assets: selectedStyleAssets,
     reference_images: selectedStyleAssets
-      .filter((asset) => asset.lock_policy === "reference_only" || asset.role === "style_reference" || asset.role === "composition_reference")
+      .filter((asset) => asset.lock_policy === "reference_only" || asset.role === "style_reference" || asset.role === "composition_reference" || asset.role === "title_style_reference")
       .map((asset) => ({ path: asset.path, role: asset.role, lock_policy: asset.lock_policy, description: asset.description })),
     locked_assets: selectedStyleAssets.filter((asset) => asset.lock_policy === "locked").map((asset) => asset.path),
     enable_ai: input.options?.enable_ai,
@@ -77,6 +77,24 @@ export async function buildVisualJobFromCommand(input: BuildVisualJobInput): Pro
   visualJob.internal_prompt = [profile.image_style_rules, profile.composition_rules, profile.negative_rules, commandText].filter(Boolean).join("\n");
 
   if (input.options?.enable_ai) {
+    if ((projectKey === "monopoly" || projectKey === "monopoly_pay") && visualJob.title_image_layer?.enabled) {
+      const titleLayer = await provider.generateTitleImageLayer?.({
+        ...aiInput,
+        visual_job: visualJob,
+        mode: "generate_with_references",
+        layer_type: "title_image",
+        output: { transparent_background: true, size: process.env.OPENAI_TITLE_IMAGE_SIZE || "1024x1024" },
+      });
+      if (titleLayer) {
+        visualJob.title_image_layer = {
+          ...visualJob.title_image_layer,
+          ...definedOnly(titleLayer),
+          enabled: true,
+          text: titleLayer.text || visualJob.title_image_layer.text,
+        };
+        if (titleLayer.warnings?.length) warnings.push(...titleLayer.warnings);
+      }
+    }
     if (!visualJob.illustration_layer?.asset_path && visualMode !== "hockey_photo_template") {
       const aiIllustration = await provider.generateIllustrationLayer({ ...aiInput, visual_job: visualJob });
       if (aiIllustration.asset_path) visualJob.illustration_layer = { enabled: true, ...visualJob.illustration_layer, ...aiIllustration };
@@ -106,6 +124,7 @@ function collectStyleAssets(job: VisualJob, manifest: ProjectAssetManifest): Vis
       job.style_assets?.logo,
       job.style_assets?.background,
       job.style_assets?.reference,
+      job.style_assets?.title_style_reference,
       job.style_assets?.template,
       job.style_assets?.icon,
       ...(job.style_assets?.icons || []),

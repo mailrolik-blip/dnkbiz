@@ -23,13 +23,28 @@ export function qualityCheckVisual(input: QualityCheckInput): QualityCheckResult
   if (input.expected?.uploaded_photo_required && !job.background_layer?.asset_path && !job.illustration_layer?.asset_path) {
     critical.push("photo template expected uploaded photo asset, but no photo/background asset path is set.");
   }
+  if ((job.project_key === "monopoly" || job.project_key === "monopoly_pay") && job.title_image_layer?.enabled) {
+    if (!job.title_image_layer.asset_path && !job.title_image_layer.generated_asset_path && job.title_image_layer.source !== "composer_fallback") {
+      warnings.push("missing title image layer asset.");
+    }
+    if (job.title_image_layer.source === "ai" && !job.title_image_layer.transparent_background) {
+      warnings.push("generated title not transparent.");
+    }
+  }
+  if ((job.project_key === "monopoly" || job.project_key === "monopoly_pay") && job.character_layer?.enabled) {
+    if (!job.character_layer.asset_path && !job.character_layer.generated_asset_path) warnings.push("missing character layer asset.");
+    if (job.character_layer.scale && job.character_layer.scale < 0.3) warnings.push("character too small.");
+  }
 
   if (input.previous_job && input.revision_target) {
     const previous = input.previous_job;
-    if (input.revision_target === "text") {
+    if (input.revision_target === "text" || input.revision_target === "title_image") {
       if (job.background_layer?.asset_path !== previous.background_layer?.asset_path) warnings.push("text revision changed background asset.");
       if (job.illustration_layer?.asset_path !== previous.illustration_layer?.asset_path) warnings.push("text revision changed illustration asset.");
+      if (job.character_layer?.asset_path !== previous.character_layer?.asset_path) warnings.push("text revision changed character asset.");
     }
+    if (input.revision_target === "character" && job.background_layer?.asset_path !== previous.background_layer?.asset_path) warnings.push("character revision changed background asset.");
+    if (input.revision_target === "character" && job.title_image_layer?.text !== previous.title_image_layer?.text) warnings.push("character revision changed title image text.");
     if (input.revision_target === "background" && job.text_layer?.text !== previous.text_layer?.text) warnings.push("background revision changed text.");
     if (input.revision_target === "layout" && job.text_layer?.text !== previous.text_layer?.text) warnings.push("layout revision changed text.");
   }

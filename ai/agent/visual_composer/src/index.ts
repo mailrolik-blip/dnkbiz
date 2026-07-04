@@ -22,6 +22,8 @@ interface CliOptions {
   qualitySheet?: boolean;
   layeredSmoke?: boolean;
   layerPackSmoke?: boolean;
+  titleLayerSmoke?: boolean;
+  referenceFlowSmoke?: boolean;
   aiUsage?: boolean;
   aiUsageReset?: boolean;
   yes?: boolean;
@@ -51,6 +53,8 @@ function parseArgs(argv: string[]): CliOptions {
     if (arg === "--quality-sheet") options.qualitySheet = true;
     if (arg === "--layered-smoke") options.layeredSmoke = true;
     if (arg === "--layer-pack-smoke") options.layerPackSmoke = true;
+    if (arg === "--title-layer-smoke") options.titleLayerSmoke = true;
+    if (arg === "--reference-flow-smoke") options.referenceFlowSmoke = true;
     if (arg === "--ai-usage") options.aiUsage = true;
     if (arg === "--ai-usage-reset") options.aiUsageReset = true;
     if (arg === "--yes") options.yes = true;
@@ -520,9 +524,11 @@ async function createLayeredSmokeManifest(root: string) {
       fakeAsset("monopoly-character", "monopoly", "character", await asset("monopoly-ded.png", "#f6c453"), "main_character", "locked", ["ded", "main"], 100),
       fakeAsset("monopoly-background", "monopoly", "background", await asset("monopoly-bg.png", "#f97316"), "background", "replaceable", ["wide", "promo"], 50),
       fakeAsset("monopoly-title", "monopoly", "reference", await asset("monopoly-ref.png", "#facc15"), "style_reference", "reference_only", ["promo", "style"], 20),
+      fakeAsset("monopoly-title-style", "monopoly", "reference", await asset("monopoly-title-ref.png", "#fbbf24"), "title_style_reference", "reference_only", ["title", "text", "3d"], 30),
       fakeAsset("pay-logo", "monopoly_pay", "logo", await asset("pay-logo.png", "#18d47b"), "brand_logo", "locked", ["main", "pay"], 100),
       fakeAsset("pay-character", "monopoly_pay", "character", await asset("pay-character.png", "#38bdf8"), "main_character", "locked", ["main", "pay"], 100),
       fakeAsset("pay-background", "monopoly_pay", "background", await asset("pay-bg.png", "#0f172a"), "background", "replaceable", ["wide", "pay"], 50),
+      fakeAsset("pay-title-style", "monopoly_pay", "reference", await asset("pay-title-ref.png", "#0ea5e9"), "title_style_reference", "reference_only", ["title", "text", "3d", "pay"], 30),
     ],
   };
 }
@@ -558,9 +564,51 @@ async function runLayerPackSmoke(): Promise<void> {
   const pack = await exportLayerPack({ job_id: "layer-pack-smoke", visual_job: built.visual_job, final_output_path: composed.output_path, manifest });
   const finalExists = await fs.stat(path.join(pack.folder_path, "final.png")).then((stat) => stat.isFile()).catch(() => false);
   const jobExists = await fs.stat(path.join(pack.folder_path, "visual_job.json")).then((stat) => stat.isFile()).catch(() => false);
+  const titleExists = await fs.stat(path.join(pack.folder_path, "title.png")).then((stat) => stat.isFile()).catch(() => false);
+  const promptLogExists = await fs.stat(path.join(pack.folder_path, "prompt_log.txt")).then((stat) => stat.isFile()).catch(() => false);
   const zipExists = await fs.stat(pack.zip_path).then((stat) => stat.isFile() && stat.size > 0).catch(() => false);
-  if (!finalExists || !jobExists || !zipExists) throw new Error("Layer pack smoke missing final.png, visual_job.json or zip.");
+  if (!finalExists || !jobExists || !titleExists || !promptLogExists || !zipExists) throw new Error("Layer pack smoke missing final.png, title.png, prompt_log.txt, visual_job.json or zip.");
   console.log(JSON.stringify({ ok: true, folder_path: pack.folder_path, zip_path: pack.zip_path }, null, 2));
+}
+
+async function runTitleLayerSmoke(): Promise<void> {
+  const { buildVisualJobFromCommand } = await import("./jobBuilder");
+  const { composeVisualJob } = await import("./compose");
+  const { exportLayerPack } = await import("./layerPack/exportLayerPack");
+  const manifest = await createLayeredSmokeManifest(path.join(process.cwd(), ".storage", "visual_title_layer_smoke"));
+  const built = await buildVisualJobFromCommand({ command_text: "сделай новую картинку для монополии результаты конкурса 1920x1080", asset_manifest: manifest as never, options: { enable_ai: false } });
+  if (!built.visual_job.title_image_layer?.enabled) throw new Error("title_image_layer missing.");
+  if (built.visual_job.title_image_layer.source !== "composer_fallback") throw new Error(`Expected composer_fallback title source, got ${built.visual_job.title_image_layer.source || "-"}.`);
+  const composed = await composeVisualJob(built.visual_job);
+  if (composed.width !== 1920 || composed.height !== 1080) throw new Error("Title layer smoke expected final 1920x1080.");
+  const pack = await exportLayerPack({ job_id: "title-layer-smoke", visual_job: built.visual_job, final_output_path: composed.output_path, manifest });
+  const titleExists = await fs.stat(path.join(pack.folder_path, "title.png")).then((stat) => stat.isFile() && stat.size > 0).catch(() => false);
+  if (!titleExists) throw new Error("Title layer smoke expected title.png in layer pack.");
+  console.log(JSON.stringify({ ok: true, title_source: built.visual_job.title_image_layer.source, output: `${composed.width}x${composed.height}`, layer_pack: pack.zip_path }, null, 2));
+}
+
+async function runReferenceFlowSmoke(): Promise<void> {
+  const { buildVisualJobFromCommand } = await import("./jobBuilder");
+  const { composeVisualJob } = await import("./compose");
+  const { createVisualJobRecord, FileVisualJobStore } = await import("./store");
+  const { reviseProducedVisual } = await import("./production/reviseVisual");
+  const manifest = await createLayeredSmokeManifest(path.join(process.cwd(), ".storage", "visual_reference_flow_smoke"));
+  const built = await buildVisualJobFromCommand({ command_text: "сделай новую картинку для монополии история знакомства", asset_manifest: manifest as never, options: { enable_ai: false } });
+  const composed = await composeVisualJob(built.visual_job);
+  const store = new FileVisualJobStore();
+  const record = createVisualJobRecord({
+    job_id: "reference-flow-smoke",
+    command_text: "сделай новую картинку для монополии история знакомства",
+    detected: built.detected,
+    visual_job: { ...built.visual_job, output_path: composed.output_path },
+    output: { version: 1, output_path: composed.output_path, output_url: "/generated/visual/reference-flow-smoke.png", width: composed.width, height: composed.height, created_at: new Date().toISOString() },
+  });
+  await store.save({ record });
+  const revised = await reviseProducedVisual({ job_id: "reference-flow-smoke", target: "character", instruction: "дед держит кубок", options: { enable_ai: true } });
+  const warningText = revised.warnings.join("; ");
+  assertIncludes(warningText, "image reference/edit not available", "Reference flow smoke expected provider capability warning");
+  if (revised.visual_job.character_layer?.asset_path !== built.visual_job.character_layer?.asset_path) throw new Error("Reference flow smoke changed locked character asset unexpectedly.");
+  console.log(JSON.stringify({ ok: true, warning: "image reference/edit not available", character_preserved: true }, null, 2));
 }
 
 function fakeAsset(
@@ -685,6 +733,16 @@ async function main(): Promise<void> {
 
   if (options.layerPackSmoke) {
     await runLayerPackSmoke();
+    return;
+  }
+
+  if (options.titleLayerSmoke) {
+    await runTitleLayerSmoke();
+    return;
+  }
+
+  if (options.referenceFlowSmoke) {
+    await runReferenceFlowSmoke();
     return;
   }
 

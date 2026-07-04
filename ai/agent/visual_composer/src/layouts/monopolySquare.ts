@@ -26,8 +26,8 @@ export async function renderMonopolySquare(job: VisualJob, context: RenderContex
   const sticker = job.text_layer?.sticker || "";
   const isStory = height > width * 1.3;
 
-  const background = await loadImageOrPlaceholder({ assetPath: job.background_layer?.asset_path, repoRoot: context.repoRoot, composerRoot: context.composerRoot, width, height, label: "Monopoly background", kind: "background", colors, warnings: context.warnings });
-  const character = await loadImageOrPlaceholder({ assetPath: job.character_layer?.asset_path || job.illustration_layer?.asset_path, repoRoot: context.repoRoot, composerRoot: context.composerRoot, width: Math.round(width * 0.55), height: Math.round(height * 0.55), label: "Monopoly character", kind: "illustration", colors, warnings: context.warnings });
+  const background = await loadImageOrPlaceholder({ assetPath: job.background_layer?.generated_asset_path || job.background_layer?.asset_path, repoRoot: context.repoRoot, composerRoot: context.composerRoot, width, height, label: "Monopoly background", kind: "background", colors, warnings: context.warnings });
+  const character = await loadImageOrPlaceholder({ assetPath: job.character_layer?.generated_asset_path || job.character_layer?.asset_path || job.illustration_layer?.asset_path, repoRoot: context.repoRoot, composerRoot: context.composerRoot, width: Math.round(width * 0.55), height: Math.round(height * 0.55), label: "Monopoly character", kind: "illustration", colors, warnings: context.warnings });
   const titleImage = job.title_image_layer?.asset_path || job.title_image_layer?.generated_asset_path
     ? await loadImageOrPlaceholder({ assetPath: job.title_image_layer.asset_path || job.title_image_layer.generated_asset_path, repoRoot: context.repoRoot, composerRoot: context.composerRoot, width: Math.round(width * 0.58), height: Math.round(height * 0.25), label: "Monopoly title", kind: "illustration", colors, warnings: context.warnings })
     : null;

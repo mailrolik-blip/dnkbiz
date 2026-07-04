@@ -115,3 +115,9 @@ npm run visual:layered-smoke
 npm run visual:layer-pack-smoke
 npm run visual:quality-sheet
 ```
+
+## v1.48 Addendum
+
+For reference/edit and title-image production tests, use `V1_8_REFERENCE_EDIT_TEST_PLAN.md`.
+
+Layer packs now include `prompt_log.txt` and `README.txt`; `title.png` is exported even when the title is composer fallback.

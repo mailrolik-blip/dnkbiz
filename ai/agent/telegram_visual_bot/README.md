@@ -222,3 +222,30 @@ Manual plan:
 ```text
 ai/agent/telegram_visual_bot/V1_6_LAYERED_PIPELINE_TEST_PLAN.md
 ```
+
+## DNK MVP 1.48 Reference/Edit Workflow
+
+Telegram layer revisions now distinguish title and character work:
+
+- `?? Текст` updates `title_image_layer` for Monopoly/Pay and then recomposes the final PNG.
+- `Дед/персонаж` targets `character_layer`.
+- If image reference/edit is unavailable, the bot keeps the locked character and reports the capability warning instead of replacing the ded with a random prompt-only character.
+- Explicit unlock phrases such as `можно заменить персонажа` allow prompt-only character replacement and are logged in debug/history.
+- `PNG без сжатия` sends the latest final PNG as a document.
+- `Слои ZIP` sends a layer pack with `final.png`, editable layers, `visual_job.json`, `manifest.json`, `prompt_log.txt` and `README.txt`.
+
+Optional env flags:
+
+```bash
+VISUAL_BOT_AUTO_SEND_ORIGINAL=true
+VISUAL_BOT_AUTO_SEND_LAYER_PACK=false
+VISUAL_AI_CONFIRM_EXPENSIVE_ACTIONS=false
+```
+
+Title style reference upload example:
+
+```text
+asset monopoly reference role: title_style_reference tags: orange,3d,text lock: reference_only
+```
+
+See `V1_8_REFERENCE_EDIT_TEST_PLAN.md` for the manual checklist.

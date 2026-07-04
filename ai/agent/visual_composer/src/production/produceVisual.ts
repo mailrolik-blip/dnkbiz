@@ -101,8 +101,10 @@ export async function produceVisualFromCommand(input: ProduceVisualInput): Promi
     process.env.OPENAI_API_KEY ? "OPENAI_API_KEY present" : "OPENAI_API_KEY missing",
     buildResult.visual_job.illustration_layer?.generated_by_ai ? `illustration AI model=${buildResult.visual_job.illustration_layer.model || "-"}` : "illustration fallback/manual",
     buildResult.visual_job.background_layer?.generated_by_ai ? `background AI model=${buildResult.visual_job.background_layer.model || "-"}` : "background fallback/manual",
+    buildResult.visual_job.title_image_layer?.source === "ai" ? "title_image AI generated" : `title_image ${buildResult.visual_job.title_image_layer?.source || "none"}`,
     buildResult.visual_job.illustration_layer?.warnings?.join("; ") || "",
     buildResult.visual_job.background_layer?.warnings?.join("; ") || "",
+    buildResult.visual_job.title_image_layer?.warnings?.join("; ") || "",
   ];
   record.compose_log = [
     `layout=${record.visual_job.layout.variant}`,
@@ -123,7 +125,7 @@ export async function produceVisualFromCommand(input: ProduceVisualInput): Promi
     width: composeResult.width,
     height: composeResult.height,
     post_caption: record.post_caption,
-    available_revisions: ["text", "illustration", "background", "layout", "format"],
+    available_revisions: ["text", "title_image", "character", "illustration", "background", "layout", "format"],
     warnings,
   };
 }

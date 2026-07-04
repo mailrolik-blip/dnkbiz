@@ -9,13 +9,14 @@ export function buildMonopolyPayJob(input: BuildVisualJobInput, text: TextLayerP
   const illustration = resolveVisualAsset({ project_key: "monopoly_pay", visual_mode: "composer", asset_type: "illustration", tags: ["payment"], manifest: input.asset_manifest });
   const icon = resolveVisualAsset({ project_key: "monopoly_pay", visual_mode: "composer", asset_type: "icon", tags: ["payment", "pay", "card"], manifest: input.asset_manifest });
   const logo = resolveVisualAsset({ project_key: "monopoly_pay", visual_mode: "composer", asset_type: "logo", tags: ["main"], manifest: input.asset_manifest });
+  const titleReference = resolveVisualAsset({ project_key: "monopoly_pay", visual_mode: "composer", asset_type: "reference", role: "title_style_reference", lock_policy: "reference_only", tags: ["title", "text", "3d", "pay"], manifest: input.asset_manifest });
   const payCharacter = resolveVisualAsset({ project_key: "monopoly_pay", visual_mode: "composer", asset_type: "character", role: "main_character", lock_policy: "locked", tags: ["ded", "main", "pay"], manifest: input.asset_manifest });
   const wantsDed = /дед|нашим\s+дедом|наш\s+дед/i.test(input.command_text);
   const monopolyCharacter = wantsDed && !payCharacter.asset_path
     ? resolveVisualAsset({ project_key: "monopoly", visual_mode: "composer", asset_type: "character", role: "main_character", lock_policy: "locked", tags: ["ded", "main"], manifest: input.asset_manifest })
     : undefined;
   const characterPath = payCharacter.asset_path || monopolyCharacter?.asset_path || "";
-  warnings.push(...(bg.selection_log || []), ...(illustration.selection_log || []), ...(icon.selection_log || []), ...(logo.selection_log || []), ...(payCharacter.selection_log || []), ...(monopolyCharacter?.selection_log || []), ...bg.warnings, ...illustration.warnings);
+  warnings.push(...(bg.selection_log || []), ...(illustration.selection_log || []), ...(icon.selection_log || []), ...(logo.selection_log || []), ...(titleReference.selection_log || []), ...(payCharacter.selection_log || []), ...(monopolyCharacter?.selection_log || []), ...bg.warnings, ...illustration.warnings);
   if (wantsDed && !characterPath) warnings.push("Pay requested 'наш дед', but no locked Pay or Monopoly main character was found.");
   if (wantsDed && !payCharacter.asset_path && monopolyCharacter?.asset_path) warnings.push("Pay character missing; using locked Monopoly main_character as cross-project fallback.");
   const layout = chooseLayout(input, text);
@@ -42,7 +43,7 @@ export function buildMonopolyPayJob(input: BuildVisualJobInput, text: TextLayerP
     illustration_layer: { enabled: true, asset_path: illustrationPath, position: "center", locked: Boolean(characterPath) },
     background_layer: { enabled: true, asset_path: bg.asset_path, lock_policy: bg.asset?.lock_policy, fit: "cover", source: bg.asset_path ? "asset" : "fallback", locked: false },
     character_layer: { enabled: true, asset_path: illustrationPath, role: "main_character", lock_policy: payCharacter.asset?.lock_policy || monopolyCharacter?.asset?.lock_policy, fit: "contain", source: illustrationPath ? "asset" : "fallback", locked: Boolean(characterPath) },
-    title_image_layer: { enabled: true, text: text.title, transparent_background: true, source: "composer_fallback", position: "top", fit: "contain", warnings: ["title_image_layer uses composer_fallback; AI exact text image generation needs manual review."] },
+    title_image_layer: { enabled: true, text: text.title, transparent_background: true, style_ref_asset_path: titleReference.asset_path, source: "composer_fallback", position: "top", fit: "contain", warnings: ["title_image_layer uses composer_fallback; AI exact text image generation needs manual review."] },
     layout: { variant: layout, width: size.width, height: size.height, safe_area: 64 },
     brand: { logo_path: logo.asset_path, colors: { primary: "#19D47B", accent: "#006DFF", dark: "#101820", light: "#F4FBFF" } },
     logo_layer: { enabled: Boolean(logo.asset_path), asset_path: logo.asset_path, position: "top_right", fit: "contain", lock_policy: logo.asset?.lock_policy, source: logo.asset_path ? "asset" : "fallback" },
@@ -53,6 +54,9 @@ export function buildMonopolyPayJob(input: BuildVisualJobInput, text: TextLayerP
       main_character: characterPath,
       logo: logo.asset_path,
       background: bg.asset_path,
+      title_style_reference: titleReference.asset_path,
+      reference: titleReference.asset_path,
+      references: compactStrings([titleReference.asset_path]),
       icon: icon.asset_path,
       icons: compactStrings([icon.asset_path]),
       locked_assets: compactStrings([characterPath, logo.asset_path]),

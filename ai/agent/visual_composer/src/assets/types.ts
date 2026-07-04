@@ -1,4 +1,4 @@
-import type { VisualMode, VisualProjectKey } from "../types";
+﻿import type { VisualMode, VisualProjectKey } from "../types";
 
 export type VisualAssetType =
   | "background"
@@ -22,7 +22,8 @@ export interface VisualAsset {
     | "brand_logo"
     | "style_reference"
     | "background"
-    | "composition_reference";
+    | "composition_reference"
+    | "title_style_reference";
   path: string;
   tags: string[];
   usage: string;

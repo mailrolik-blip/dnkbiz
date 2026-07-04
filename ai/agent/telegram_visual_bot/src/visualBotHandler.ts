@@ -153,6 +153,7 @@ async function handleCommand(chatId: string, text: string, telegram: TelegramCli
       "Отправь картинку с caption:",
       "asset monopoly background tags: orange,promo,contest",
       "asset monopoly character role: main_character tags: ded,main lock: locked",
+      "asset monopoly reference role: title_style_reference tags: orange,3d,text lock: reference_only",
       "asset pay icon tags: bank,pay",
       "asset casper reference tags: warning,news",
       "asset hockey logo tags: main",
@@ -317,6 +318,9 @@ async function handleNewVisualTask(chatId: string, userId: string | undefined, t
   }
   if (process.env.VISUAL_BOT_AUTO_SEND_ORIGINAL === "true" && deps.telegram.sendDocumentFromFile) {
     await deps.telegram.sendDocumentFromFile(chatId, result.output_path, "PNG без сжатия");
+  }
+  if (process.env.VISUAL_BOT_AUTO_SEND_LAYER_PACK === "true") {
+    await sendLayerPack(chatId, result.job_id, deps.telegram);
   }
   if (deps.sendPostText && result.post_caption) await deps.telegram.sendMessage(chatId, `Текст поста:\n${result.post_caption}`);
   await stateStore.setActiveJob({ chat_id: chatId, user_id: userId, active_job_id: result.job_id, active_output_path: result.output_path, active_output_url: result.output_url, last_project_key: result.detected.project_key, last_visual_mode: result.detected.visual_mode });
@@ -530,6 +534,7 @@ async function sendAssetProjectStatus(chatId: string, telegram: TelegramClient, 
   const manifest = loadDefaultAssetManifest();
   const assets = manifest.assets.filter((asset) => asset.project_key === project);
   const count = (type: string) => assets.filter((asset) => asset.type === type).length;
+  const roleCount = (role: string) => assets.filter((asset) => asset.role === role).length;
   const safe = assets.filter((asset) => asset.safe_for_auto_use !== false).length;
   const locked = assets.filter((asset) => asset.lock_policy === "locked").length;
   await telegram.sendMessage(chatId, [
@@ -538,6 +543,7 @@ async function sendAssetProjectStatus(chatId: string, telegram: TelegramClient, 
     `characters: ${count("character")}`,
     `logos: ${count("logo")}`,
     `references: ${count("reference")}`,
+    `title_style_references: ${roleCount("title_style_reference")}`,
     `templates: ${count("template")}`,
     `icons: ${count("icon")}`,
     `safe_for_auto_use: ${safe}`,
@@ -565,6 +571,7 @@ async function sendAiStatus(chatId: string, telegram: TelegramClient) {
     `image model: ${process.env.OPENAI_IMAGE_MODEL || "gpt-image-1"}`,
     `image quality: ${process.env.OPENAI_IMAGE_QUALITY || process.env.VISUAL_OUTPUT_QUALITY || "medium"}`,
     `image size: ${process.env.OPENAI_IMAGE_SIZE || "1024x1024"}`,
+    `confirm expensive actions: ${process.env.VISUAL_AI_CONFIRM_EXPENSIVE_ACTIONS === "true" ? "yes" : "no"}`,
     `daily limit: ${usage.daily_limit}`,
     `usage today: images=${usage.image_generations_count}, text=${usage.text_generations_count}, failed=${usage.failed_generations_count}`,
   ].join("\n"));

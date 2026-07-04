@@ -11,7 +11,8 @@ export function buildMonopolyJob(input: BuildVisualJobInput, text: TextLayerPart
   const illustration = resolveVisualAsset({ project_key: "monopoly", visual_mode: "composer", asset_type: "illustration", tags: ["character"], manifest: input.asset_manifest });
   const logo = resolveVisualAsset({ project_key: "monopoly", visual_mode: "composer", asset_type: "logo", tags: ["main"], manifest: input.asset_manifest });
   const reference = resolveVisualAsset({ project_key: "monopoly", visual_mode: "composer", asset_type: "reference", role: "style_reference", lock_policy: "reference_only", tags: ["promo", "style"], manifest: input.asset_manifest });
-  warnings.push(...(character.selection_log || []), ...(bg.selection_log || []), ...(illustration.selection_log || []), ...(logo.selection_log || []), ...(reference.selection_log || []), ...bg.warnings, ...illustration.warnings);
+  const titleReference = resolveVisualAsset({ project_key: "monopoly", visual_mode: "composer", asset_type: "reference", role: "title_style_reference", lock_policy: "reference_only", tags: ["title", "text", "3d"], manifest: input.asset_manifest });
+  warnings.push(...(character.selection_log || []), ...(bg.selection_log || []), ...(illustration.selection_log || []), ...(logo.selection_log || []), ...(reference.selection_log || []), ...(titleReference.selection_log || []), ...bg.warnings, ...illustration.warnings);
   if (!character.asset_path) warnings.push("No locked Monopoly main character found; AI generated/free fallback used.");
   const layout = chooseLayout(input, text);
   const size = sizeFor(format);
@@ -62,7 +63,7 @@ export function buildMonopolyJob(input: BuildVisualJobInput, text: TextLayerPart
       enabled: true,
       text: text.title,
       transparent_background: true,
-      style_ref_asset_path: reference.asset_path,
+      style_ref_asset_path: titleReference.asset_path || reference.asset_path,
       source: "composer_fallback",
       position: "top",
       fit: "contain",
@@ -89,7 +90,8 @@ export function buildMonopolyJob(input: BuildVisualJobInput, text: TextLayerPart
       logo: logo.asset_path,
       background: bg.asset_path,
       reference: reference.asset_path,
-      references: [reference.asset_path].filter(Boolean),
+      title_style_reference: titleReference.asset_path,
+      references: [reference.asset_path, titleReference.asset_path].filter(Boolean),
       locked_assets: [character.asset_path, logo.asset_path].filter(Boolean),
       warnings: character.asset_path ? ["main_character locked asset used"] : ["main_character missing"],
     },

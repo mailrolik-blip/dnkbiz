@@ -1,13 +1,14 @@
 ﻿import fs from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
-import type { AiLayerInput, VisualAiProvider } from "./types";
+import type { AiImageLayerType, AiLayerInput, VisualAiCapabilities, VisualAiProvider } from "./types";
 import { buildStructuredImagePrompt } from "./prompts/buildImagePrompt";
 import { buildTextPrompt } from "./prompts/buildTextPrompt";
 import { canGenerateImage, recordImageGeneration, recordTextGeneration } from "./usageGuard";
 
 export function createOpenAiProvider(): VisualAiProvider {
   return {
+    getCapabilities,
     async generateTextLayer(input) {
       const prompt = buildTextPrompt(input);
       try {
@@ -33,17 +34,117 @@ export function createOpenAiProvider(): VisualAiProvider {
       }
     },
     async generateIllustrationLayer(input) {
-      return generateImageOrFallback(input, "illustration");
+      return generateImageOrFallback({ ...input, mode: "generate_image", layer_type: "illustration" }, "illustration");
     },
     async generateBackgroundLayer(input) {
       if (input.visual_mode === "hockey_photo_template") {
         return { enabled: true, asset_path: "", locked: false, warnings: ["AI background skipped: uploaded photo template mode."] };
       }
-      return generateImageOrFallback(input, "background");
+      return generateImageOrFallback({ ...input, mode: "generate_image", layer_type: "background" }, "background");
     },
     async generateStyleBaseImage(input) {
-      return generateImageOrFallback(input, "style_base");
+      return generateImageOrFallback({ ...input, mode: "generate_image", layer_type: "style_base" }, "style_base");
     },
+    async generateCharacterLayer(input) {
+      return generateCharacterLayer(input);
+    },
+    async generateTitleImageLayer(input) {
+      return generateTitleImageLayer(input);
+    },
+  };
+}
+
+function getCapabilities(): VisualAiCapabilities {
+  return {
+    image_generation: true,
+    image_references: false,
+    image_edit: false,
+    transparent_background: process.env.OPENAI_IMAGE_TRANSPARENT_BACKGROUND === "true",
+  };
+}
+
+async function generateCharacterLayer(input: AiLayerInput) {
+  const capabilities = getCapabilities();
+  const current = input.visual_job?.character_layer;
+  const locked = Boolean(current?.locked || current?.lock_policy === "locked" || input.locked_assets?.length);
+  const unlockRequested = Boolean(input.allow_locked_character_replacement || /можно заменить персонажа|сгенерируй нового деда|замени персонажа|new character|replace character/iu.test(input.command_text));
+  const references = collectCharacterReferences(input);
+
+  if (locked && !unlockRequested && (!capabilities.image_edit || !capabilities.image_references)) {
+    return {
+      enabled: true,
+      asset_path: current?.asset_path,
+      generated_asset_path: current?.generated_asset_path,
+      role: "main_character" as const,
+      lock_policy: current?.lock_policy || "locked" as const,
+      source: current?.source || "asset" as const,
+      locked: true,
+      warnings: ["image reference/edit not available in current provider; locked character preserved"],
+    };
+  }
+
+  const promptInput = {
+    ...input,
+    mode: references.length && capabilities.image_references ? "generate_with_references" as const : "generate_image" as const,
+    layer_type: "character" as const,
+    reference_images: references,
+  };
+  const generated = await generateImageOnly(promptInput, "character");
+  if (!generated.asset_path) {
+    return {
+      enabled: true,
+      asset_path: current?.asset_path,
+      generated_asset_path: current?.generated_asset_path,
+      source: current?.source || "asset" as const,
+      locked: current?.locked,
+      warnings: generated.warnings,
+    };
+  }
+
+  return {
+    enabled: true,
+    generated_asset_path: generated.asset_path,
+    role: "main_character" as const,
+    lock_policy: unlockRequested ? "replaceable" as const : current?.lock_policy,
+    source: "ai" as const,
+    locked: false,
+    warnings: [
+      unlockRequested ? "character lock overridden by user" : "character revision from reference",
+      ...(generated.warnings || []),
+    ],
+  };
+}
+
+async function generateTitleImageLayer(input: AiLayerInput) {
+  const capabilities = getCapabilities();
+  const promptInput = {
+    ...input,
+    mode: input.reference_images?.length ? "generate_with_references" as const : "generate_image" as const,
+    layer_type: "title_image" as const,
+    output: { transparent_background: true, size: input.output?.size || process.env.OPENAI_TITLE_IMAGE_SIZE || "1024x1024" },
+  };
+  const generated = await generateImageOnly(promptInput, "title_image");
+  const text = input.visual_job?.title_image_layer?.text || input.visual_job?.text_layer?.text || input.command_text;
+  if (!generated.asset_path) {
+    return {
+      enabled: true,
+      text,
+      source: "composer_fallback" as const,
+      transparent_background: true,
+      warnings: generated.warnings,
+    };
+  }
+  return {
+    enabled: true,
+    text,
+    generated_asset_path: generated.asset_path,
+    source: "ai" as const,
+    transparent_background: capabilities.transparent_background,
+    warnings: [
+      "AI title image may need manual review for exact Cyrillic text",
+      ...(capabilities.transparent_background ? [] : ["generated title not transparent; transparent background is not enabled in current provider"]),
+      ...(generated.warnings || []),
+    ],
   };
 }
 
@@ -89,17 +190,19 @@ async function callOpenAiText(prompt: ReturnType<typeof buildTextPrompt>): Promi
   return parseJsonObject(text);
 }
 
-async function generateImageOrFallback(input: AiLayerInput, kind: "illustration" | "background" | "style_base") {
+async function generateImageOrFallback(input: AiLayerInput, kind: AiImageLayerType) {
   const prompt = buildStructuredImagePrompt(input, kind);
   const promptText = [prompt.system, prompt.user, `Negative rules: ${prompt.negative_rules}`, `Output: ${prompt.output_expectations}`].join("\n\n");
   const model = process.env.OPENAI_IMAGE_MODEL || "gpt-image-1";
-  const referenceWarning = hasReferenceAssets(input)
-    ? "reference assets selected but image reference input is not implemented; using prompt-only generation"
-    : "";
+  const referenceWarning = hasReferenceAssets(input) && input.mode !== "generate_image"
+    ? "image reference/edit not available in current provider; using prompt-only generation"
+    : hasReferenceAssets(input)
+      ? "reference assets selected but image reference input is not implemented; using prompt-only generation"
+      : "";
   try {
     const guard = await canGenerateImage();
     if (!guard.ok) throw new Error(guard.reason || "AI image usage guard blocked generation.");
-    const assetPath = await callOpenAiImage(input.project_key, kind, promptText, model);
+    const assetPath = await callOpenAiImage(input.project_key, kind, promptText, model, input.output);
     await recordImageGeneration(true);
     return { enabled: true, asset_path: assetPath, locked: false, generated_by_ai: true, prompt_used: promptText, model, warnings: referenceWarning ? [referenceWarning] : [] };
   } catch (error) {
@@ -115,25 +218,54 @@ async function generateImageOrFallback(input: AiLayerInput, kind: "illustration"
   }
 }
 
+async function generateImageOnly(input: AiLayerInput, kind: AiImageLayerType): Promise<{ asset_path?: string; warnings: string[]; prompt_used?: string; model?: string }> {
+  const prompt = buildStructuredImagePrompt(input, kind);
+  const promptText = [prompt.system, prompt.user, `Negative rules: ${prompt.negative_rules}`, `Output: ${prompt.output_expectations}`].join("\n\n");
+  const model = process.env.OPENAI_IMAGE_MODEL || "gpt-image-1";
+  try {
+    if (!process.env.OPENAI_API_KEY) throw new Error("OPENAI_API_KEY missing");
+    const guard = await canGenerateImage();
+    if (!guard.ok) throw new Error(guard.reason || "AI image usage guard blocked generation.");
+    const assetPath = await callOpenAiImage(input.project_key, kind, promptText, model, input.output);
+    await recordImageGeneration(true);
+    return { asset_path: assetPath, warnings: [], prompt_used: promptText, model };
+  } catch (error) {
+    await recordImageGeneration(false);
+    return { warnings: [`OpenAI ${kind} generation unavailable: ${error instanceof Error ? error.message : "unknown error"}`], prompt_used: promptText, model };
+  }
+}
+
+function collectCharacterReferences(input: AiLayerInput): NonNullable<AiLayerInput["reference_images"]> {
+  const references = [...(input.reference_images || [])];
+  const characterPath = input.visual_job?.character_layer?.asset_path || input.visual_job?.style_assets?.main_character;
+  if (characterPath && !references.some((ref) => ref.path === characterPath)) {
+    references.unshift({ path: characterPath, role: "main_character", lock_policy: "locked", description: "Locked character identity reference" });
+  }
+  return references;
+}
+
 function hasReferenceAssets(input: AiLayerInput): boolean {
   return Boolean(
     input.reference_images?.length ||
       input.visual_job?.style_assets?.reference ||
       input.visual_job?.style_assets?.main_character ||
-      input.visual_job?.style_assets?.logo,
+      input.visual_job?.style_assets?.logo ||
+      input.visual_job?.title_image_layer?.style_ref_asset_path,
   );
 }
 
-async function callOpenAiImage(projectKey: string, kind: string, prompt: string, model: string): Promise<string> {
+async function callOpenAiImage(projectKey: string, kind: string, prompt: string, model: string, output?: AiLayerInput["output"]): Promise<string> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY missing");
   const quality = process.env.OPENAI_IMAGE_QUALITY || process.env.VISUAL_OUTPUT_QUALITY || "medium";
-  const size = process.env.OPENAI_IMAGE_SIZE || "1024x1024";
+  const size = output?.size || process.env.OPENAI_IMAGE_SIZE || "1024x1024";
   const n = Math.max(1, Math.min(Number(process.env.VISUAL_AI_MAX_IMAGES_PER_REQUEST || "1"), 1));
+  const body: Record<string, unknown> = { model, prompt, n, size, quality };
+  if (output?.transparent_background && process.env.OPENAI_IMAGE_TRANSPARENT_BACKGROUND === "true") body.background = "transparent";
   const response = await fetch("https://api.openai.com/v1/images/generations", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({ model, prompt, n, size, quality }),
+    body: JSON.stringify(body),
   });
   if (!response.ok) throw new Error(`OpenAI image failed: ${response.status}`);
   const payload = await response.json() as { data?: Array<{ b64_json?: string; url?: string }> };

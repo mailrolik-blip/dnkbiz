@@ -303,3 +303,9 @@ Start Stage 1 stabilization in a separate pass: fix Data Table filters, normaliz
 - Added Telegram `/ai_status`, `/ai_on`, `/ai_off`.
 - Added `npm run visual:ai-smoke` with image generation opt-in via `-- --image`.
 - Added `V1_3_AI_TEST_PLAN.md`.
+
+## DNK MVP 1.48 Reference/Edit Notes
+
+v1.48 adds provider capability diagnostics, character-layer reference/edit workflow guards, title-image layer generation/fallback, title style references, and richer layer packs with `prompt_log.txt` and `README.txt`.
+
+The current OpenAI image provider path supports prompt-only image generation. Image reference/edit is explicitly reported as unavailable until a real reference/edit API path is wired; locked characters are preserved by default.

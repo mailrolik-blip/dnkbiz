@@ -303,3 +303,14 @@ Check original delivery buttons:
 PNG Р±РµР· СЃР¶Р°С‚РёСЏ
 РЎР»РѕРё ZIP
 ```
+
+## DNK MVP 1.48 Manual Checks
+
+Additional reference/edit checks are documented in `V1_8_REFERENCE_EDIT_TEST_PLAN.md`.
+
+Key checks:
+
+- Upload `title_style_reference` via `asset monopoly reference role: title_style_reference tags: orange,3d,text lock: reference_only`.
+- Use `?? Текст` and verify only `title_image_layer` changes.
+- Use `Дед/персонаж` with `дед держит кубок`; if reference/edit is unavailable, locked character must remain unchanged and debug must show the warning.
+- Use `PNG без сжатия` and `Слои ZIP` after generation.

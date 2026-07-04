@@ -365,3 +365,25 @@ npm run visual:ai-usage:reset -- --yes
 `visual:asset-selection-smoke` creates safe dummy PNG files under `.storage/visual_asset_selection_smoke/` and asserts that Monopoly background/character/reference and Pay logo/character/background/icon are selected and used by composer.
 
 The reset command is local-dev only. It deletes today's local usage file under `.storage/visual_ai_usage/`; do not use it in production to bypass cost guard.
+
+## DNK MVP 1.48 Reference/Edit And Title Layers
+
+Monopoly and Monopoly Pay now expose production layer workflows for character and title revisions:
+
+- `character_layer` is revised separately from background/title/logo.
+- Locked character assets are preserved unless the user explicitly writes `можно заменить персонажа`, `замени персонажа` or `сгенерируй нового деда`.
+- The provider exposes capability diagnostics for image generation, image references, image edit and transparent background.
+- Current OpenAI image reference/edit capability is gated as unavailable in this provider path; the bot logs `image reference/edit not available in current provider` and keeps the locked character instead of silently replacing it.
+- `title_image_layer` can be generated as an AI image layer when AI image generation is available, otherwise it falls back to composer-rendered text.
+- `title_style_reference` assets can be uploaded with: `asset monopoly reference role: title_style_reference tags: orange,3d,text lock: reference_only`.
+- Layer packs now include `prompt_log.txt` and `README.txt`; `title.png` is exported even for composer fallback so it can be replaced manually in Photoshop.
+
+Useful local checks:
+
+```bash
+npm run visual:title-layer-smoke
+npm run visual:reference-flow-smoke
+npm run visual:layer-pack-smoke
+```
+
+Manual test plan: `ai/agent/telegram_visual_bot/V1_8_REFERENCE_EDIT_TEST_PLAN.md`.

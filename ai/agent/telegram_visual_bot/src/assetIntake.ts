@@ -64,6 +64,7 @@ const roleAliases: Record<string, VisualAsset["role"]> = {
   secondary_character: "secondary_character",
   brand_logo: "brand_logo",
   style_reference: "style_reference",
+  title_style_reference: "title_style_reference",
   background: "background",
   composition_reference: "composition_reference",
   "главный_персонаж": "main_character",
