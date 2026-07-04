@@ -212,3 +212,15 @@ Native Telegram visual bot now treats Monopoly and Monopoly Pay as layered produ
 - final composite.
 
 Original PNG delivery uses Telegram `sendDocument`; layer packs are exported as ZIP files under `.storage/visual_layer_packs/`.
+
+## DNK MVP 1.48 Art Direction Rule
+
+Before suggesting the next MVP commit message, check `MVP_VERSION_LOG.md`.
+
+The current recommended commit message is:
+
+```text
+DNK MVP 1.48: improve layered visual art direction
+```
+
+The visual bot roadmap now treats Monopoly/Pay output as production layer art direction: preset-based placement, manual layer movement, title preprocessing and explicit provider capability reporting for reference/edit.

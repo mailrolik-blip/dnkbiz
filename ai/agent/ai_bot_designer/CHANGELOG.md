@@ -309,3 +309,18 @@ Start Stage 1 stabilization in a separate pass: fix Data Table filters, normaliz
 v1.48 adds provider capability diagnostics, character-layer reference/edit workflow guards, title-image layer generation/fallback, title style references, and richer layer packs with `prompt_log.txt` and `README.txt`.
 
 The current OpenAI image provider path supports prompt-only image generation. Image reference/edit is explicitly reported as unavailable until a real reference/edit API path is wired; locked characters are preserved by default.
+
+## DNK MVP 1.48: improve layered visual art direction
+
+- Added MVP version log and commit-message guard.
+- Added production placement presets for Monopoly and Monopoly Pay.
+- Added layer placement controls for title and character revisions without AI generation.
+- Added title image preprocessing and stronger branded fallback rendering.
+- Added provider capability check for image reference/edit support.
+- Added `placement.json` to layer packs.
+
+Recommended commit message:
+
+```text
+DNK MVP 1.48: improve layered visual art direction
+```

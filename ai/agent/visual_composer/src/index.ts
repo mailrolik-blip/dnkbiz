@@ -24,6 +24,9 @@ interface CliOptions {
   layerPackSmoke?: boolean;
   titleLayerSmoke?: boolean;
   referenceFlowSmoke?: boolean;
+  placementSmoke?: boolean;
+  titlePreprocessSmoke?: boolean;
+  referenceProviderCheck?: boolean;
   aiUsage?: boolean;
   aiUsageReset?: boolean;
   yes?: boolean;
@@ -55,6 +58,9 @@ function parseArgs(argv: string[]): CliOptions {
     if (arg === "--layer-pack-smoke") options.layerPackSmoke = true;
     if (arg === "--title-layer-smoke") options.titleLayerSmoke = true;
     if (arg === "--reference-flow-smoke") options.referenceFlowSmoke = true;
+    if (arg === "--placement-smoke") options.placementSmoke = true;
+    if (arg === "--title-preprocess-smoke") options.titlePreprocessSmoke = true;
+    if (arg === "--reference-provider-check") options.referenceProviderCheck = true;
     if (arg === "--ai-usage") options.aiUsage = true;
     if (arg === "--ai-usage-reset") options.aiUsageReset = true;
     if (arg === "--yes") options.yes = true;
@@ -316,10 +322,10 @@ async function runQualitySheet(): Promise<void> {
   const outputDir = path.join(getComposerRoot(), "examples", "outputs", "quality-sheet");
   await fs.mkdir(outputDir, { recursive: true });
   const scenarios = [
-    { project: "monopoly", title: "ИСТОРИЯ ЗНАКОМСТВА", command_text: "сделай новую картинку для монополии история знакомства", variants: ["character_center_title_top", "character_right_title_left", "poster_sticker_style"] },
-    { project: "monopoly", title: "РЕЗУЛЬТАТЫ КОНКУРСА", command_text: "сделай новую картинку для монополии результаты конкурса", variants: ["character_center_bottom"] },
-    { project: "monopoly_pay", title: "ЯНДЕКС-ЯНДЕКС", command_text: "для монополии пэй нужна новая картинка с текстом Яндекс-Яндекс", variants: ["pay_method_card", "pay_character_right"] },
-    { project: "monopoly_pay", title: "НОВЫЕ ТРИГГЕРЫ БАНКОВ", command_text: "сделай новую картинку для пэй новые триггеры банков", variants: ["pay_alert_bank", "pay_character_center"] },
+    { project: "monopoly", title: "ИСТОРИЯ ЗНАКОМСТВА", command_text: "сделай новую картинку для монополии история знакомства", variants: ["monopoly_banner_like_reference", "monopoly_hero_title_left_character_right"] },
+    { project: "monopoly", title: "РЕЗУЛЬТАТЫ КОНКУРСА", command_text: "сделай новую картинку для монополии результаты конкурса", variants: ["monopoly_big_title_center_character_right"] },
+    { project: "monopoly_pay", title: "ЯНДЕКС-ЯНДЕКС", command_text: "для монополии пэй нужна новая картинка с текстом Яндекс-Яндекс", variants: ["pay_method_title_center_character_right"] },
+    { project: "monopoly_pay", title: "НОВЫЕ ТРИГГЕРЫ БАНКОВ", command_text: "сделай новую картинку для пэй новые триггеры банков", variants: ["pay_alert_title_big_icons_bottom"] },
     { project: "gorilla_hockey", title: "НАБОР ДЕТЕЙ", command_text: "задача для хоккея набор детей", variants: ["hockey_training_recruitment"] },
   ];
   const entries: Array<{ filePath: string; label: string; warnings: number }> = [];
@@ -334,7 +340,9 @@ async function runQualitySheet(): Promise<void> {
       const usage = composed.warnings.find((warning) => warning.startsWith("composer_usage")) || "";
       const background = usage.includes("background=asset") ? "asset" : "fallback";
       const character = usage.includes("character=asset") ? "asset" : usage.includes("character=illustration_asset") ? "asset" : "fallback";
-      entries.push({ filePath: outputPath, label: `${scenario.project} / ${variant} / ${composed.width}x${composed.height} / ${scenario.title} / bg:${background} char:${character}`, warnings: composed.warnings.filter((warning) => warning.includes("quality_warning")).length });
+      const title = usage.includes("title=asset") ? "asset" : "fallback";
+      const preset = composed.warnings.find((warning) => warning.startsWith("placement_preset="))?.replace("placement_preset=", "") || variant;
+      entries.push({ filePath: outputPath, label: `${scenario.project} / ${preset} / ${composed.width}x${composed.height} / title:${title} bg:${background} char:${character}`, warnings: composed.warnings.filter((warning) => warning.includes("quality_warning") || warning.includes("_too_small") || warning.includes("_missing")).length });
     }
   }
   const thumbWidth = 360;
@@ -566,8 +574,9 @@ async function runLayerPackSmoke(): Promise<void> {
   const jobExists = await fs.stat(path.join(pack.folder_path, "visual_job.json")).then((stat) => stat.isFile()).catch(() => false);
   const titleExists = await fs.stat(path.join(pack.folder_path, "title.png")).then((stat) => stat.isFile()).catch(() => false);
   const promptLogExists = await fs.stat(path.join(pack.folder_path, "prompt_log.txt")).then((stat) => stat.isFile()).catch(() => false);
+  const placementExists = await fs.stat(path.join(pack.folder_path, "placement.json")).then((stat) => stat.isFile()).catch(() => false);
   const zipExists = await fs.stat(pack.zip_path).then((stat) => stat.isFile() && stat.size > 0).catch(() => false);
-  if (!finalExists || !jobExists || !titleExists || !promptLogExists || !zipExists) throw new Error("Layer pack smoke missing final.png, title.png, prompt_log.txt, visual_job.json or zip.");
+  if (!finalExists || !jobExists || !titleExists || !promptLogExists || !placementExists || !zipExists) throw new Error("Layer pack smoke missing final.png, title.png, prompt_log.txt, placement.json, visual_job.json or zip.");
   console.log(JSON.stringify({ ok: true, folder_path: pack.folder_path, zip_path: pack.zip_path }, null, 2));
 }
 
@@ -609,6 +618,42 @@ async function runReferenceFlowSmoke(): Promise<void> {
   assertIncludes(warningText, "image reference/edit not available", "Reference flow smoke expected provider capability warning");
   if (revised.visual_job.character_layer?.asset_path !== built.visual_job.character_layer?.asset_path) throw new Error("Reference flow smoke changed locked character asset unexpectedly.");
   console.log(JSON.stringify({ ok: true, warning: "image reference/edit not available", character_preserved: true }, null, 2));
+}
+
+async function runPlacementSmoke(): Promise<void> {
+  const { buildVisualJobFromCommand } = await import("./jobBuilder");
+  const { reviseVisualJob } = await import("./revision");
+  const { composeVisualJob } = await import("./compose");
+  const manifest = await createLayeredSmokeManifest(path.join(process.cwd(), ".storage", "visual_placement_smoke"));
+  const built = await buildVisualJobFromCommand({ command_text: "сделай новую картинку для монополии история знакомства 1920x1080", asset_manifest: manifest as never, options: { enable_ai: false } });
+  const titleMoved = await reviseVisualJob({ visual_job: built.visual_job, target: "text", instruction: "увеличь текст" });
+  assertIncludes(titleMoved.warnings.join("; "), "title placement updated", "Title placement command");
+  const characterMoved = await reviseVisualJob({ visual_job: titleMoved.visual_job, target: "character", instruction: "увеличь деда" });
+  assertIncludes(characterMoved.warnings.join("; "), "character placement updated", "Character placement command");
+  const layoutMoved = await reviseVisualJob({ visual_job: characterMoved.visual_job, target: "layout", instruction: "дед справа, текст слева как в примере" });
+  assertEqual(layoutMoved.visual_job.layout.variant, "monopoly_banner_like_reference", "Composition preset mapping");
+  const composed = await composeVisualJob(layoutMoved.visual_job);
+  assertIncludes(composed.warnings.join("; "), "placement_preset=monopoly_banner_like_reference", "Composer placement preset warning");
+  console.log(JSON.stringify({ ok: true, preset: layoutMoved.visual_job.layout.variant, output: `${composed.width}x${composed.height}` }, null, 2));
+}
+
+async function runTitlePreprocessSmoke(): Promise<void> {
+  const sharpModule = await import("sharp");
+  const sharp = sharpModule.default;
+  const { preprocessTitleImage, renderBrandTitleImage } = await import("./titleImage/renderBrandTitleImage");
+  const raw = await sharp({ create: { width: 1000, height: 320, channels: 4, background: "#00000000" } })
+    .composite([{ input: await renderBrandTitleImage({ text: "РЕЗУЛЬТАТЫ КОНКУРСА", project_key: "monopoly", width: 760, height: 210 }), left: 120, top: 50 }])
+    .png()
+    .toBuffer();
+  const processed = await preprocessTitleImage(raw, { width: 1200, height: 360 }, true);
+  if (!processed.buffer.length) throw new Error("Title preprocess returned empty buffer.");
+  if (!processed.warnings.includes("title_image_trimmed")) throw new Error(`Expected title_image_trimmed warning, got ${processed.warnings.join(",")}`);
+  console.log(JSON.stringify({ ok: true, warnings: processed.warnings, transparent: processed.metadata.transparent }, null, 2));
+}
+
+async function runReferenceProviderCheck(): Promise<void> {
+  const { describeOpenAiImageCapabilities } = await import("./ai/openaiProvider");
+  console.log(JSON.stringify(describeOpenAiImageCapabilities(), null, 2));
 }
 
 function fakeAsset(
@@ -743,6 +788,21 @@ async function main(): Promise<void> {
 
   if (options.referenceFlowSmoke) {
     await runReferenceFlowSmoke();
+    return;
+  }
+
+  if (options.placementSmoke) {
+    await runPlacementSmoke();
+    return;
+  }
+
+  if (options.titlePreprocessSmoke) {
+    await runTitlePreprocessSmoke();
+    return;
+  }
+
+  if (options.referenceProviderCheck) {
+    await runReferenceProviderCheck();
     return;
   }
 

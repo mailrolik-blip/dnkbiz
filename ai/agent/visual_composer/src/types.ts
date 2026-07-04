@@ -30,6 +30,17 @@ export type OutputPreset =
 
 export type VisualLayerSource = "asset" | "ai" | "fallback" | "composer_fallback";
 
+export interface LayerPlacement {
+  x: number;
+  y: number;
+  width?: number;
+  height?: number;
+  anchor?: "top_left" | "top_center" | "top_right" | "center" | "bottom_left" | "bottom_center" | "bottom_right";
+  fit?: "contain" | "cover";
+  z_index?: number;
+  opacity?: number;
+}
+
 export interface TextLayer {
   enabled: boolean;
   text?: string;
@@ -66,6 +77,7 @@ export interface BackgroundLayer {
   fit?: "cover" | "contain";
   opacity?: number;
   source?: VisualLayerSource;
+  placement?: LayerPlacement;
   locked?: boolean;
   generated_by_ai?: boolean;
   prompt_used?: string;
@@ -83,6 +95,7 @@ export interface CharacterLayer {
   scale?: number;
   fit?: "contain" | "cover";
   source?: VisualLayerSource;
+  placement?: LayerPlacement;
   locked?: boolean;
   warnings?: string[];
 }
@@ -98,6 +111,7 @@ export interface TitleImageLayer {
   position?: "top" | "bottom" | "left" | "right" | "center";
   scale?: number;
   fit?: "contain" | "cover";
+  placement?: LayerPlacement;
   revision_state?: string;
   warnings?: string[];
 }
@@ -108,6 +122,7 @@ export interface LogoLayer {
   position?: "top_left" | "top_right" | "bottom_left" | "bottom_right";
   scale?: number;
   fit?: "contain";
+  placement?: LayerPlacement;
   lock_policy?: "locked" | "reference_only" | "replaceable" | "optional";
   source?: VisualLayerSource;
 }
@@ -133,6 +148,13 @@ export interface LayoutConfig {
   width?: number;
   height?: number;
   safe_area?: number;
+  preset_name?: string;
+  boxes?: {
+    title_image_box?: { x: number; y: number; width: number; height: number };
+    character_box?: { x: number; y: number; width: number; height: number };
+    logo_box?: { x: number; y: number; width: number; height: number };
+    cta_box?: { x: number; y: number; width: number; height: number };
+  };
 }
 
 export interface BrandElement {

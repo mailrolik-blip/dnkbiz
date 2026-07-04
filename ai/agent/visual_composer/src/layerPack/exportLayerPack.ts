@@ -1,7 +1,7 @@
 ﻿import fs from "node:fs/promises";
 import path from "node:path";
-import sharp from "sharp";
 import type { VisualJob } from "../types";
+import { renderBrandTitleImage } from "../titleImage/renderBrandTitleImage";
 import { resolveAssetPath } from "../utils/loadImage";
 import { writeSimpleZip } from "./simpleZip";
 
@@ -50,6 +50,7 @@ export async function exportLayerPack(input: {
   };
 
   entries.push({ name: "visual_job.json", data: Buffer.from(JSON.stringify(input.visual_job, null, 2)) });
+  entries.push({ name: "placement.json", data: Buffer.from(JSON.stringify(input.visual_job.layout.boxes || {}, null, 2)) });
   entries.push({ name: "manifest.json", data: Buffer.from(JSON.stringify(layerManifest, null, 2)) });
   entries.push({ name: "prompt_log.txt", data: Buffer.from(promptLog || "No AI prompt log recorded.", "utf8") });
   entries.push({ name: "README.txt", data: Buffer.from(buildReadme(input.visual_job), "utf8") });
@@ -114,11 +115,5 @@ function buildReadme(job: VisualJob): string {
 }
 
 async function renderFallbackTitlePng(text: string): Promise<Buffer> {
-  const safeText = escapeXml(text.toUpperCase());
-  const svg = `<svg width="1200" height="320" xmlns="http://www.w3.org/2000/svg"><rect width="1200" height="320" fill="none"/><text x="600" y="180" text-anchor="middle" font-family="Arial, sans-serif" font-size="92" font-weight="900" fill="#fff6d1" stroke="#101820" stroke-width="12" paint-order="stroke">${safeText}</text></svg>`;
-  return sharp(Buffer.from(svg)).png().toBuffer();
-}
-
-function escapeXml(value: string): string {
-  return value.replace(/[<>&'"]/g, (char) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "'": "&apos;", '"': "&quot;" })[char] || char);
+  return renderBrandTitleImage({ text, project_key: "monopoly", width: 1200, height: 360 });
 }

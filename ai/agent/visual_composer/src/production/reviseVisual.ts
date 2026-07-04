@@ -56,7 +56,8 @@ export async function reviseProducedVisual(input: ReviseProducedVisualInput): Pr
   });
 
   const aiLogs: string[] = [];
-  if (input.options?.enable_ai && input.target !== "layout" && input.target !== "format") {
+  const placementOnly = revision.warnings.some((warning) => warning.includes("placement updated without"));
+  if (input.options?.enable_ai && !placementOnly && input.target !== "layout" && input.target !== "format") {
     const provider = getVisualAiProvider(true);
     const capabilities = provider.getCapabilities?.();
     aiLogs.push(`AI requested for ${input.target}`);
@@ -127,6 +128,8 @@ export async function reviseProducedVisual(input: ReviseProducedVisualInput): Pr
       revision.visual_job.post_caption = aiText.post_caption || revision.visual_job.post_caption;
       if (aiText.warnings?.length) revision.warnings.push(...aiText.warnings);
     }
+  } else if (placementOnly) {
+    aiLogs.push(`AI skipped for ${input.target}: placement_only_revision`);
   } else if (!input.options?.enable_ai) {
     aiLogs.push(`AI skipped for ${input.target}: VISUAL_BOT_ENABLE_AI=false`);
   }

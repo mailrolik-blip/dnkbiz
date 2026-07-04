@@ -339,7 +339,7 @@ async function handleRevisionMessage(chatId: string, userId: string | undefined,
 
   await deps.telegram.sendMessage(chatId, "Принял правку, пересобираю картинку...");
   const result = await reviseProducedVisual({ job_id: activeJobId, target, instruction: text, uploaded_assets: [], options: { enable_ai: Boolean(deps.enableAi) } });
-  await deps.telegram.sendPhotoFromFile(chatId, result.output_path, `✅ Обновил: ${REVISION_LABELS[target]}\nВерсия: ${result.version}\nJob: ${result.job_id}`, visualRevisionKeyboard());
+  await deps.telegram.sendPhotoFromFile(chatId, result.output_path, `✅ Обновил: ${REVISION_LABELS[target]}\nВерсия: ${result.version}\nJob: ${result.job_id}\nДля качества нажми PNG без сжатия.`, visualRevisionKeyboard());
   if (deps.sendPostText && result.post_caption) await deps.telegram.sendMessage(chatId, `Текст поста:\n${result.post_caption}`);
   await stateStore.setActiveJob({ chat_id: chatId, user_id: userId, active_job_id: result.job_id, active_output_path: result.output_path, active_output_url: result.output_url });
 }
@@ -357,7 +357,7 @@ async function regenerateActiveJob(chatId: string, userId: string | undefined, a
   const target: RevisionTarget = deps.enableAi && record.detected.project_key !== "gorilla_hockey" ? "illustration" : "layout";
   const instruction = target === "illustration" ? "new variant regenerate illustration" : "new variant другая композиция";
   const result = await reviseProducedVisual({ job_id: activeJobId, target, instruction, uploaded_assets: [], options: { enable_ai: Boolean(deps.enableAi) } });
-  await deps.telegram.sendPhotoFromFile(chatId, result.output_path, `✅ Новый вариант\nВерсия: ${result.version}\nJob: ${result.job_id}`, visualRevisionKeyboard());
+  await deps.telegram.sendPhotoFromFile(chatId, result.output_path, `✅ Новый вариант\nВерсия: ${result.version}\nJob: ${result.job_id}\nДля качества нажми PNG без сжатия.`, visualRevisionKeyboard());
   await stateStore.setActiveJob({ chat_id: chatId, user_id: userId, active_job_id: result.job_id, active_output_path: result.output_path, active_output_url: result.output_url });
 }
 
@@ -449,7 +449,10 @@ async function sendDebugJob(chatId: string, telegram: TelegramClient, stateStore
     `project: ${record.detected.project_key}`,
     `mode: ${record.detected.visual_mode}`,
     `layout: ${job.layout.variant}`,
+    `preset: ${job.layout.preset_name || job.layout.variant}`,
     `resolved_size: ${job.layout.width || job.final_composite?.width || "-"}x${job.layout.height || job.final_composite?.height || "-"}`,
+    `title_box: ${formatDebugBox(job.layout.boxes?.title_image_box)}`,
+    `character_box: ${formatDebugBox(job.layout.boxes?.character_box)}`,
     `versions: ${record.outputs.length}`,
     `title: ${job.text_layer?.text || "-"}`,
     `post_caption: ${record.post_caption ? "yes" : "no"}`,
@@ -641,5 +644,9 @@ function toVisualUploadedAsset(asset: UploadedTelegramAsset): UploadedAsset {
 }
 
 function buildProducedCaption(result: Awaited<ReturnType<typeof produceVisualFromCommand>>): string {
-  return ["✅ Готово", `Проект: ${result.detected.project_key}`, `Режим: ${result.detected.visual_mode}`, `Версия: ${result.version}`, `Job: ${result.job_id}`].join("\n");
+  return ["✅ Готово", `Проект: ${result.detected.project_key}`, `Режим: ${result.detected.visual_mode}`, `Версия: ${result.version}`, `Job: ${result.job_id}`, "Для качества нажми PNG без сжатия."].join("\n");
+}
+
+function formatDebugBox(box?: { x: number; y: number; width: number; height: number }): string {
+  return box ? `${box.x},${box.y},${box.width}x${box.height}` : "-";
 }

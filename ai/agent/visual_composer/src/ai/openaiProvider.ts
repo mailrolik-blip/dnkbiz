@@ -54,6 +54,20 @@ export function createOpenAiProvider(): VisualAiProvider {
   };
 }
 
+export function describeOpenAiImageCapabilities() {
+  const capabilities = getCapabilities();
+  return {
+    model: process.env.OPENAI_IMAGE_MODEL || "gpt-image-1",
+    image_generation_supported: capabilities.image_generation,
+    image_reference_supported: capabilities.image_references,
+    image_edit_supported: capabilities.image_edit,
+    transparent_supported: capabilities.transparent_background,
+    reason: capabilities.image_references || capabilities.image_edit
+      ? ""
+      : "Current provider path uses images/generations prompt-only calls; reference/edit endpoint is not wired in this project yet.",
+  };
+}
+
 function getCapabilities(): VisualAiCapabilities {
   return {
     image_generation: true,

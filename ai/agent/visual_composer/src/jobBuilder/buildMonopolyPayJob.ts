@@ -76,11 +76,11 @@ function compactStrings(values: Array<string | undefined>): string[] {
 
 function chooseLayout(input: BuildVisualJobInput, text: TextLayerParts): string {
   if (input.options?.layout_variant && input.options.layout_variant !== "auto") return input.options.layout_variant;
-  if (input.output_format === "story" || input.output_format === "story_1080x1920") return "pay_story_vertical";
+  if (input.output_format === "story" || input.output_format === "story_1080x1920") return "pay_reference_style_wide";
   const lower = `${input.command_text} ${text.title}`.toLowerCase();
-  if (lower.includes("банк")) return "pay_alert_bank_wide";
-  if (lower.includes("метод") || lower.includes("яндекс")) return "pay_method_card_wide";
-  return "pay_character_right_title_left";
+  if (lower.includes("банк")) return "pay_alert_title_big_icons_bottom";
+  if (lower.includes("метод") || lower.includes("яндекс")) return "pay_method_title_center_character_right";
+  return "pay_title_left_character_right";
 }
 
 function tagsFor(format: OutputFormat, extra: string): string[] {

@@ -105,10 +105,10 @@ function compactStrings(values: Array<string | undefined>): string[] {
 
 function chooseLayout(input: BuildVisualJobInput, text: TextLayerParts): string {
   if (input.options?.layout_variant && input.options.layout_variant !== "auto") return input.options.layout_variant;
-  if (input.output_format === "story" || input.output_format === "story_1080x1920") return "character_center_title_top";
-  if (text.sticker) return "poster_sticker_style";
-  if (text.title.length > 34) return "character_center_bottom";
-  return "character_right_title_left";
+  if (input.output_format === "story" || input.output_format === "story_1080x1920") return "monopoly_title_top_character_bottom_right";
+  if (text.sticker) return "monopoly_banner_like_reference";
+  if (text.title.length > 34) return "monopoly_big_title_center_character_right";
+  return "monopoly_hero_title_left_character_right";
 }
 
 function tagsFor(format: OutputFormat, extra: string): string[] {

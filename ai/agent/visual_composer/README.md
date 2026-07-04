@@ -387,3 +387,31 @@ npm run visual:layer-pack-smoke
 ```
 
 Manual test plan: `ai/agent/telegram_visual_bot/V1_8_REFERENCE_EDIT_TEST_PLAN.md`.
+
+## DNK MVP 1.48 Art Direction
+
+Current recommended commit message:
+
+```text
+DNK MVP 1.48: improve layered visual art direction
+```
+
+Before suggesting the next MVP commit message, check `ai/agent/ai_bot_designer/MVP_VERSION_LOG.md`.
+
+Production layered layouts now use explicit placement presets for Monopoly and Monopoly Pay. `/debug_job` shows compact placement metadata: preset, title box and character box.
+
+Manual placement commands:
+
+- `увеличь текст`, `текст левее`, `текст ниже`, `растяни заголовок`
+- `увеличь деда`, `деда вправо`, `деда вниз`, `поставь деда справа`
+- composition examples such as `дед справа, текст слева как в примере`
+
+Local checks:
+
+```bash
+npm run visual:placement-smoke
+npm run visual:title-preprocess-smoke
+npm run visual:reference-provider-check
+```
+
+Manual test plan: `ai/agent/telegram_visual_bot/V1_8_ART_DIRECTION_TEST_PLAN.md`.

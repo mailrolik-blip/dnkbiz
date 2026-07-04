@@ -121,3 +121,7 @@ npm run visual:quality-sheet
 For reference/edit and title-image production tests, use `V1_8_REFERENCE_EDIT_TEST_PLAN.md`.
 
 Layer packs now include `prompt_log.txt` and `README.txt`; `title.png` is exported even when the title is composer fallback.
+
+## v1.48 Art Direction Addendum
+
+Layered pipeline now has production placement presets, manual title/character movement commands, title preprocessing and `placement.json` in layer packs. See `V1_8_ART_DIRECTION_TEST_PLAN.md`.
