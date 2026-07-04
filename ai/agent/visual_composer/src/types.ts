@@ -114,6 +114,16 @@ export interface TitleImageLayer {
   placement?: LayerPlacement;
   revision_state?: string;
   warnings?: string[];
+  fit_metadata?: {
+    title_image_width?: number;
+    title_image_height?: number;
+    final_font_size?: number;
+    lines?: string[];
+    was_shrunk?: boolean;
+    was_wrapped?: boolean;
+    safe_padding_used?: number;
+    warnings?: string[];
+  };
 }
 
 export interface LogoLayer {
@@ -203,6 +213,15 @@ export interface VisualJob {
   post_caption?: string;
   internal_prompt?: string;
   output_path?: string;
+  title_extraction?: {
+    raw_command: string;
+    extracted_title: string;
+    normalized_title: string;
+    method: string;
+    removed_prefixes: string[];
+    confidence: number;
+    warnings: string[];
+  };
 }
 
 export interface ComposeResult {

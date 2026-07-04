@@ -13,3 +13,11 @@ Recommended commit message for the current completed task:
 ```text
 DNK MVP 1.48: improve layered visual art direction
 ```
+
+- 1.49: improve title layer fit and reference-edit readiness
+
+Recommended commit message for this task:
+
+```text
+DNK MVP 1.49: improve title layer fit and reference-edit readiness
+```

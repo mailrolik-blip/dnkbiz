@@ -147,3 +147,9 @@ Expected without live mode:
 
 - No external OpenAI call.
 - Prints current support flags and reason if reference/edit is unavailable.
+
+## DNK MVP 1.49 Title Fit Addendum
+
+The title layer now uses deterministic command-title extraction, composer-safe Cyrillic title rendering, title fit metadata and the manual crop repair command `текст обрезается`.
+
+See `V1_9_TITLE_LAYER_TEST_PLAN.md`.

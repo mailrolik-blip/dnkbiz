@@ -269,3 +269,22 @@ The bot now supports manual layer placement revisions without regeneration:
 Preview captions now remind the user to press `PNG без сжатия` for production quality. Layer ZIP includes `placement.json`.
 
 Manual checklist: `V1_8_ART_DIRECTION_TEST_PLAN.md`.
+
+## DNK MVP 1.49 Title Layer Fit
+
+Manual checklist: `V1_9_TITLE_LAYER_TEST_PLAN.md`.
+
+Important expected extraction:
+
+```text
+сделай новую картинку для монополии история знакомства -> ИСТОРИЯ ЗНАКОМСТВА
+для монополии пэй нужна новая картинка с текстом Яндекс-Яндекс -> ЯНДЕКС-ЯНДЕКС
+```
+
+If title is cropped, press `?? Текст` and send:
+
+```text
+текст обрезается
+```
+
+This adjusts placement/scale without regenerating title content.

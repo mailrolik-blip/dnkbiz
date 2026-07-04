@@ -27,6 +27,8 @@
     "visual:layered-smoke": "npm run visual:build --silent && node ai/agent/visual_composer/dist/index.js --layered-smoke",
     "visual:title-layer-smoke": "npm run visual:build --silent && node ai/agent/visual_composer/dist/index.js --title-layer-smoke",
     "visual:reference-flow-smoke": "npm run visual:build --silent && node ai/agent/visual_composer/dist/index.js --reference-flow-smoke",
+    "visual:title-extraction-smoke": "npm run visual:build --silent && node ai/agent/visual_composer/dist/index.js --title-extraction-smoke",
+    "visual:title-fit-smoke": "npm run visual:build --silent && node ai/agent/visual_composer/dist/index.js --title-fit-smoke",
     "visual:placement-smoke": "npm run visual:build --silent && node ai/agent/visual_composer/dist/index.js --placement-smoke",
     "visual:title-preprocess-smoke": "npm run visual:build --silent && node ai/agent/visual_composer/dist/index.js --title-preprocess-smoke",
     "visual:reference-provider-check": "npm run visual:build --silent && node ai/agent/visual_composer/dist/index.js --reference-provider-check",

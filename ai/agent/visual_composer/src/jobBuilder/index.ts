@@ -52,6 +52,7 @@ export async function buildVisualJobFromCommand(input: BuildVisualJobInput): Pro
   }
 
   visualJob.profile = profile;
+  visualJob.title_extraction = parseTitleExtraction(text.internal_prompt);
   const selectedStyleAssets = collectStyleAssets(visualJob, assetManifest);
   const aiInput = {
     command_text: commandText,
@@ -70,9 +71,13 @@ export async function buildVisualJobFromCommand(input: BuildVisualJobInput): Pro
   visualJob.text_layer = {
     ...(visualJob.text_layer || { enabled: true }),
     ...definedOnly(aiText),
+    text: visualJob.text_layer?.text || aiText.text,
     enabled: visualJob.text_layer?.enabled ?? true,
     post_caption: text.post_caption || aiText.post_caption,
   };
+  if (visualJob.title_image_layer) {
+    visualJob.title_image_layer.text = visualJob.text_layer.text || visualJob.title_image_layer.text;
+  }
   visualJob.post_caption = text.post_caption || aiText.post_caption || buildDefaultPostCaption(commandText, projectKey);
   visualJob.internal_prompt = [profile.image_style_rules, profile.composition_rules, profile.negative_rules, commandText].filter(Boolean).join("\n");
 
@@ -152,6 +157,16 @@ function definedOnly<T extends Record<string, unknown>>(value: T): Partial<T> {
 
 function buildDefaultPostCaption(commandText: string, projectKey: string): string {
   return `${projectKey}: ${commandText}`;
+}
+
+function parseTitleExtraction(value?: string) {
+  if (!value) return undefined;
+  try {
+    const parsed = JSON.parse(value) as { title_extraction?: VisualJob["title_extraction"] };
+    return parsed.title_extraction;
+  } catch {
+    return undefined;
+  }
 }
 
 export type { BuildVisualJobInput, VisualJobBuildResult, UploadedAsset } from "./types";

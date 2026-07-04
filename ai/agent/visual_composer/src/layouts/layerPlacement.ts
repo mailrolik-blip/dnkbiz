@@ -203,9 +203,13 @@ export function nudgePlacement(base: LayerPlacement | undefined, preset: LayerPl
     next.height = Math.min((next.height ?? preset.height ?? 0.3) + scaleStep, layer === "title" ? 0.50 : 0.78);
     changed = true;
   }
-  if (/меньш|уменьш/.test(lower)) {
+  if (/меньш|уменьш|обрез/.test(lower)) {
     next.width = Math.max((next.width ?? preset.width ?? 0.3) - scaleStep, layer === "title" ? 0.38 : 0.18);
     next.height = Math.max((next.height ?? preset.height ?? 0.3) - scaleStep, layer === "title" ? 0.18 : 0.34);
+    if (layer === "title") {
+      next.x = Math.max(0.04, Math.min(next.x, 0.10));
+      next.y = Math.max(0.06, Math.min(next.y, 0.18));
+    }
     changed = true;
   }
   if (/левее|влево|слева/.test(lower)) {

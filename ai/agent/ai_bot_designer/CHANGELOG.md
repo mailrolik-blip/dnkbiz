@@ -324,3 +324,17 @@ Recommended commit message:
 ```text
 DNK MVP 1.48: improve layered visual art direction
 ```
+
+## DNK MVP 1.49: improve title layer fit and reference-edit readiness
+
+- Fixed command title extraction so service phrases are not included in title layers.
+- Added title extraction metadata for debug output.
+- Improved branded title image fallback with multiline fit metadata.
+- Added title crop repair command handling.
+- Added title extraction and title fit smoke tests.
+
+Recommended commit message:
+
+```text
+DNK MVP 1.49: improve title layer fit and reference-edit readiness
+```

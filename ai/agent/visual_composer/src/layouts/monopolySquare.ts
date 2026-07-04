@@ -4,7 +4,7 @@ import { VisualJob, ComposeResult, RenderContext } from "../types";
 import { loadImageOrPlaceholder } from "../utils/loadImage";
 import { renderPillSvg } from "../utils/renderText";
 import { resolvePlacementPreset, type LayerBox } from "./layerPlacement";
-import { preprocessTitleImage, renderBrandTitleImage } from "../titleImage/renderBrandTitleImage";
+import { preprocessTitleImage, renderBrandTitleImageLayer } from "../titleImage/renderBrandTitleImage";
 
 export async function renderMonopolySquare(job: VisualJob, context: RenderContext): Promise<ComposeResult> {
   const width = job.layout.width || 1920;
@@ -48,9 +48,21 @@ export async function renderMonopolySquare(job: VisualJob, context: RenderContex
   const overlap = overlapRatio(placement.title_image_box, faceZone(placement.character_box));
   if (overlap > 0.05) context.warnings.push(`character_overlaps_title_face_zone ratio=${overlap.toFixed(2)}`);
 
-  const titleBuffer = titleSource?.existed
-    ? (await preprocessTitleImage(await sharp(titleSource.input).png().toBuffer(), placement.title_image_box, job.title_image_layer?.transparent_background)).buffer
-    : await renderBrandTitleImage({ text: headline, project_key: "monopoly", width: placement.title_image_box.width, height: placement.title_image_box.height, tags: styleTags(job) });
+  const titlePolicy = process.env.VISUAL_TITLE_IMAGE_PROVIDER || "composer";
+  context.warnings.push(`title_image_policy provider=${titlePolicy} title_style_reference_used=${job.style_assets?.title_style_reference ? "yes" : "no"}`);
+  const titleResult = titleSource?.existed && titlePolicy !== "composer"
+    ? await preprocessTitleImage(await sharp(titleSource.input).png().toBuffer(), placement.title_image_box, job.title_image_layer?.transparent_background)
+    : await renderBrandTitleImageLayer({ text: headline, project_key: "monopoly", width: placement.title_image_box.width, height: placement.title_image_box.height, tags: styleTags(job), maxLines: 2 });
+  const titleBuffer = titleResult.buffer;
+  if ("metadata" in titleResult) {
+    const preprocessWarnings = (titleResult as { warnings?: string[] }).warnings || [];
+    job.title_image_layer = {
+      ...(job.title_image_layer || { enabled: true, text: headline }),
+      fit_metadata: "final_font_size" in titleResult.metadata ? titleResult.metadata : { warnings: preprocessWarnings },
+    };
+  }
+  const titleWarnings = (titleResult as { warnings?: string[] }).warnings || (titleResult.metadata as { warnings?: string[] }).warnings || [];
+  context.warnings.push(...titleWarnings);
 
   const composites: sharp.OverlayOptions[] = [
     { input: await sharp(background.input).resize(width, height, { fit: "cover" }).png().toBuffer(), left: 0, top: 0 },

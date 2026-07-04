@@ -415,3 +415,28 @@ npm run visual:reference-provider-check
 ```
 
 Manual test plan: `ai/agent/telegram_visual_bot/V1_8_ART_DIRECTION_TEST_PLAN.md`.
+
+## DNK MVP 1.49 Title Layer Fit
+
+Recommended commit message:
+
+```text
+DNK MVP 1.49: improve title layer fit and reference-edit readiness
+```
+
+Title extraction is now deterministic before AI text generation. Service phrases such as `сделай новую картинку для монополии` are removed, so `сделай новую картинку для монополии история знакомства` becomes `ИСТОРИЯ ЗНАКОМСТВА`.
+
+Default title image policy:
+
+```bash
+VISUAL_TITLE_IMAGE_PROVIDER=composer
+```
+
+Allowed values: `composer`, `ai`, `asset`. Composer is the safe default for Cyrillic title layers.
+
+New checks:
+
+```bash
+npm run visual:title-extraction-smoke
+npm run visual:title-fit-smoke
+```

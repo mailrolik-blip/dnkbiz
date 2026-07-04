@@ -57,7 +57,7 @@ function reviseTitlePlacement(input: ReviseVisualJobInput): { job: ReviseVisualJ
   const placement = nudgePlacement(next.title_image_layer?.placement, preset.title_image, input.instruction, "title");
   if (!placement) return null;
   next.title_image_layer = { ...(next.title_image_layer || { enabled: true, text: next.text_layer?.text || "" }), enabled: true, placement, revision_state: `placement:${new Date().toISOString()}` };
-  return { job: next, warnings: ["title placement updated without regenerating title_image_layer"] };
+  return { job: next, warnings: [/обрез/i.test(input.instruction) ? "fixed title crop by reducing title placement without regenerating title_image_layer" : "title placement updated without regenerating title_image_layer"] };
 }
 
 function reviseCharacterPlacement(input: ReviseVisualJobInput): { job: ReviseVisualJobInput["visual_job"]; warnings: string[] } | null {
@@ -74,7 +74,7 @@ function isPlacementCommand(instruction: string, layer: "title" | "character"): 
   const lower = instruction.toLowerCase();
   const titleWords = /текст|заголов|надпис|title/.test(lower);
   const characterWords = /дед|персонаж|character/.test(lower);
-  const action = /увелич|уменьш|меньш|крупн|больше|растяни|левее|влево|справа|слева|правее|вправо|выше|ниже|вниз|наверх|вверх/.test(lower);
+  const action = /увелич|уменьш|меньш|крупн|больше|растяни|левее|влево|справа|слева|правее|вправо|выше|ниже|вниз|наверх|вверх|обрез/.test(lower);
   if (!action) return false;
   if (layer === "title") return titleWords || !characterWords;
   return characterWords;

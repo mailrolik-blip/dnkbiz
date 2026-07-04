@@ -27,6 +27,8 @@ interface CliOptions {
   placementSmoke?: boolean;
   titlePreprocessSmoke?: boolean;
   referenceProviderCheck?: boolean;
+  titleExtractionSmoke?: boolean;
+  titleFitSmoke?: boolean;
   aiUsage?: boolean;
   aiUsageReset?: boolean;
   yes?: boolean;
@@ -61,6 +63,8 @@ function parseArgs(argv: string[]): CliOptions {
     if (arg === "--placement-smoke") options.placementSmoke = true;
     if (arg === "--title-preprocess-smoke") options.titlePreprocessSmoke = true;
     if (arg === "--reference-provider-check") options.referenceProviderCheck = true;
+    if (arg === "--title-extraction-smoke") options.titleExtractionSmoke = true;
+    if (arg === "--title-fit-smoke") options.titleFitSmoke = true;
     if (arg === "--ai-usage") options.aiUsage = true;
     if (arg === "--ai-usage-reset") options.aiUsageReset = true;
     if (arg === "--yes") options.yes = true;
@@ -326,7 +330,8 @@ async function runQualitySheet(): Promise<void> {
     { project: "monopoly", title: "РЕЗУЛЬТАТЫ КОНКУРСА", command_text: "сделай новую картинку для монополии результаты конкурса", variants: ["monopoly_big_title_center_character_right"] },
     { project: "monopoly_pay", title: "ЯНДЕКС-ЯНДЕКС", command_text: "для монополии пэй нужна новая картинка с текстом Яндекс-Яндекс", variants: ["pay_method_title_center_character_right"] },
     { project: "monopoly_pay", title: "НОВЫЕ ТРИГГЕРЫ БАНКОВ", command_text: "сделай новую картинку для пэй новые триггеры банков", variants: ["pay_alert_title_big_icons_bottom"] },
-    { project: "gorilla_hockey", title: "НАБОР ДЕТЕЙ", command_text: "задача для хоккея набор детей", variants: ["hockey_training_recruitment"] },
+    { project: "casper", title: "КОНКУРС НА 3000", command_text: "для каспера конкурс на 3000 пользователей", variants: ["casper_contest_square"] },
+    { project: "gorilla_hockey", title: "ТРЕНИРОВКА ЗАВТРА", command_text: "завтра тренировка для детей", variants: ["hockey_training_recruitment"] },
   ];
   const entries: Array<{ filePath: string; label: string; warnings: number }> = [];
   for (const scenario of scenarios) {
@@ -342,7 +347,9 @@ async function runQualitySheet(): Promise<void> {
       const character = usage.includes("character=asset") ? "asset" : usage.includes("character=illustration_asset") ? "asset" : "fallback";
       const title = usage.includes("title=asset") ? "asset" : "fallback";
       const preset = composed.warnings.find((warning) => warning.startsWith("placement_preset="))?.replace("placement_preset=", "") || variant;
-      entries.push({ filePath: outputPath, label: `${scenario.project} / ${preset} / ${composed.width}x${composed.height} / title:${title} bg:${background} char:${character}`, warnings: composed.warnings.filter((warning) => warning.includes("quality_warning") || warning.includes("_too_small") || warning.includes("_missing")).length });
+      const extracted = built.visual_job.title_extraction?.normalized_title || built.visual_job.text_layer?.text || scenario.title;
+      const titleFitWarnings = composed.warnings.filter((warning) => warning.startsWith("title_")).length;
+      entries.push({ filePath: outputPath, label: `${scenario.project} / ${preset} / ${composed.width}x${composed.height} / ${extracted} / title:${title} fit:${titleFitWarnings}`, warnings: composed.warnings.filter((warning) => warning.includes("quality_warning") || warning.includes("_too_small") || warning.includes("_missing")).length });
     }
   }
   const thumbWidth = 360;
@@ -656,6 +663,39 @@ async function runReferenceProviderCheck(): Promise<void> {
   console.log(JSON.stringify(describeOpenAiImageCapabilities(), null, 2));
 }
 
+async function runTitleExtractionSmoke(): Promise<void> {
+  const { extractTitleForProject } = await import("./jobBuilder/titleExtractor");
+  const cases = [
+    ["monopoly", "сделай новую картинку для монополии история знакомства", "ИСТОРИЯ ЗНАКОМСТВА"],
+    ["monopoly", "для монополии результаты конкурса", "РЕЗУЛЬТАТЫ КОНКУРСА"],
+    ["monopoly", "монополия новый конкурс", "НОВЫЙ КОНКУРС"],
+    ["monopoly", "монополия 2000 пользователей", "2000 ПОЛЬЗОВАТЕЛЕЙ"],
+    ["monopoly_pay", "для монополии пэй нужна новая картинка с текстом Яндекс-Яндекс", "ЯНДЕКС-ЯНДЕКС"],
+    ["monopoly_pay", "сделай новую картинку для пэй новые триггеры банков", "НОВЫЕ ТРИГГЕРЫ БАНКОВ"],
+    ["monopoly_pay", "оплата по ссылке", "ОПЛАТА ПО ССЫЛКЕ"],
+    ["casper", "для каспера конкурс на 3000 пользователей", "КОНКУРС НА 3000"],
+    ["gorilla_hockey", "завтра тренировка для детей", "ТРЕНИРОВКА ЗАВТРА"],
+  ] as const;
+  for (const [project, command, expected] of cases) {
+    const result = extractTitleForProject(command, project as never);
+    assertEqual(result.normalized_title, expected, `Title extraction ${command}`);
+  }
+  console.log(JSON.stringify({ ok: true, cases: cases.length }, null, 2));
+}
+
+async function runTitleFitSmoke(): Promise<void> {
+  const { renderBrandTitleImageLayer, preprocessTitleImage } = await import("./titleImage/renderBrandTitleImage");
+  const titles = ["ИСТОРИЯ ЗНАКОМСТВА", "РЕЗУЛЬТАТЫ КОНКУРСА", "НОВЫЕ ТРИГГЕРЫ БАНКОВ", "ЯНДЕКС-ЯНДЕКС"];
+  for (const title of titles) {
+    const rendered = await renderBrandTitleImageLayer({ text: title, project_key: title.includes("ТРИГГЕР") || title.includes("ЯНДЕКС") ? "monopoly_pay" : "monopoly", width: 1280, height: 420, maxLines: 2 });
+    if (!rendered.buffer.length) throw new Error(`Empty title render for ${title}`);
+    if (rendered.metadata.final_font_size < 36) throw new Error(`Title font too small for ${title}`);
+    const processed = await preprocessTitleImage(rendered.buffer, { width: 1280, height: 420 }, true);
+    if (processed.warnings.includes("title_fit_failed")) throw new Error(`Title fit failed for ${title}`);
+  }
+  console.log(JSON.stringify({ ok: true, titles: titles.length }, null, 2));
+}
+
 function fakeAsset(
   id: string,
   projectKey: string,
@@ -803,6 +843,16 @@ async function main(): Promise<void> {
 
   if (options.referenceProviderCheck) {
     await runReferenceProviderCheck();
+    return;
+  }
+
+  if (options.titleExtractionSmoke) {
+    await runTitleExtractionSmoke();
+    return;
+  }
+
+  if (options.titleFitSmoke) {
+    await runTitleFitSmoke();
     return;
   }
 

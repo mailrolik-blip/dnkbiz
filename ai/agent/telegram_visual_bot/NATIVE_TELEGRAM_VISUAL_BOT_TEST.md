@@ -326,3 +326,15 @@ Key checks:
 - `увеличь деда` should update placement only, without replacing the locked character.
 - `/debug_job` should show preset/title_box/character_box.
 - `Слои ZIP` should include `placement.json`.
+
+## DNK MVP 1.49 Title Checks
+
+Use `V1_9_TITLE_LAYER_TEST_PLAN.md`.
+
+Key regression check:
+
+```text
+сделай новую картинку для монополии история знакомства
+```
+
+Expected title: `ИСТОРИЯ ЗНАКОМСТВА`.
