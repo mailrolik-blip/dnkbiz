@@ -1,4 +1,5 @@
 ﻿import path from "node:path";
+import fs from "node:fs/promises";
 import sharp from "sharp";
 import { VisualJob, ComposeResult, RenderContext } from "../types";
 import { loadImageOrPlaceholder } from "../utils/loadImage";
@@ -58,8 +59,12 @@ export async function renderMonopolySquare(job: VisualJob, context: RenderContex
     const preprocessWarnings = (titleResult as { warnings?: string[] }).warnings || [];
     job.title_image_layer = {
       ...(job.title_image_layer || { enabled: true, text: headline }),
+      source: titleSource?.existed && titlePolicy !== "composer" ? job.title_image_layer?.source || "asset" : "composer_fallback",
       fit_metadata: "final_font_size" in titleResult.metadata ? titleResult.metadata : { warnings: preprocessWarnings },
     };
+    if (!job.title_image_layer.asset_path) {
+      job.title_image_layer.generated_asset_path = await saveTitleLayerPng(job, context.outputPath, titleBuffer);
+    }
   }
   const titleWarnings = (titleResult as { warnings?: string[] }).warnings || (titleResult.metadata as { warnings?: string[] }).warnings || [];
   context.warnings.push(...titleWarnings);
@@ -128,3 +133,15 @@ function styleTags(job: VisualJob): string[] {
 function transparent() {
   return { r: 0, g: 0, b: 0, alpha: 0 };
 }
+
+async function saveTitleLayerPng(job: VisualJob, outputPath: string, buffer: Buffer): Promise<string> {
+  const date = new Date().toISOString().slice(0, 10);
+  const dir = path.join(process.cwd(), ".storage", "visual_generated_assets", job.project_key, date);
+  await fs.mkdir(dir, { recursive: true });
+  const base = path.basename(outputPath, path.extname(outputPath)).replace(/[^a-zA-Z0-9._-]/g, "_");
+  const filePath = path.join(dir, `${base}-title.png`);
+  await fs.writeFile(filePath, buffer);
+  return filePath;
+}
+
+

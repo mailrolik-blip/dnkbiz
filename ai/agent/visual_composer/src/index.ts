@@ -29,10 +29,14 @@ interface CliOptions {
   referenceProviderCheck?: boolean;
   titleExtractionSmoke?: boolean;
   titleFitSmoke?: boolean;
+  visualQaSmoke?: boolean;
+  qualityGate?: boolean;
+  referenceLiveSmoke?: boolean;
   aiUsage?: boolean;
   aiUsageReset?: boolean;
   yes?: boolean;
   image?: boolean;
+  imagePath?: string;
   project?: string;
 }
 
@@ -65,10 +69,14 @@ function parseArgs(argv: string[]): CliOptions {
     if (arg === "--reference-provider-check") options.referenceProviderCheck = true;
     if (arg === "--title-extraction-smoke") options.titleExtractionSmoke = true;
     if (arg === "--title-fit-smoke") options.titleFitSmoke = true;
+    if (arg === "--visual-qa-smoke") options.visualQaSmoke = true;
+    if (arg === "--quality-gate") options.qualityGate = true;
+    if (arg === "--reference-live-smoke") options.referenceLiveSmoke = true;
     if (arg === "--ai-usage") options.aiUsage = true;
     if (arg === "--ai-usage-reset") options.aiUsageReset = true;
     if (arg === "--yes") options.yes = true;
     if (arg === "--image") options.image = true;
+    if (arg === "--image" && argv[index + 1] && !argv[index + 1].startsWith("--")) options.imagePath = argv[index + 1];
     if (arg === "--project") options.project = argv[index + 1];
   }
   return options;
@@ -321,17 +329,22 @@ async function runQualitySheet(): Promise<void> {
   const sharpModule = await import("sharp");
   const sharp = sharpModule.default;
   const { buildVisualJobFromCommand } = await import("./jobBuilder");
-  const { composeVisualJob, getComposerRoot } = await import("./compose");
+  const { getComposerRoot } = await import("./compose");
+  const { composeWithVisualQaRepair } = await import("./production/composeWithVisualQa");
   const { safeFilename } = await import("./utils/safeFilename");
   const outputDir = path.join(getComposerRoot(), "examples", "outputs", "quality-sheet");
   await fs.mkdir(outputDir, { recursive: true });
   const scenarios = [
     { project: "monopoly", title: "ИСТОРИЯ ЗНАКОМСТВА", command_text: "сделай новую картинку для монополии история знакомства", variants: ["monopoly_banner_like_reference", "monopoly_hero_title_left_character_right"] },
     { project: "monopoly", title: "РЕЗУЛЬТАТЫ КОНКУРСА", command_text: "сделай новую картинку для монополии результаты конкурса", variants: ["monopoly_big_title_center_character_right"] },
+    { project: "monopoly", title: "2000 ПОЛЬЗОВАТЕЛЕЙ", command_text: "монополия 2000 пользователей", variants: ["monopoly_hero_title_left_character_right"] },
     { project: "monopoly_pay", title: "ЯНДЕКС-ЯНДЕКС", command_text: "для монополии пэй нужна новая картинка с текстом Яндекс-Яндекс", variants: ["pay_method_title_center_character_right"] },
     { project: "monopoly_pay", title: "НОВЫЕ ТРИГГЕРЫ БАНКОВ", command_text: "сделай новую картинку для пэй новые триггеры банков", variants: ["pay_alert_title_big_icons_bottom"] },
+    { project: "monopoly_pay", title: "ОПЛАТА ПО ССЫЛКЕ", command_text: "оплата по ссылке", variants: ["pay_title_left_character_right"] },
     { project: "casper", title: "КОНКУРС НА 3000", command_text: "для каспера конкурс на 3000 пользователей", variants: ["casper_contest_square"] },
+    { project: "casper", title: "БУДЬ НА СВЯЗИ", command_text: "будь на связи", variants: ["casper_subscribe_square"] },
     { project: "gorilla_hockey", title: "ТРЕНИРОВКА ЗАВТРА", command_text: "завтра тренировка для детей", variants: ["hockey_training_recruitment"] },
+    { project: "gorilla_hockey", title: "НАБОР ДЕТЕЙ", command_text: "набор детей 2016-2018", variants: ["hockey_training_recruitment"] },
   ];
   const entries: Array<{ filePath: string; label: string; warnings: number }> = [];
   for (const scenario of scenarios) {
@@ -341,7 +354,9 @@ async function runQualitySheet(): Promise<void> {
         options: { enable_ai: false, layout_variant: variant },
       });
       const outputPath = path.join(outputDir, `${safeFilename(scenario.project)}.${safeFilename(variant)}.${safeFilename(scenario.title)}.png`);
-      const composed = await composeVisualJob({ ...built.visual_job, output_path: outputPath });
+      const qaCompose = await composeWithVisualQaRepair({ ...built.visual_job, output_path: outputPath });
+      const composed = qaCompose.compose_result;
+      const qa = qaCompose.qa;
       const usage = composed.warnings.find((warning) => warning.startsWith("composer_usage")) || "";
       const background = usage.includes("background=asset") ? "asset" : "fallback";
       const character = usage.includes("character=asset") ? "asset" : usage.includes("character=illustration_asset") ? "asset" : "fallback";
@@ -349,7 +364,7 @@ async function runQualitySheet(): Promise<void> {
       const preset = composed.warnings.find((warning) => warning.startsWith("placement_preset="))?.replace("placement_preset=", "") || variant;
       const extracted = built.visual_job.title_extraction?.normalized_title || built.visual_job.text_layer?.text || scenario.title;
       const titleFitWarnings = composed.warnings.filter((warning) => warning.startsWith("title_")).length;
-      entries.push({ filePath: outputPath, label: `${scenario.project} / ${preset} / ${composed.width}x${composed.height} / ${extracted} / title:${title} fit:${titleFitWarnings}`, warnings: composed.warnings.filter((warning) => warning.includes("quality_warning") || warning.includes("_too_small") || warning.includes("_missing")).length });
+      entries.push({ filePath: outputPath, label: `${scenario.project} / ${extracted} / ${composed.width}x${composed.height} / ${preset} / e:${qa.errors.length} w:${qa.warnings.length} fit:${titleFitWarnings}`, warnings: qa.errors.length + qa.warnings.length });
     }
   }
   const thumbWidth = 360;
@@ -663,6 +678,38 @@ async function runReferenceProviderCheck(): Promise<void> {
   console.log(JSON.stringify(describeOpenAiImageCapabilities(), null, 2));
 }
 
+async function runReferenceLiveSmoke(options: CliOptions): Promise<void> {
+  const { describeOpenAiImageCapabilities } = await import("./ai/openaiProvider");
+  const enabled = process.env.VISUAL_ENABLE_LIVE_REFERENCE_TEST === "true";
+  const capabilities = describeOpenAiImageCapabilities();
+  if (!enabled) {
+    console.log(JSON.stringify({
+      ok: true,
+      live_call: false,
+      skipped_reason: "VISUAL_ENABLE_LIVE_REFERENCE_TEST is not true",
+      project: options.project || "monopoly",
+      image: options.imagePath || "",
+      capabilities,
+    }, null, 2));
+    return;
+  }
+  if (!options.imagePath) throw new Error("Usage: npm run visual:reference-live-smoke -- --project monopoly --image <path>");
+  const imagePath = path.resolve(options.imagePath);
+  if (!fsSync.existsSync(imagePath)) throw new Error(`Reference image not found: ${imagePath}`);
+  if (!capabilities.image_reference_supported && !capabilities.image_edit_supported) {
+    console.log(JSON.stringify({
+      ok: true,
+      live_call: false,
+      skipped_reason: "Reference/edit provider is not enabled or not supported by this installed runtime.",
+      project: options.project || "monopoly",
+      image: imagePath,
+      capabilities,
+    }, null, 2));
+    return;
+  }
+  throw new Error("Live OpenAI reference/edit call is intentionally not wired in automated CLI yet; provider capability is exposed for manual integration.");
+}
+
 async function runTitleExtractionSmoke(): Promise<void> {
   const { extractTitleForProject } = await import("./jobBuilder/titleExtractor");
   const cases = [
@@ -694,6 +741,53 @@ async function runTitleFitSmoke(): Promise<void> {
     if (processed.warnings.includes("title_fit_failed")) throw new Error(`Title fit failed for ${title}`);
   }
   console.log(JSON.stringify({ ok: true, titles: titles.length }, null, 2));
+}
+
+async function runVisualQaSmoke(): Promise<void> {
+  const { buildVisualJobFromCommand } = await import("./jobBuilder");
+  const { composeWithVisualQaRepair } = await import("./production/composeWithVisualQa");
+  const manifest = await createLayeredSmokeManifest(path.join(process.cwd(), ".storage", "visual_qa_smoke"));
+  const built = await buildVisualJobFromCommand({ command_text: "для монополии пэй нужна новая картинка с текстом Яндекс-Яндекс", asset_manifest: manifest as never, options: { enable_ai: false } });
+  built.visual_job.title_image_layer = {
+    ...(built.visual_job.title_image_layer || { enabled: true, text: "ЯНДЕКС-ЯНДЕКС" }),
+    placement: { x: -0.08, y: 0.14, width: 0.42, height: 0.18, anchor: "top_left", fit: "contain" },
+  };
+  const result = await composeWithVisualQaRepair(built.visual_job);
+  const box = result.visual_job.layout.boxes?.title_image_box;
+  if (!box || box.x < 80) throw new Error(`Visual QA smoke expected title box x >= 80 after repair, got ${box ? box.x : "-"}.`);
+  if (!result.visual_job.title_image_layer?.generated_asset_path && !result.visual_job.title_image_layer?.asset_path) throw new Error("Visual QA smoke expected title layer path.");
+  if (!result.qa.ok) throw new Error(`Visual QA smoke expected no errors after repair: ${result.qa.errors.map((item) => item.code).join(",")}`);
+  console.log(JSON.stringify({ ok: true, title_box: box, title_path: result.visual_job.title_image_layer.generated_asset_path || result.visual_job.title_image_layer.asset_path, repair_actions: result.repair_actions }, null, 2));
+}
+
+async function runQualityGate(): Promise<void> {
+  const { buildVisualJobFromCommand } = await import("./jobBuilder");
+  const { composeWithVisualQaRepair } = await import("./production/composeWithVisualQa");
+  const scenarios = qualityGateScenarios();
+  const results: Array<{ command: string; errors: string[]; warnings: string[] }> = [];
+  for (const scenario of scenarios) {
+    const built = await buildVisualJobFromCommand({ command_text: scenario, options: { enable_ai: false } });
+    const result = await composeWithVisualQaRepair(built.visual_job);
+    results.push({ command: scenario, errors: result.qa.errors.map((item) => item.code), warnings: result.qa.warnings.map((item) => item.code) });
+  }
+  const failed = results.filter((item) => item.errors.length);
+  if (failed.length) throw new Error(`Quality gate failed: ${JSON.stringify(failed, null, 2)}`);
+  console.log(JSON.stringify({ ok: true, scenarios: results.length, warnings: results.reduce((sum, item) => sum + item.warnings.length, 0) }, null, 2));
+}
+
+function qualityGateScenarios(): string[] {
+  return [
+    "сделай новую картинку для монополии история знакомства",
+    "сделай новую картинку для монополии результаты конкурса",
+    "монополия 2000 пользователей",
+    "для монополии пэй нужна новая картинка с текстом Яндекс-Яндекс",
+    "сделай новую картинку для пэй новые триггеры банков",
+    "оплата по ссылке",
+    "для каспера конкурс на 3000 пользователей",
+    "будь на связи",
+    "завтра тренировка для детей",
+    "набор детей 2016-2018",
+  ];
 }
 
 function fakeAsset(
@@ -846,6 +940,11 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (options.referenceLiveSmoke) {
+    await runReferenceLiveSmoke(options);
+    return;
+  }
+
   if (options.titleExtractionSmoke) {
     await runTitleExtractionSmoke();
     return;
@@ -853,6 +952,16 @@ async function main(): Promise<void> {
 
   if (options.titleFitSmoke) {
     await runTitleFitSmoke();
+    return;
+  }
+
+  if (options.visualQaSmoke) {
+    await runVisualQaSmoke();
+    return;
+  }
+
+  if (options.qualityGate) {
+    await runQualityGate();
     return;
   }
 

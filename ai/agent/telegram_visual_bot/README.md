@@ -288,3 +288,37 @@ If title is cropped, press `?? �����` and send:
 ```
 
 This adjusts placement/scale without regenerating title content.
+
+## DNK MVP 1.50 Visual QA
+
+Manual checklist: `V1_10_VISUAL_QA_TEST_PLAN.md`.
+
+Key regression:
+
+```text
+для монополии пэй нужна новая картинка с текстом Яндекс-Яндекс
+```
+
+Expected:
+
+- Pay `title_box.x` is never negative and stays inside the safe canvas area.
+- `title_image_layer` always has a real `title.png` file path, even when source is `composer_fallback`.
+- `/debug_job` shows `qa_errors`, `qa_warnings`, title path, title box and repair actions.
+- `✏️ Текст` + `текст обрезается` repairs placement without changing title content, character, background or logo.
+
+Local production gate:
+
+```bash
+npm run visual:visual-qa-smoke
+npm run visual:quality-gate
+npm run visual:quality-sheet
+```
+
+Reference/edit readiness is reported without live API calls by default:
+
+```bash
+npm run visual:reference-provider-check
+npm run visual:reference-live-smoke -- --project monopoly --image <path>
+```
+
+`visual:reference-live-smoke` skips live calls unless `VISUAL_ENABLE_LIVE_REFERENCE_TEST=true`.

@@ -87,3 +87,12 @@ Expected:
 - `title_raw` differs from title for long commands.
 - `title_fit` shows font/lines/warnings.
 - `title_image_policy provider=composer` by default.
+
+## v1.50 Carry-Forward
+
+After v1.50, this same plan should also confirm:
+
+- `title_image_layer.path` is present for composer fallback title layers.
+- `title_box` is clamped inside canvas safe area.
+- Pay layouts never produce negative title x/y.
+- `/debug_job` includes QA and repair summary lines.

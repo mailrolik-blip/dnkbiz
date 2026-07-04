@@ -21,3 +21,11 @@ Recommended commit message for this task:
 ```text
 DNK MVP 1.49: improve title layer fit and reference-edit readiness
 ```
+
+- 1.50: production visual QA and reference-edit integration
+
+Recommended commit message for this task:
+
+```text
+DNK MVP 1.50: production visual QA and reference-edit integration
+```

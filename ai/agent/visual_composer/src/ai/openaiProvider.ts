@@ -1,4 +1,5 @@
 ﻿import fs from "node:fs/promises";
+import fsSync from "node:fs";
 import path from "node:path";
 import sharp from "sharp";
 import type { AiImageLayerType, AiLayerInput, VisualAiCapabilities, VisualAiProvider } from "./types";
@@ -56,25 +57,44 @@ export function createOpenAiProvider(): VisualAiProvider {
 
 export function describeOpenAiImageCapabilities() {
   const capabilities = getCapabilities();
+  const sdkInstalled = isOpenAiSdkInstalled();
+  const referenceProvider = process.env.VISUAL_IMAGE_REFERENCE_PROVIDER || "disabled";
+  const editProvider = process.env.VISUAL_IMAGE_EDIT_PROVIDER || "disabled";
+  const reasons = [];
+  if (referenceProvider !== "openai") reasons.push("VISUAL_IMAGE_REFERENCE_PROVIDER is disabled");
+  if (editProvider !== "openai") reasons.push("VISUAL_IMAGE_EDIT_PROVIDER is disabled");
+  if (!sdkInstalled) reasons.push("openai npm SDK is not installed; current project uses fetch-based prompt-only image generation");
+  if (referenceProvider === "openai" || editProvider === "openai") {
+    reasons.push("fetch-based reference/edit endpoint is not wired for live calls in automated path yet");
+  }
   return {
     model: process.env.OPENAI_IMAGE_MODEL || "gpt-image-1",
+    reference_provider: referenceProvider,
+    edit_provider: editProvider,
+    openai_sdk_installed: sdkInstalled,
     image_generation_supported: capabilities.image_generation,
     image_reference_supported: capabilities.image_references,
     image_edit_supported: capabilities.image_edit,
     transparent_supported: capabilities.transparent_background,
-    reason: capabilities.image_references || capabilities.image_edit
-      ? ""
-      : "Current provider path uses images/generations prompt-only calls; reference/edit endpoint is not wired in this project yet.",
+    live_reference_test_enabled: process.env.VISUAL_ENABLE_LIVE_REFERENCE_TEST === "true",
+    reason: capabilities.image_references || capabilities.image_edit ? "" : reasons.join("; "),
   };
 }
 
 function getCapabilities(): VisualAiCapabilities {
+  const referenceProvider = process.env.VISUAL_IMAGE_REFERENCE_PROVIDER || "disabled";
+  const editProvider = process.env.VISUAL_IMAGE_EDIT_PROVIDER || "disabled";
+  const sdkInstalled = isOpenAiSdkInstalled();
   return {
     image_generation: true,
-    image_references: false,
-    image_edit: false,
+    image_references: referenceProvider === "openai" && sdkInstalled && process.env.VISUAL_ENABLE_LIVE_REFERENCE_TEST === "true",
+    image_edit: editProvider === "openai" && sdkInstalled && process.env.VISUAL_ENABLE_LIVE_REFERENCE_TEST === "true",
     transparent_background: process.env.OPENAI_IMAGE_TRANSPARENT_BACKGROUND === "true",
   };
+}
+
+function isOpenAiSdkInstalled(): boolean {
+  return fsSync.existsSync(path.join(process.cwd(), "node_modules", "openai", "package.json"));
 }
 
 async function generateCharacterLayer(input: AiLayerInput) {
@@ -321,3 +341,4 @@ function parseJsonObject(value: string): Record<string, unknown> {
 function escapeXml(value: string): string {
   return value.replace(/[<>&'"]/g, (char) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "'": "&apos;", '"': "&quot;" })[char] || char);
 }
+

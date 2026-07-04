@@ -338,3 +338,18 @@ Recommended commit message:
 ```text
 DNK MVP 1.49: improve title layer fit and reference-edit readiness
 ```
+
+## DNK MVP 1.50: production visual QA and reference-edit integration
+
+- Added production visual QA checks for title, character, logo and output dimensions.
+- Added QA compose wrapper with bounded auto-repair for title crop and missing title path issues.
+- Clamped Pay/Monopoly title boxes into safe canvas bounds, preventing negative visible title coordinates.
+- Ensured composer fallback title layers are saved as real `title.png` assets for layer packs and debug.
+- Added `visual:visual-qa-smoke` and `visual:quality-gate`.
+- Extended reference/edit provider diagnostics with env-gated readiness and live-smoke dry-run.
+
+Recommended commit message:
+
+```text
+DNK MVP 1.50: production visual QA and reference-edit integration
+```

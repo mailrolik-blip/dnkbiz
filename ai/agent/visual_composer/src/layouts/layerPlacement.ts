@@ -159,8 +159,9 @@ export function nextPlacementPresetName(projectKey: VisualProjectKey, current: s
 
 export function resolvePlacementPreset(job: VisualJob, variant: string, canvas: { width: number; height: number }): ResolvedPlacementPreset {
   const preset = getPlacementPreset(job.project_key, variant);
-  const title = resolveLayerBox(job.title_image_layer?.placement || preset.title_image, canvas);
-  const character = resolveLayerBox(job.character_layer?.placement || preset.character, canvas);
+  const titleSafe = titleSafePadding(job.project_key, canvas);
+  const title = clampBoxToCanvas(resolveLayerBox(job.title_image_layer?.placement || preset.title_image, canvas), canvas, titleSafe);
+  const character = clampBoxToCanvas(resolveLayerBox(job.character_layer?.placement || preset.character, canvas), canvas, 0);
   return {
     name: preset.name,
     title_image_box: title,
@@ -185,10 +186,35 @@ export function resolveLayerBox(placement: LayerPlacement, canvas: { width: numb
   if (anchor.startsWith("bottom")) y -= height;
   if (anchor === "center") y -= height / 2;
   return {
-    x: clamp(Math.round(x), -Math.round(width * 0.1), canvas.width - 24),
-    y: clamp(Math.round(y), -Math.round(height * 0.1), canvas.height - 24),
+    x: Math.round(x),
+    y: Math.round(y),
     width: Math.round(width),
     height: Math.round(height),
+  };
+}
+
+export function clampBoxToCanvas(box: LayerBox, canvas: { width: number; height: number }, safePadding: number): LayerBox {
+  const maxWidth = Math.max(24, canvas.width - safePadding * 2);
+  const maxHeight = Math.max(24, canvas.height - safePadding * 2);
+  const scale = Math.min(1, maxWidth / Math.max(1, box.width), maxHeight / Math.max(1, box.height));
+  const width = Math.max(24, Math.round(box.width * scale));
+  const height = Math.max(24, Math.round(box.height * scale));
+  return {
+    x: clamp(box.x, safePadding, canvas.width - safePadding - width),
+    y: clamp(box.y, safePadding, canvas.height - safePadding - height),
+    width,
+    height,
+  };
+}
+
+export function boxToTopLeftPlacement(box: LayerBox, canvas: { width: number; height: number }): LayerPlacement {
+  return {
+    x: box.x / canvas.width,
+    y: box.y / canvas.height,
+    width: box.width / canvas.width,
+    height: box.height / canvas.height,
+    anchor: "top_left",
+    fit: "contain",
   };
 }
 
@@ -238,4 +264,10 @@ function toPixels(value: number, size: number): number {
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
+}
+
+function titleSafePadding(projectKey: VisualProjectKey, canvas: { width: number; height: number }): number {
+  if (projectKey === "monopoly_pay" && canvas.width >= 1600) return 80;
+  if (projectKey === "monopoly" && canvas.width >= 1600) return 72;
+  return 48;
 }

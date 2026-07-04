@@ -440,3 +440,40 @@ New checks:
 npm run visual:title-extraction-smoke
 npm run visual:title-fit-smoke
 ```
+
+## DNK MVP 1.50 Production Visual QA
+
+Recommended commit message:
+
+```text
+DNK MVP 1.50: production visual QA and reference-edit integration
+```
+
+The production compose path now runs a lightweight visual QA pass after composing and can repair critical title bounds issues once or twice before returning the final output.
+
+QA checks include:
+
+- title box inside safe canvas bounds;
+- real `title.png` path for `title_image_layer`;
+- output dimensions;
+- character/logo bounds;
+- Hockey default `1024x1024`;
+- Monopoly/Pay wide output expectations.
+
+New local checks:
+
+```bash
+npm run visual:visual-qa-smoke
+npm run visual:quality-gate
+npm run visual:reference-live-smoke -- --project monopoly --image <path>
+```
+
+Reference/edit env flags:
+
+```bash
+VISUAL_IMAGE_REFERENCE_PROVIDER=disabled
+VISUAL_IMAGE_EDIT_PROVIDER=disabled
+VISUAL_ENABLE_LIVE_REFERENCE_TEST=false
+```
+
+Use `openai` values only for manual integration work. Automated checks must not call OpenAI.

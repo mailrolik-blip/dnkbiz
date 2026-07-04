@@ -1,6 +1,6 @@
 import path from "node:path";
 import { randomUUID } from "node:crypto";
-import { composeVisualJob } from "../compose";
+import { composeWithVisualQaRepair } from "./composeWithVisualQa";
 import { buildVisualJobFromCommand, type BuildVisualJobInput } from "../jobBuilder";
 import { createVisualJobRecord, FileVisualJobStore } from "../store";
 import { safeFilename } from "../utils/safeFilename";
@@ -56,7 +56,9 @@ export async function produceVisualFromCommand(input: ProduceVisualInput): Promi
     buildResult.visual_job.layout.variant,
     jobId,
   );
-  const composeResult = await composeVisualJob({ ...buildResult.visual_job, output_path: outputPath });
+  const qaCompose = await composeWithVisualQaRepair({ ...buildResult.visual_job, output_path: outputPath });
+  const composeResult = qaCompose.compose_result;
+  buildResult.visual_job = qaCompose.visual_job;
   buildResult.visual_job.final_composite = {
     ...(buildResult.visual_job.final_composite || {}),
     output_path: composeResult.output_path,
@@ -74,7 +76,7 @@ export async function produceVisualFromCommand(input: ProduceVisualInput): Promi
       uploaded_photo_required: buildResult.detected.visual_mode === "hockey_photo_template",
     },
   });
-  const warnings = [...buildResult.warnings, ...composeResult.warnings, ...quality.warnings, ...quality.critical];
+  const warnings = [...buildResult.warnings, ...composeResult.warnings, ...quality.warnings, ...quality.critical, ...qaCompose.qa.errors.map((item) => item.code), ...qaCompose.qa.warnings.map((item) => item.code)];
   const output = {
     version: 1,
     output_path: composeResult.output_path,
@@ -110,6 +112,9 @@ export async function produceVisualFromCommand(input: ProduceVisualInput): Promi
     `layout=${record.visual_job.layout.variant}`,
     `output=${composeResult.output_path}`,
     `size=${composeResult.width}x${composeResult.height}`,
+    `qa_errors=${qaCompose.qa.errors.length}`,
+    `qa_warnings=${qaCompose.qa.warnings.length}`,
+    `repair_actions=${qaCompose.repair_actions.join(" | ") || "-"}`,
     ...composeResult.warnings.filter((warning) => warning.startsWith("composer_usage")),
   ];
   await new FileVisualJobStore().update(record);

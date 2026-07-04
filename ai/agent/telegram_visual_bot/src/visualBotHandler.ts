@@ -340,6 +340,9 @@ async function handleRevisionMessage(chatId: string, userId: string | undefined,
   await deps.telegram.sendMessage(chatId, "Принял правку, пересобираю картинку...");
   const result = await reviseProducedVisual({ job_id: activeJobId, target, instruction: text, uploaded_assets: [], options: { enable_ai: Boolean(deps.enableAi) } });
   await deps.telegram.sendPhotoFromFile(chatId, result.output_path, `✅ Обновил: ${REVISION_LABELS[target]}\nВерсия: ${result.version}\nJob: ${result.job_id}\nДля качества нажми PNG без сжатия.`, visualRevisionKeyboard());
+  if (target === "character" && result.warnings.some((warning) => warning.includes("image reference/edit not available"))) {
+    await deps.telegram.sendMessage(chatId, "Точную новую позу по этому деду пока не могу сделать: image reference/edit provider не включён. Я сохранил текущего деда и пересобрал макет. Можно написать: «можно заменить персонажа», тогда сгенерирую нового, но он может отличаться.");
+  }
   if (deps.sendPostText && result.post_caption) await deps.telegram.sendMessage(chatId, `Текст поста:\n${result.post_caption}`);
   await stateStore.setActiveJob({ chat_id: chatId, user_id: userId, active_job_id: result.job_id, active_output_path: result.output_path, active_output_url: result.output_url });
 }
@@ -441,6 +444,9 @@ async function sendDebugJob(chatId: string, telegram: TelegramClient, stateStore
   const projectAssets = manifest.assets.filter((asset) => asset.project_key === record.detected.project_key);
   const count = (type: string) => projectAssets.filter((asset) => asset.type === type).length;
   const composerUsage = (record.compose_log || []).find((line) => line.startsWith("composer_usage")) || "composer_usage background=unknown character=unknown logo=unknown";
+  const qaErrors = [...(record.compose_log || [])].reverse().find((line) => line.startsWith("qa_errors=")) || "qa_errors=-";
+  const qaWarnings = [...(record.compose_log || [])].reverse().find((line) => line.startsWith("qa_warnings=")) || "qa_warnings=-";
+  const repairActions = [...(record.compose_log || [])].reverse().find((line) => line.startsWith("repair_actions=")) || "repair_actions=-";
   const selectionLog = record.asset_selection_log || [];
   const selectedLine = (type: string) => selectionLog.filter((line) => line.includes(`type=${type}`) || line.includes(`/${type}`)).slice(-2).join("; ") || "-";
   const aiSkippedReason = detectAiSkippedReason(record.ai_generation_log || [], job);
@@ -481,6 +487,9 @@ async function sendDebugJob(chatId: string, telegram: TelegramClient, stateStore
     `selection_character: ${selectedLine("character")}`,
     `selection_logo: ${selectedLine("logo")}`,
     `composer: ${composerUsage}`,
+    qaErrors,
+    qaWarnings,
+    repairActions,
     `usage_today: images=${usage.image_generations_count}, text=${usage.text_generations_count}, failed=${usage.failed_generations_count}`,
     full ? "full_debug: sending details below" : "full_debug: use /debug_job_full for detailed logs",
   ].join("\n");

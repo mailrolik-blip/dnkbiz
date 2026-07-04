@@ -1,5 +1,5 @@
 ﻿import path from "node:path";
-import { composeVisualJob } from "../compose";
+import { composeWithVisualQaRepair } from "./composeWithVisualQa";
 import { getVisualAiProvider } from "../ai";
 import { reviseVisualJob, type RevisionTarget } from "../revision";
 import { FileVisualJobStore, nextOutputVersion } from "../store";
@@ -136,7 +136,9 @@ export async function reviseProducedVisual(input: ReviseProducedVisualInput): Pr
 
   const previousJob = structuredClone(record.visual_job);
   const { outputPath, outputUrl } = outputFor(input.job_id, input.target, version);
-  const composeResult = await composeVisualJob({ ...revision.visual_job, output_path: outputPath });
+  const qaCompose = await composeWithVisualQaRepair({ ...revision.visual_job, output_path: outputPath });
+  const composeResult = qaCompose.compose_result;
+  revision.visual_job = qaCompose.visual_job;
   revision.visual_job.final_composite = {
     ...(revision.visual_job.final_composite || {}),
     output_path: composeResult.output_path,
@@ -152,9 +154,9 @@ export async function reviseProducedVisual(input: ReviseProducedVisualInput): Pr
   record.image_text = { title: record.visual_job.text_layer?.text, subtitle: record.visual_job.text_layer?.subtitle, sticker: record.visual_job.text_layer?.sticker };
   record.post_caption = record.visual_job.post_caption || record.visual_job.text_layer?.post_caption || record.post_caption;
   record.internal_prompt = record.visual_job.internal_prompt || record.visual_job.text_layer?.internal_prompt || record.internal_prompt;
-  record.quality_warnings = [...(record.quality_warnings || []), ...quality.warnings, ...quality.critical];
+  record.quality_warnings = [...(record.quality_warnings || []), ...quality.warnings, ...quality.critical, ...qaCompose.qa.errors.map((item) => item.code), ...qaCompose.qa.warnings.map((item) => item.code)];
   record.ai_generation_log = [...(record.ai_generation_log || []), ...aiLogs, ...revision.warnings.filter((warning) => warning.includes("OpenAI") || warning.includes("image reference") || warning.includes("character lock"))];
-  record.compose_log = [...(record.compose_log || []), `v${version} layout=${record.visual_job.layout.variant} output=${composeResult.output_path}`, ...composeResult.warnings.filter((warning) => warning.startsWith("composer_usage"))];
+  record.compose_log = [...(record.compose_log || []), `v${version} layout=${record.visual_job.layout.variant} output=${composeResult.output_path}`, `qa_errors=${qaCompose.qa.errors.length}`, `qa_warnings=${qaCompose.qa.warnings.length}`, `repair_actions=${qaCompose.repair_actions.join(" | ") || "-"}`, ...composeResult.warnings.filter((warning) => warning.startsWith("composer_usage"))];
   record.outputs.push({ version, output_path: composeResult.output_path, output_url: outputUrl, width: composeResult.width, height: composeResult.height, created_at: now });
   const layerKey = input.target === "format" ? "layout" : input.target === "title_image" ? "text" : input.target === "character" ? "illustration" : input.target;
   record.layers[layerKey].last_updated_at = now;
