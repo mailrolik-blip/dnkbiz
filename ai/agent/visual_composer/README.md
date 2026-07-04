@@ -477,3 +477,111 @@ VISUAL_ENABLE_LIVE_REFERENCE_TEST=false
 ```
 
 Use `openai` values only for manual integration work. Automated checks must not call OpenAI.
+
+## DNK MVP 1.51 Approved Asset-First Pipeline
+
+Recommended commit message:
+
+```text
+DNK MVP 1.51: add approved visual asset packs for Monopoly and Pay
+```
+
+For Monopoly and Pay, build now selects approved production layers first:
+
+- `title_image` exact match by normalized `text`;
+- `character_pose` match by requested pose/tags such as `phone`, `cup`, `receipt`;
+- normal background/logo/icon assets;
+- AI/fallback only when approved assets are missing.
+
+Production toggle:
+
+```bash
+VISUAL_PRODUCTION_ASSET_FIRST=true
+```
+
+Set it to `false` only for experiments. Local smoke:
+
+```bash
+npm run visual:asset-first-smoke
+```
+
+## DNK MVP 1.51 Autonomous Multi-Pass Pipeline
+
+Recommended commit message:
+
+```text
+DNK MVP 1.51: add autonomous multi-pass AI visual pipeline
+```
+
+Default layer policy is now:
+
+```bash
+VISUAL_LAYER_SOURCE_POLICY=generate_first
+```
+
+For Monopoly and Pay, one command creates a production plan and runs separate layer phases:
+
+1. title layer generation/verification;
+2. character pose reference/edit generation and consistency review;
+3. project background reuse or generation when explicitly needed;
+4. layered compose;
+5. visual QA/final critic;
+6. selective repair of only the weak layer.
+
+Approved assets remain as cache, exact reuse, manual override and fallback. Users do not need to know future post topics or upload future title/pose assets in advance.
+
+Offline checks:
+
+```bash
+npm run visual:production-plan-smoke
+npm run visual:multi-pass-smoke
+npm run visual:title-verification-smoke
+npm run visual:character-critic-smoke
+```
+
+Live-gated checks:
+
+```bash
+VISUAL_ENABLE_LIVE_REFERENCE_TEST=true npm run visual:openai-edit-smoke -- --image <path> --prompt "same character holding a cup"
+VISUAL_ENABLE_LIVE_PRODUCTION_TEST=true npm run visual:production-live-smoke -- --project monopoly_pay --command "новые триггеры банков, дед проходит между лучами сигнализации"
+```
+
+### DNK MVP 1.51 live image edit input handling
+
+`images.edit` inputs are normalized before upload:
+
+- source file MIME is detected by magic bytes first, extension second;
+- supported formats are PNG, JPEG and WEBP;
+- every reference is copied to `.storage/visual_reference_inputs/<job_id>/reference-XX.png`;
+- OpenAI receives the normalized PNG stream with explicit `type: image/png`;
+- user-facing diagnostics show only basenames, detected format, normalized dimensions and byte size.
+
+New offline checks:
+
+```bash
+npm run visual:image-mime-smoke
+npm run visual:reference-normalization-smoke
+npm run visual:cli-path-smoke
+```
+
+`visual:openai-edit-smoke` prints `OUTPUT PNG: <path>` after a live edit. `visual:production-live-smoke` prints `FINAL PNG: <path>` after composing the E2E output.
+
+### DNK MVP 1.51 model-aware image edit parameters
+
+`images.edit` request options are model-aware. For `gpt-image-2`, the provider omits `input_fidelity` because the live API rejects that parameter for this model.
+
+Offline diagnostics:
+
+```bash
+npm run visual:reference-provider-check
+npm run visual:image-edit-params-smoke
+```
+
+Expected diagnostic for `gpt-image-2`:
+
+```text
+applied_optional_parameters: []
+skipped_optional_parameters: { input_fidelity: "unsupported_for_model" }
+```
+
+The production planner uses a locked `character` / `main_character` asset as the primary identity reference. Approved `character_pose` assets are secondary references or fallbacks in `generate_first` mode.

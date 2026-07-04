@@ -1,4 +1,6 @@
 ﻿import { getPlacementPreset, nudgePlacement } from "../layouts/layerPlacement";
+import { loadDefaultAssetManifest } from "../assets/assetResolver";
+import { resolveApprovedPoseAsset, resolveApprovedTitleAsset } from "../assets/approvedAssetResolver";
 import { reviseBackgroundLayer } from "./reviseBackgroundLayer";
 import { reviseFormat, reviseLayout } from "./reviseLayout";
 import { reviseIllustrationLayer } from "./reviseIllustrationLayer";
@@ -16,12 +18,21 @@ export async function reviseVisualJob(input: ReviseVisualJobInput): Promise<Revi
     } else {
       result = reviseTextLayer(input.visual_job, input.instruction);
       if (result.job.title_image_layer) {
+        const approvedTitle = resolveApprovedTitleAsset({
+          project_key: result.job.project_key,
+          title: result.job.text_layer?.text || result.job.title_image_layer.text,
+          manifest: loadDefaultAssetManifest(),
+        });
         result.job.title_image_layer = {
           ...result.job.title_image_layer,
           text: result.job.text_layer?.text || result.job.title_image_layer.text,
-          source: "composer_fallback",
+          asset_path: approvedTitle.asset_path || undefined,
+          generated_asset_path: approvedTitle.asset_path ? undefined : result.job.title_image_layer.generated_asset_path,
+          source: approvedTitle.asset_path ? "asset" : "composer_fallback",
           revision_state: `updated:${new Date().toISOString()}`,
+          warnings: [...(result.job.title_image_layer.warnings || []), approvedTitle.log],
         };
+        if (approvedTitle.asset_path) result.warnings.push(approvedTitle.log);
       }
     }
   }
@@ -30,12 +41,36 @@ export async function reviseVisualJob(input: ReviseVisualJobInput): Promise<Revi
     if (placement) {
       result = { job: placement.job, warnings: placement.warnings };
     } else {
-      result = reviseIllustrationLayer(input.visual_job, input.instruction, input.uploaded_assets);
+      const approvedPose = resolveApprovedPoseAsset({ project_key: input.visual_job.project_key, instruction: input.instruction, manifest: loadDefaultAssetManifest() });
+      if (approvedPose.asset_path) {
+        const next = structuredClone(input.visual_job);
+        next.character_layer = {
+          ...(next.character_layer || { enabled: true }),
+          enabled: true,
+          asset_path: approvedPose.asset_path,
+          generated_asset_path: undefined,
+          role: "main_character",
+          lock_policy: approvedPose.asset?.lock_policy || "replaceable",
+          source: "asset",
+          locked: false,
+          warnings: [...(next.character_layer?.warnings || []), approvedPose.log],
+        };
+        next.illustration_layer = {
+          ...(next.illustration_layer || { enabled: true }),
+          enabled: true,
+          asset_path: approvedPose.asset_path,
+          locked: false,
+          warnings: [...(next.illustration_layer?.warnings || []), approvedPose.log],
+        };
+        result = { job: next, warnings: [approvedPose.log, "character revision used approved_pose without AI generation"] };
+      } else {
+        result = reviseIllustrationLayer(input.visual_job, input.instruction, input.uploaded_assets);
+      }
       result.job.character_layer = {
         ...(input.visual_job.character_layer || { enabled: true }),
         ...(result.job.character_layer || {}),
-        asset_path: input.visual_job.character_layer?.asset_path || result.job.illustration_layer?.asset_path || result.job.character_layer?.asset_path,
-        generated_asset_path: input.visual_job.character_layer?.generated_asset_path,
+        asset_path: result.job.character_layer?.asset_path || input.visual_job.character_layer?.asset_path || result.job.illustration_layer?.asset_path,
+        generated_asset_path: result.job.character_layer?.generated_asset_path || input.visual_job.character_layer?.generated_asset_path,
         locked: input.visual_job.character_layer?.locked ?? result.job.illustration_layer?.locked,
       };
       result.warnings.push("Character revision is layer-scoped. Locked character is preserved unless explicit unlock/replacement is requested.");
@@ -79,3 +114,4 @@ function isPlacementCommand(instruction: string, layer: "title" | "character"): 
   if (layer === "title") return titleWords || !characterWords;
   return characterWords;
 }
+

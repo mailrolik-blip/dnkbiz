@@ -1,5 +1,6 @@
 ﻿import type { OutputFormat, VisualJob } from "../types";
 import { resolveVisualAsset } from "../assets/assetResolver";
+import { resolveApprovedPoseAsset, resolveApprovedTitleAsset } from "../assets/approvedAssetResolver";
 import type { BuildVisualJobInput, TextLayerParts } from "./types";
 import { sizeForOutputFormat } from "./outputPresets";
 
@@ -12,11 +13,14 @@ export function buildMonopolyJob(input: BuildVisualJobInput, text: TextLayerPart
   const logo = resolveVisualAsset({ project_key: "monopoly", visual_mode: "composer", asset_type: "logo", tags: ["main"], manifest: input.asset_manifest });
   const reference = resolveVisualAsset({ project_key: "monopoly", visual_mode: "composer", asset_type: "reference", role: "style_reference", lock_policy: "reference_only", tags: ["promo", "style"], manifest: input.asset_manifest });
   const titleReference = resolveVisualAsset({ project_key: "monopoly", visual_mode: "composer", asset_type: "reference", role: "title_style_reference", lock_policy: "reference_only", tags: ["title", "text", "3d"], manifest: input.asset_manifest });
+  const approvedTitle = resolveApprovedTitleAsset({ project_key: "monopoly", title: text.title, manifest: input.asset_manifest });
+  const approvedPose = resolveApprovedPoseAsset({ project_key: "monopoly", instruction: input.command_text, manifest: input.asset_manifest });
   warnings.push(...(character.selection_log || []), ...(bg.selection_log || []), ...(illustration.selection_log || []), ...(logo.selection_log || []), ...(reference.selection_log || []), ...(titleReference.selection_log || []), ...bg.warnings, ...illustration.warnings);
+  warnings.push(`production_asset_first=${process.env.VISUAL_PRODUCTION_ASSET_FIRST !== "false"}`, approvedTitle.log, approvedPose.log);
   if (!character.asset_path) warnings.push("No locked Monopoly main character found; AI generated/free fallback used.");
   const layout = chooseLayout(input, text);
   const size = sizeFor(format);
-  const characterPath = character.asset_path || illustration.asset_path;
+  const characterPath = approvedPose.asset_path || character.asset_path || illustration.asset_path;
 
   return {
     job_type: "visual_production",
@@ -40,7 +44,7 @@ export function buildMonopolyJob(input: BuildVisualJobInput, text: TextLayerPart
       enabled: true,
       asset_path: characterPath,
       position: layout.includes("character_center") ? "center" : "bottom",
-      locked: Boolean(character.asset_path),
+      locked: Boolean(approvedPose.asset_path || character.asset_path),
     },
     background_layer: {
       enabled: true,
@@ -54,20 +58,22 @@ export function buildMonopolyJob(input: BuildVisualJobInput, text: TextLayerPart
       enabled: true,
       asset_path: characterPath,
       role: "main_character",
-      lock_policy: character.asset?.lock_policy,
+      lock_policy: approvedPose.asset?.lock_policy || character.asset?.lock_policy,
       fit: "contain",
       source: characterPath ? "asset" : "fallback",
-      locked: Boolean(character.asset_path),
+      locked: Boolean(approvedPose.asset_path || character.asset_path),
+      warnings: compactStrings([approvedPose.asset_path ? "pose_asset_match source=approved_pose" : ""]),
     },
     title_image_layer: {
       enabled: true,
       text: text.title,
+      asset_path: approvedTitle.asset_path || undefined,
       transparent_background: true,
       style_ref_asset_path: titleReference.asset_path || reference.asset_path,
-      source: "composer_fallback",
+      source: approvedTitle.asset_path ? "asset" : "composer_fallback",
       position: "top",
       fit: "contain",
-      warnings: ["title_image_layer uses composer_fallback; AI title PNG generation is not enabled in smoke/fallback mode."],
+      warnings: compactStrings([approvedTitle.asset_path ? "title_asset_match source=approved_asset" : "title_image_layer uses composer_fallback; AI title PNG generation is not enabled in smoke/fallback mode."]),
     },
     layout: { variant: layout, width: size.width, height: size.height, safe_area: 64 },
     brand: {
@@ -86,14 +92,19 @@ export function buildMonopolyJob(input: BuildVisualJobInput, text: TextLayerPart
     final_composite: { width: size.width, height: size.height, delivery_mode: "preview" },
     profile: input.profile,
     style_assets: {
-      main_character: character.asset_path,
+      main_character: characterPath,
       logo: logo.asset_path,
       background: bg.asset_path,
       reference: reference.asset_path,
       title_style_reference: titleReference.asset_path,
       references: [reference.asset_path, titleReference.asset_path].filter(Boolean),
-      locked_assets: [character.asset_path, logo.asset_path].filter(Boolean),
-      warnings: character.asset_path ? ["main_character locked asset used"] : ["main_character missing"],
+      locked_assets: [characterPath, logo.asset_path].filter(Boolean),
+      warnings: compactStrings([
+        approvedTitle.asset_path ? "approved title_image asset used" : "",
+        approvedPose.asset_path ? "approved character_pose asset used" : "",
+        character.asset_path ? "main_character locked asset used" : "",
+        !characterPath ? "main_character missing" : "",
+      ]),
     },
     post_caption: text.post_caption,
   };
@@ -119,3 +130,4 @@ function tagsFor(format: OutputFormat, extra: string): string[] {
 function sizeFor(format: OutputFormat) {
   return sizeForOutputFormat(format);
 }
+

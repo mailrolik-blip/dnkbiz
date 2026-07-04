@@ -5,8 +5,12 @@ export type VisualAssetType =
   | "character"
   | "illustration"
   | "logo"
+  | "title_image"
+  | "character_pose"
   | "reference"
+  | "composition_template"
   | "template"
+  | "decor"
   | "photo"
   | "qr"
   | "icon"
@@ -20,6 +24,7 @@ export interface VisualAsset {
     | "main_character"
     | "secondary_character"
     | "brand_logo"
+    | "title"
     | "style_reference"
     | "background"
     | "composition_reference"
@@ -29,6 +34,9 @@ export interface VisualAsset {
   usage: string;
   description: string;
   safe_for_auto_use: boolean;
+  approved?: boolean;
+  text?: string;
+  pose?: string;
   priority?: number;
   lock_policy?: "locked" | "reference_only" | "replaceable" | "optional";
   recommended_modes?: VisualMode[];

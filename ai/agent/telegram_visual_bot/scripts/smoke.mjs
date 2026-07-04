@@ -2,6 +2,7 @@
 import fs from "node:fs/promises";
 
 const { handleVisualBotUpdate, TelegramStateStore } = await import("../dist/agent/telegram_visual_bot/src/index.js");
+const { FileVisualJobStore } = await import("../../visual_composer/dist/store/index.js");
 
 class MockTelegramClient {
   calls = [];
@@ -50,6 +51,8 @@ await handleVisualBotUpdate({
 
 let state = await stateStore.getChatState(String(chatId));
 if (!state.active_job_id || !state.active_output_path || state.last_project_key !== "monopoly") throw new Error("Smoke failed: monopoly active job was not saved.");
+const firstRecord = await new FileVisualJobStore().get(state.active_job_id);
+if (firstRecord?.visual_job?.production?.pipeline_route !== "autonomous_multi_pass") throw new Error(`Smoke failed: expected autonomous_multi_pass route, got ${firstRecord?.visual_job?.production?.pipeline_route || "-"}.`);
 
 await handleVisualBotUpdate({ update_id: 2, callback_query: { id: "callback-smoke-1", from: { id: userId, username: "smoke" }, message: { message_id: 2, chat: { id: chatId, type: "private" } }, data: "visual:revise:text" } }, deps);
 await handleVisualBotUpdate({ update_id: 3, message: { message_id: 3, from: { id: userId, username: "smoke" }, chat: { id: chatId, type: "private" }, text: "поменяй текст на НОВЫЙ СПОСОБ ОПЛАТЫ" } }, deps);

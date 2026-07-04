@@ -223,6 +223,20 @@ async function handleCommand(chatId: string, text: string, telegram: TelegramCli
     await telegram.sendMessage(chatId, "AI runtime override: off. Env default не изменён.");
     return;
   }
+  if (command === "/visual_fast") {
+    await setVisualProductionMode("fast");
+    await telegram.sendMessage(chatId, "Visual production mode: fast.");
+    return;
+  }
+  if (command === "/visual_quality") {
+    await setVisualProductionMode("quality");
+    await telegram.sendMessage(chatId, "Visual production mode: quality.");
+    return;
+  }
+  if (command === "/visual_mode") {
+    await telegram.sendMessage(chatId, `Visual production mode: ${await readVisualProductionMode()}`);
+    return;
+  }
   if (command === "/health") {
     await telegram.sendMessage(chatId, "Visual bot работает.");
     return;
@@ -303,7 +317,7 @@ async function handleCallback(callbackQueryId: string, chatId: string, userId: s
 }
 
 async function handleNewVisualTask(chatId: string, userId: string | undefined, text: string, uploadedAsset: UploadedTelegramAsset | undefined, deps: VisualBotHandlerDeps, stateStore: TelegramStateStore) {
-  await deps.telegram.sendMessage(chatId, "Принял, собираю картинку...");
+  await deps.telegram.sendMessage(chatId, "Принял. Собираю картинку по слоям...");
   const result = await produceVisualFromCommand({
     command_text: text,
     uploaded_assets: uploadedAsset?.path ? [toVisualUploadedAsset(uploadedAsset)] : [],
@@ -454,6 +468,9 @@ async function sendDebugJob(chatId: string, telegram: TelegramClient, stateStore
     `job_id: ${record.job_id}`,
     `project: ${record.detected.project_key}`,
     `mode: ${record.detected.visual_mode}`,
+    `pipeline_route: ${job.production?.pipeline_route || "-"}`,
+    `production_mode: ${job.production?.mode || "-"}`,
+    `production_phase: ${job.production?.phase || "-"}`,
     `layout: ${job.layout.variant}`,
     `preset: ${job.layout.preset_name || job.layout.variant}`,
     `resolved_size: ${job.layout.width || job.final_composite?.width || "-"}x${job.layout.height || job.final_composite?.height || "-"}`,
@@ -477,6 +494,18 @@ async function sendDebugJob(chatId: string, telegram: TelegramClient, stateStore
     `background: ${job.background_layer?.asset_path || "-"}`,
     `character_layer: ${job.character_layer?.asset_path || job.illustration_layer?.asset_path || "-"}`,
     `title_image_layer: source=${job.title_image_layer?.source || "-"} path=${job.title_image_layer?.asset_path || job.title_image_layer?.generated_asset_path || "-"} transparent=${job.title_image_layer?.transparent_background ? "yes" : "no"} text=${job.title_image_layer?.text || "-"}`,
+    `title_source: ${job.production?.title_final_source || job.title_image_layer?.source || "-"}`,
+    `title_attempts: ${job.production?.title_attempts ?? "-"} verified=${job.production?.title_verified ?? "-"}`,
+    `character_source: ${job.production?.character_source || job.character_layer?.source || "-"}`,
+    `character_attempts: ${job.production?.character_attempts ?? "-"} score=${job.production?.character_consistency_score ?? "-"}`,
+    `character_identity_reference: source=${job.production?.character_identity_reference_source || "-"} path=${job.production?.character_identity_reference_path || "-"}`,
+    `image_edit_model: ${job.production?.image_edit_model || "-"}`,
+    `image_edit_optional_params_applied: ${(job.production?.image_edit_optional_params_applied || []).join(",") || "-"}`,
+    `image_edit_optional_params_skipped: ${job.production?.image_edit_optional_params_skipped ? JSON.stringify(job.production.image_edit_optional_params_skipped) : "-"}`,
+    `background_source: ${job.production?.background_source || job.background_layer?.source || "-"}`,
+    `final_critic: ${job.production?.final_critic_result ? JSON.stringify(job.production.final_critic_result).slice(0, 260) : "-"}`,
+    `repair_cycles: ${job.production?.repair_cycles ?? "-"} image_calls_this_job=${job.production?.image_calls_this_job ?? "-"}`,
+    `image_calls: attempted=${job.production?.image_call_accounting?.attempted ?? "-"} successful=${job.production?.image_call_accounting?.successful ?? "-"} failed=${job.production?.image_call_accounting?.failed ?? "-"}`,
     `title_fit: font=${job.title_image_layer?.fit_metadata?.final_font_size || "-"} lines=${job.title_image_layer?.fit_metadata?.lines?.join("/") || "-"} warnings=${job.title_image_layer?.fit_metadata?.warnings?.join(",") || "-"}`,
     `illustration: ${job.illustration_layer?.asset_path || "-"}`,
     `logo: ${job.brand?.logo_path || "-"}`,
@@ -557,10 +586,13 @@ async function sendAssetProjectStatus(chatId: string, telegram: TelegramClient, 
     `project: ${project}`,
     `backgrounds: ${count("background")}`,
     `characters: ${count("character")}`,
+    `character_poses: ${count("character_pose")}`,
+    `title_images: ${count("title_image")}`,
     `logos: ${count("logo")}`,
     `references: ${count("reference")}`,
     `title_style_references: ${roleCount("title_style_reference")}`,
     `templates: ${count("template")}`,
+    `decor: ${count("decor")}`,
     `icons: ${count("icon")}`,
     `safe_for_auto_use: ${safe}`,
     `locked_assets: ${locked}`,
@@ -606,6 +638,25 @@ async function readAiOverride(): Promise<boolean | null> {
   } catch {
     return null;
   }
+}
+
+async function readVisualProductionMode(): Promise<"fast" | "quality"> {
+  try {
+    const parsed = JSON.parse(await fs.readFile(visualModeConfigPath(), "utf8")) as { production_mode?: string };
+    return parsed.production_mode === "fast" ? "fast" : "quality";
+  } catch {
+    return process.env.VISUAL_PRODUCTION_MODE === "fast" ? "fast" : "quality";
+  }
+}
+
+async function setVisualProductionMode(mode: "fast" | "quality") {
+  await fs.mkdir(path.dirname(visualModeConfigPath()), { recursive: true });
+  await fs.writeFile(visualModeConfigPath(), JSON.stringify({ production_mode: mode, updated_at: new Date().toISOString() }, null, 2), "utf8");
+  process.env.VISUAL_PRODUCTION_MODE = mode;
+}
+
+function visualModeConfigPath() {
+  return path.join(process.cwd(), ".storage", "telegram_visual_bot", "visual_mode.local.json");
 }
 
 async function setAiOverride(value: boolean | null): Promise<void> {
@@ -657,7 +708,18 @@ function toVisualUploadedAsset(asset: UploadedTelegramAsset): UploadedAsset {
 }
 
 function buildProducedCaption(result: Awaited<ReturnType<typeof produceVisualFromCommand>>): string {
-  return ["✅ Готово", `Проект: ${result.detected.project_key}`, `Режим: ${result.detected.visual_mode}`, `Версия: ${result.version}`, `Job: ${result.job_id}`, "Для качества нажми PNG без сжатия."].join("\n");
+  const characterFallback = (result.visual_job.project_key === "monopoly" || result.visual_job.project_key === "monopoly_pay")
+    && result.visual_job.production?.pipeline_route === "autonomous_multi_pass"
+    && result.visual_job.production?.character_source !== "reference_edit";
+  return [
+    "✅ Готово",
+    `Проект: ${result.detected.project_key}`,
+    `Режим: ${result.detected.visual_mode}`,
+    `Версия: ${result.version}`,
+    `Job: ${result.job_id}`,
+    characterFallback ? "Персонаж: использован резервный слой — новая поза не сгенерировалась." : "",
+    "Для качества нажми PNG без сжатия.",
+  ].filter(Boolean).join("\n");
 }
 
 function formatDebugBox(box?: { x: number; y: number; width: number; height: number }): string {

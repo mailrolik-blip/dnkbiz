@@ -6,6 +6,7 @@ import type { AiImageLayerType, AiLayerInput, VisualAiCapabilities, VisualAiProv
 import { buildStructuredImagePrompt } from "./prompts/buildImagePrompt";
 import { buildTextPrompt } from "./prompts/buildTextPrompt";
 import { canGenerateImage, recordImageGeneration, recordTextGeneration } from "./usageGuard";
+import { getOpenAiImageEditImplementationCapabilities, resolveImageEditParameters } from "./openaiImageEditProvider";
 
 export function createOpenAiProvider(): VisualAiProvider {
   return {
@@ -58,20 +59,27 @@ export function createOpenAiProvider(): VisualAiProvider {
 export function describeOpenAiImageCapabilities() {
   const capabilities = getCapabilities();
   const sdkInstalled = isOpenAiSdkInstalled();
+  const implementation = getOpenAiImageEditImplementationCapabilities();
   const referenceProvider = process.env.VISUAL_IMAGE_REFERENCE_PROVIDER || "disabled";
   const editProvider = process.env.VISUAL_IMAGE_EDIT_PROVIDER || "disabled";
   const reasons = [];
   if (referenceProvider !== "openai") reasons.push("VISUAL_IMAGE_REFERENCE_PROVIDER is disabled");
   if (editProvider !== "openai") reasons.push("VISUAL_IMAGE_EDIT_PROVIDER is disabled");
   if (!sdkInstalled) reasons.push("openai npm SDK is not installed; current project uses fetch-based prompt-only image generation");
-  if (referenceProvider === "openai" || editProvider === "openai") {
-    reasons.push("fetch-based reference/edit endpoint is not wired for live calls in automated path yet");
-  }
+  const model = process.env.OPENAI_IMAGE_MODEL || "gpt-image-2";
+  const editParameterProfile = resolveImageEditParameters(model, { input_fidelity: "high" }).diagnostics;
   return {
-    model: process.env.OPENAI_IMAGE_MODEL || "gpt-image-1",
+    model,
     reference_provider: referenceProvider,
     edit_provider: editProvider,
     openai_sdk_installed: sdkInstalled,
+    implementation,
+    runtime: {
+      key_present: Boolean(process.env.OPENAI_API_KEY),
+      provider_enabled: referenceProvider === "openai" || editProvider === "openai",
+      model,
+    },
+    optional_parameters: editParameterProfile,
     image_generation_supported: capabilities.image_generation,
     image_reference_supported: capabilities.image_references,
     image_edit_supported: capabilities.image_edit,
@@ -87,8 +95,8 @@ function getCapabilities(): VisualAiCapabilities {
   const sdkInstalled = isOpenAiSdkInstalled();
   return {
     image_generation: true,
-    image_references: referenceProvider === "openai" && sdkInstalled && process.env.VISUAL_ENABLE_LIVE_REFERENCE_TEST === "true",
-    image_edit: editProvider === "openai" && sdkInstalled && process.env.VISUAL_ENABLE_LIVE_REFERENCE_TEST === "true",
+    image_references: referenceProvider === "openai" && sdkInstalled,
+    image_edit: editProvider === "openai" && sdkInstalled,
     transparent_background: process.env.OPENAI_IMAGE_TRANSPARENT_BACKGROUND === "true",
   };
 }

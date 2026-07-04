@@ -57,7 +57,8 @@ export async function reviseProducedVisual(input: ReviseProducedVisualInput): Pr
 
   const aiLogs: string[] = [];
   const placementOnly = revision.warnings.some((warning) => warning.includes("placement updated without"));
-  if (input.options?.enable_ai && !placementOnly && input.target !== "layout" && input.target !== "format") {
+  const approvedAssetOnly = revision.warnings.some((warning) => warning.includes("approved_pose") || warning.includes("source=approved_asset"));
+  if (input.options?.enable_ai && !placementOnly && !approvedAssetOnly && input.target !== "layout" && input.target !== "format") {
     const provider = getVisualAiProvider(true);
     const capabilities = provider.getCapabilities?.();
     aiLogs.push(`AI requested for ${input.target}`);
@@ -130,6 +131,8 @@ export async function reviseProducedVisual(input: ReviseProducedVisualInput): Pr
     }
   } else if (placementOnly) {
     aiLogs.push(`AI skipped for ${input.target}: placement_only_revision`);
+  } else if (approvedAssetOnly) {
+    aiLogs.push(`AI skipped for ${input.target}: approved_asset_revision`);
   } else if (!input.options?.enable_ai) {
     aiLogs.push(`AI skipped for ${input.target}: VISUAL_BOT_ENABLE_AI=false`);
   }

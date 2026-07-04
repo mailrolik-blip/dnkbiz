@@ -353,3 +353,41 @@ Recommended commit message:
 ```text
 DNK MVP 1.50: production visual QA and reference-edit integration
 ```
+
+## DNK MVP 1.51: add approved visual asset packs for Monopoly and Pay
+
+- Added approved production asset types: `title_image`, `character_pose`, `composition_template`, `decor`.
+- Added Telegram caption parsing for approved title PNG and pose PNG uploads.
+- Added asset-first matching for Monopoly/Pay title layers and character pose layers.
+- Added `VISUAL_PRODUCTION_ASSET_FIRST=true` behavior.
+- Added `visual:asset-first-smoke`.
+
+Recommended commit message:
+
+```text
+DNK MVP 1.51: add approved visual asset packs for Monopoly and Pay
+```
+
+## DNK MVP 1.51: add autonomous multi-pass AI visual pipeline
+
+- Added OpenAI SDK dependency and a real `images.edit`/reference provider wrapper.
+- Added visual production planner for one-command layer planning.
+- Added multi-pass title, character, background and compose orchestration for Monopoly/Pay.
+- Added foreground isolation for generated title/character layers from solid backgrounds.
+- Added structured title verification and character critic interfaces with offline smoke tests.
+- Added fast/quality production modes and Telegram commands.
+- Kept approved assets as cache/manual override/fallback instead of making them the default future-post workflow.
+- Fixed live `images.edit` input MIME handling by normalizing references to PNG and sending explicit `image/png`.
+- Added Windows-safe CLI path parsing for live smoke image paths with spaces/Cyrillic.
+- Added non-retryable image input error classification and image call accounting for failed edit attempts.
+- Added `visual:image-mime-smoke`, `visual:reference-normalization-smoke` and `visual:cli-path-smoke`.
+- Added model-aware `images.edit` optional parameter resolution; `gpt-image-2` now omits unsupported `input_fidelity`.
+- Made locked `main_character` the primary character identity reference, with approved poses as secondary references/fallback.
+- Added `pipeline_route=autonomous_multi_pass` diagnostics and Telegram smoke coverage.
+- Added `visual:image-edit-params-smoke`.
+
+Recommended commit message:
+
+```text
+DNK MVP 1.51: add autonomous multi-pass AI visual pipeline
+```

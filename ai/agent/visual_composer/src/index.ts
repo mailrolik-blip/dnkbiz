@@ -19,6 +19,17 @@ interface CliOptions {
   aiSmoke?: boolean;
   stylePackSmoke?: boolean;
   assetSelectionSmoke?: boolean;
+  assetFirstSmoke?: boolean;
+  imageMimeSmoke?: boolean;
+  referenceNormalizationSmoke?: boolean;
+  cliPathSmoke?: boolean;
+  imageEditParamsSmoke?: boolean;
+  productionPlanSmoke?: boolean;
+  multiPassSmoke?: boolean;
+  titleVerificationSmoke?: boolean;
+  characterCriticSmoke?: boolean;
+  openAiEditSmoke?: boolean;
+  productionLiveSmoke?: boolean;
   qualitySheet?: boolean;
   layeredSmoke?: boolean;
   layerPackSmoke?: boolean;
@@ -38,6 +49,8 @@ interface CliOptions {
   image?: boolean;
   imagePath?: string;
   project?: string;
+  prompt?: string;
+  commandTextArg?: string;
 }
 
 function parseArgs(argv: string[]): CliOptions {
@@ -59,6 +72,15 @@ function parseArgs(argv: string[]): CliOptions {
     if (arg === "--ai-smoke") options.aiSmoke = true;
     if (arg === "--style-pack-smoke") options.stylePackSmoke = true;
     if (arg === "--asset-selection-smoke") options.assetSelectionSmoke = true;
+    if (arg === "--asset-first-smoke") options.assetFirstSmoke = true;
+    if (arg === "--image-mime-smoke") options.imageMimeSmoke = true;
+    if (arg === "--reference-normalization-smoke") options.referenceNormalizationSmoke = true;
+    if (arg === "--cli-path-smoke") options.cliPathSmoke = true;
+    if (arg === "--image-edit-params-smoke") options.imageEditParamsSmoke = true;
+    if (arg === "--production-plan-smoke") options.productionPlanSmoke = true;
+    if (arg === "--multi-pass-smoke") options.multiPassSmoke = true;
+    if (arg === "--title-verification-smoke") options.titleVerificationSmoke = true;
+    if (arg === "--character-critic-smoke") options.characterCriticSmoke = true;
     if (arg === "--quality-sheet") options.qualitySheet = true;
     if (arg === "--layered-smoke") options.layeredSmoke = true;
     if (arg === "--layer-pack-smoke") options.layerPackSmoke = true;
@@ -72,12 +94,16 @@ function parseArgs(argv: string[]): CliOptions {
     if (arg === "--visual-qa-smoke") options.visualQaSmoke = true;
     if (arg === "--quality-gate") options.qualityGate = true;
     if (arg === "--reference-live-smoke") options.referenceLiveSmoke = true;
+    if (arg === "--openai-edit-smoke") options.openAiEditSmoke = true;
+    if (arg === "--production-live-smoke") options.productionLiveSmoke = true;
     if (arg === "--ai-usage") options.aiUsage = true;
     if (arg === "--ai-usage-reset") options.aiUsageReset = true;
     if (arg === "--yes") options.yes = true;
     if (arg === "--image") options.image = true;
     if (arg === "--image" && argv[index + 1] && !argv[index + 1].startsWith("--")) options.imagePath = argv[index + 1];
     if (arg === "--project") options.project = argv[index + 1];
+    if (arg === "--prompt") options.prompt = argv[index + 1];
+    if (arg === "--command") options.commandTextArg = argv[index + 1];
   }
   return options;
 }
@@ -539,6 +565,162 @@ async function runAssetSelectionSmoke(): Promise<void> {
   ].join("\n"));
 }
 
+async function runAssetFirstSmoke(): Promise<void> {
+  const sharpModule = await import("sharp");
+  const sharp = sharpModule.default;
+  const { buildVisualJobFromCommand } = await import("./jobBuilder");
+  const { composeWithVisualQaRepair } = await import("./production/composeWithVisualQa");
+  const root = path.join(process.cwd(), ".storage", "visual_asset_first_smoke");
+  await fs.mkdir(root, { recursive: true });
+  async function asset(fileName: string, color: string): Promise<string> {
+    const filePath = path.join(root, fileName);
+    await sharp({ create: { width: 640, height: 320, channels: 4, background: color } }).png().toFile(filePath);
+    return filePath;
+  }
+  const titlePath = await asset("pay-title-yandex.png", "#facc15");
+  const posePath = await asset("pay-pose-phone.png", "#38bdf8");
+  const backgroundPath = await asset("pay-bg.png", "#0f172a");
+  const manifest = {
+    version: "asset-first-smoke",
+    assets: [
+      { ...fakeAsset("pay-title-yandex", "monopoly_pay", "title_image", titlePath, "title", "replaceable", ["yandex", "3d"], 100), approved: true, text: "ЯНДЕКС-ЯНДЕКС" },
+      { ...fakeAsset("pay-pose-phone", "monopoly_pay", "character_pose", posePath, "main_character", "replaceable", ["ded", "phone", "pay"], 100), approved: true, pose: "phone" },
+      { ...fakeAsset("pay-bg", "monopoly_pay", "background", backgroundPath, "background", "replaceable", ["wide", "pay"], 50), approved: true },
+    ],
+  } as const;
+  const built = await buildVisualJobFromCommand({
+    command_text: "для монополии пэй нужна новая картинка с текстом Яндекс-Яндекс дед с телефоном",
+    asset_manifest: manifest as never,
+    options: { enable_ai: true },
+  });
+  assertEqual(built.visual_job.title_image_layer?.asset_path, titlePath, "Approved exact title image selected");
+  assertEqual(built.visual_job.title_image_layer?.source, "asset", "Approved title source");
+  assertEqual(built.visual_job.character_layer?.asset_path, posePath, "Approved character pose selected");
+  assertIncludes(built.warnings.join("; "), "title_asset_match exact=true", "Title asset match debug");
+  assertIncludes(built.warnings.join("; "), "source=approved_pose", "Pose asset match debug");
+  const composed = await composeWithVisualQaRepair(built.visual_job);
+  if (!composed.qa.ok) throw new Error(`Asset-first QA failed: ${composed.qa.errors.map((item) => item.code).join(",")}`);
+  console.log(JSON.stringify({
+    ok: true,
+    title_source: built.visual_job.title_image_layer?.source,
+    title_path: built.visual_job.title_image_layer?.asset_path,
+    character_path: built.visual_job.character_layer?.asset_path,
+    output: `${composed.compose_result.width}x${composed.compose_result.height}`,
+  }, null, 2));
+}
+
+async function runImageMimeSmoke(): Promise<void> {
+  const sharpModule = await import("sharp");
+  const sharp = sharpModule.default;
+  const { detectImageMimeType } = await import("./imageProcessing/detectImageMimeType");
+  const root = path.join(process.cwd(), ".storage", "visual_image_mime_smoke");
+  await fs.mkdir(root, { recursive: true });
+  const png = path.join(root, "fixture.png");
+  const jpg = path.join(root, "fixture.jpg");
+  const webp = path.join(root, "fixture.webp");
+  const fake = path.join(root, "fixture.bin");
+  await sharp({ create: { width: 12, height: 12, channels: 4, background: "#ef4444" } }).png().toFile(png);
+  await sharp({ create: { width: 12, height: 12, channels: 3, background: "#22c55e" } }).jpeg().toFile(jpg);
+  await sharp({ create: { width: 12, height: 12, channels: 3, background: "#3b82f6" } }).webp().toFile(webp);
+  await fs.writeFile(fake, Buffer.from("not-an-image"));
+  const detected = [await detectImageMimeType(png), await detectImageMimeType(jpg), await detectImageMimeType(webp)];
+  assertEqual(detected[0].mime_type, "image/png", "PNG MIME");
+  assertEqual(detected[1].mime_type, "image/jpeg", "JPEG MIME");
+  assertEqual(detected[2].mime_type, "image/webp", "WEBP MIME");
+  let rejected = false;
+  try {
+    await detectImageMimeType(fake);
+  } catch {
+    rejected = true;
+  }
+  if (!rejected) throw new Error("Fake binary image was not rejected.");
+  console.log(JSON.stringify({ ok: true, detected: detected.map((item) => ({ format: item.format, mime_type: item.mime_type, detected_by: item.detected_by })) }, null, 2));
+}
+
+async function runReferenceNormalizationSmoke(): Promise<void> {
+  const sharpModule = await import("sharp");
+  const sharp = sharpModule.default;
+  const { normalizeReferenceImage } = await import("./imageProcessing/normalizeReferenceImage");
+  const root = path.join(process.cwd(), ".storage", "visual_reference_normalization_smoke");
+  await fs.mkdir(root, { recursive: true });
+  const source = path.join(root, "telegram-upload-with-metadata.jpg");
+  await sharp({ create: { width: 128, height: 96, channels: 3, background: "#f97316" } }).jpeg().toFile(source);
+  const normalized = await normalizeReferenceImage({ source_path: source, job_id: "reference-normalization-smoke", index: 0 });
+  if (!fsSync.existsSync(normalized.normalized_path)) throw new Error("Normalized reference PNG was not created.");
+  assertEqual(normalized.diagnostics.normalized_format, "png", "Normalized reference format");
+  assertEqual(normalized.diagnostics.mime_type, "image/png", "Normalized reference MIME");
+  console.log(JSON.stringify({ ok: true, normalized_path: normalized.normalized_path, diagnostics: normalized.diagnostics }, null, 2));
+}
+
+async function runCliPathSmoke(): Promise<void> {
+  const { normalizeCliFilePath } = await import("./utils/cliPath");
+  const cases = [
+    "C:\\работа\\610 пэй Новые триггеры банков\\image.png",
+    "C:\\Users\\Компик\\Desktop\\дед.png",
+    "./relative/image.png",
+    "\"C:\\работа\\610 пэй Новые триггеры банков\\image.png\"",
+  ];
+  const normalized = cases.map((item) => normalizeCliFilePath(item));
+  if (!normalized[0].startsWith("C:\\работа\\")) throw new Error(`Windows absolute path was changed incorrectly: ${normalized[0]}`);
+  if (!normalized[1].startsWith("C:\\Users\\Компик\\")) throw new Error(`Cyrillic Windows path was changed incorrectly: ${normalized[1]}`);
+  if (!path.isAbsolute(normalized[2])) throw new Error(`Relative path was not resolved: ${normalized[2]}`);
+  if (!normalized[3].startsWith("C:\\работа\\")) throw new Error(`Quoted Windows path was changed incorrectly: ${normalized[3]}`);
+  console.log(JSON.stringify({ ok: true, normalized }, null, 2));
+}
+
+async function runImageEditParamsSmoke(): Promise<void> {
+  const { resolveImageEditParameters } = await import("./ai/openaiImageEditProvider");
+  const { isNonRetryableImageInputError } = await import("./imageProcessing/detectImageMimeType");
+  const gptImage2 = resolveImageEditParameters("gpt-image-2", { input_fidelity: "high" });
+  if ("input_fidelity" in gptImage2.parameters) throw new Error("gpt-image-2 edit params must not include input_fidelity.");
+  assertEqual(gptImage2.diagnostics.skipped_optional_parameters.input_fidelity, "unsupported_for_model", "gpt-image-2 input_fidelity skipped");
+  const unknown = resolveImageEditParameters("future-image-model", { input_fidelity: "high" });
+  if ("input_fidelity" in unknown.parameters) throw new Error("Unknown model edit params must use conservative common parameters only.");
+  if (!isNonRetryableImageInputError(new Error("400 The model 'gpt-image-2' does not support the 'input_fidelity' parameter."))) {
+    throw new Error("Unsupported edit parameter error was not classified as non-retryable.");
+  }
+
+  const { buildVisualJobFromCommand } = await import("./jobBuilder");
+  const { createVisualProductionPlan } = await import("./production/visualProductionPlanner");
+  const root = path.join(process.cwd(), ".storage", "visual_image_edit_params_smoke");
+  await fs.mkdir(root, { recursive: true });
+  const sharpModule = await import("sharp");
+  const sharp = sharpModule.default;
+  async function asset(fileName: string, color: string): Promise<string> {
+    const filePath = path.join(root, fileName);
+    await sharp({ create: { width: 64, height: 64, channels: 4, background: color } }).png().toFile(filePath);
+    return filePath;
+  }
+  const lockedMain = await asset("locked-main-character.png", "#f97316");
+  const approvedPose = await asset("approved-pose-phone.png", "#38bdf8");
+  const manifest = {
+    version: "image-edit-params-smoke",
+    assets: [
+      fakeAsset("locked-main-character", "monopoly_pay", "character", lockedMain, "main_character", "locked", ["ded", "main", "pay"], 100),
+      { ...fakeAsset("approved-pose-phone", "monopoly_pay", "character_pose", approvedPose, "main_character", "replaceable", ["ded", "phone"], 90), approved: true, pose: "phone" },
+    ],
+  } as const;
+  const previousPolicy = process.env.VISUAL_LAYER_SOURCE_POLICY;
+  process.env.VISUAL_LAYER_SOURCE_POLICY = "generate_first";
+  try {
+    const built = await buildVisualJobFromCommand({ command_text: "для пэй новая картинка: новые триггеры банков, дед с телефоном", project_key: "monopoly_pay", asset_manifest: manifest as never, options: { enable_ai: false } });
+    const plan = createVisualProductionPlan({ command_text: built.visual_job.source_text || "", project_key: "monopoly_pay", visual_job: built.visual_job, manifest: manifest as never, quality_mode: "quality" });
+    assertEqual(plan.character.identity_reference_paths[0], lockedMain, "Locked main character is primary identity reference");
+    assertEqual(plan.character.identity_reference_source, "locked_main_character", "Identity reference source");
+    if (!plan.character.secondary_reference_paths.includes(approvedPose)) throw new Error("Approved pose was not retained as secondary reference.");
+  } finally {
+    if (previousPolicy === undefined) delete process.env.VISUAL_LAYER_SOURCE_POLICY;
+    else process.env.VISUAL_LAYER_SOURCE_POLICY = previousPolicy;
+  }
+
+  console.log(JSON.stringify({
+    ok: true,
+    gpt_image_2: gptImage2.diagnostics,
+    unknown_model: unknown.diagnostics,
+    multiple_input_metadata_preserved: true,
+  }, null, 2));
+}
+
 async function createLayeredSmokeManifest(root: string) {
   const sharpModule = await import("sharp");
   const sharp = sharpModule.default;
@@ -680,6 +862,7 @@ async function runReferenceProviderCheck(): Promise<void> {
 
 async function runReferenceLiveSmoke(options: CliOptions): Promise<void> {
   const { describeOpenAiImageCapabilities } = await import("./ai/openaiProvider");
+  const { normalizeCliFilePath } = await import("./utils/cliPath");
   const enabled = process.env.VISUAL_ENABLE_LIVE_REFERENCE_TEST === "true";
   const capabilities = describeOpenAiImageCapabilities();
   if (!enabled) {
@@ -694,7 +877,7 @@ async function runReferenceLiveSmoke(options: CliOptions): Promise<void> {
     return;
   }
   if (!options.imagePath) throw new Error("Usage: npm run visual:reference-live-smoke -- --project monopoly --image <path>");
-  const imagePath = path.resolve(options.imagePath);
+  const imagePath = normalizeCliFilePath(options.imagePath);
   if (!fsSync.existsSync(imagePath)) throw new Error(`Reference image not found: ${imagePath}`);
   if (!capabilities.image_reference_supported && !capabilities.image_edit_supported) {
     console.log(JSON.stringify({
@@ -708,6 +891,129 @@ async function runReferenceLiveSmoke(options: CliOptions): Promise<void> {
     return;
   }
   throw new Error("Live OpenAI reference/edit call is intentionally not wired in automated CLI yet; provider capability is exposed for manual integration.");
+}
+
+async function runProductionPlanSmoke(): Promise<void> {
+  const { buildVisualJobFromCommand } = await import("./jobBuilder");
+  const { createVisualProductionPlan } = await import("./production/visualProductionPlanner");
+  const built = await buildVisualJobFromCommand({ command_text: "для пэй новая картинка: новые триггеры банков, дед проходит между лучами сигнализации", options: { enable_ai: false } });
+  const plan = createVisualProductionPlan({ command_text: built.visual_job.source_text || "", project_key: built.visual_job.project_key, visual_job: built.visual_job, quality_mode: "quality" });
+  assertEqual(plan.title.exact_text, "НОВЫЕ ТРИГГЕРЫ БАНКОВ", "Production plan title");
+  assertEqual(plan.title.action, "generate", "Production plan title action");
+  assertEqual(plan.character.action, "reference_edit", "Production plan character action");
+  console.log(JSON.stringify({ ok: true, title: plan.title, character: plan.character, background: plan.background, composition: plan.composition }, null, 2));
+}
+
+async function runMultiPassSmoke(): Promise<void> {
+  const { buildVisualJobFromCommand } = await import("./jobBuilder");
+  const { runVisualProductionPipeline } = await import("./production/runVisualProductionPipeline");
+  const { composeWithVisualQaRepair } = await import("./production/composeWithVisualQa");
+  const manifest = await createLayeredSmokeManifest(path.join(process.cwd(), ".storage", "visual_multi_pass_smoke"));
+  const built = await buildVisualJobFromCommand({ command_text: "для пэй новая картинка: новые триггеры банков, дед проходит между лучами сигнализации", asset_manifest: manifest as never, options: { enable_ai: false } });
+  const pipeline = await runVisualProductionPipeline({ command_text: built.visual_job.source_text || "", visual_job: built.visual_job, manifest: manifest as never, enable_ai: false, quality_mode: "quality", job_id: "multi-pass-smoke" });
+  assertIncludes(pipeline.logs.join("; "), "plan_created", "Multi-pass plan");
+  assertIncludes(pipeline.logs.join("; "), "title_phase_start", "Multi-pass title phase");
+  assertIncludes(pipeline.logs.join("; "), "character_phase_start", "Multi-pass character phase");
+  const composed = await composeWithVisualQaRepair(pipeline.visual_job);
+  if (!composed.qa.ok) throw new Error(`Multi-pass final QA failed: ${composed.qa.errors.map((item) => item.code).join(",")}`);
+
+  const invalidRoot = path.join(process.cwd(), ".storage", "visual_multi_pass_non_retryable");
+  await fs.mkdir(invalidRoot, { recursive: true });
+  const invalidCharacter = path.join(invalidRoot, "invalid-character.bin");
+  const titleAsset = path.join(invalidRoot, "approved-title.png");
+  await fs.writeFile(invalidCharacter, Buffer.from("not-an-image"));
+  await (await import("sharp")).default({ create: { width: 640, height: 220, channels: 4, background: "#facc15" } }).png().toFile(titleAsset);
+  const invalidManifest = {
+    version: "multi-pass-non-retryable",
+    assets: [
+      { ...fakeAsset("invalid-pay-character", "monopoly_pay", "character", invalidCharacter, "main_character", "locked", ["main", "pay"], 100), approved: true },
+      { ...fakeAsset("approved-pay-title", "monopoly_pay", "title_image", titleAsset, "title", "replaceable", ["bank", "trigger"], 100), approved: true, text: "РќРћР’Р«Р• РўР РР“Р“Р•Р Р« Р‘РђРќРљРћР’" },
+    ],
+  } as const;
+  const previousPolicy = process.env.VISUAL_LAYER_SOURCE_POLICY;
+  const previousKey = process.env.OPENAI_API_KEY;
+  process.env.VISUAL_LAYER_SOURCE_POLICY = "asset_first";
+  process.env.OPENAI_API_KEY = previousKey || "offline-smoke-key";
+  try {
+    const invalidBuilt = await buildVisualJobFromCommand({ command_text: "РґР»СЏ РїСЌР№ РЅРѕРІР°СЏ РєР°СЂС‚РёРЅРєР°: РЅРѕРІС‹Рµ С‚СЂРёРіРіРµСЂС‹ Р±Р°РЅРєРѕРІ, РґРµРґ РґРµСЂР¶РёС‚ РєСѓР±РѕРє", asset_manifest: invalidManifest as never, options: { enable_ai: false } });
+    invalidBuilt.visual_job.project_key = "monopoly_pay";
+    invalidBuilt.visual_job.character_layer = { enabled: true, asset_path: invalidCharacter, source: "asset" };
+    invalidBuilt.visual_job.style_assets = { ...(invalidBuilt.visual_job.style_assets || {}), main_character: invalidCharacter };
+    const invalidPipeline = await runVisualProductionPipeline({ command_text: invalidBuilt.visual_job.source_text || "", visual_job: invalidBuilt.visual_job, manifest: invalidManifest as never, enable_ai: true, quality_mode: "quality", job_id: "multi-pass-non-retryable" });
+    assertIncludes(invalidPipeline.logs.join("; "), "character_generation_aborted_non_retryable", "Non-retryable character input abort");
+    if (invalidPipeline.visual_job.production?.image_call_accounting?.character !== 1) {
+      throw new Error(`Non-retryable character attempts expected 1, got ${invalidPipeline.visual_job.production?.image_call_accounting?.character}`);
+    }
+  } finally {
+    if (previousPolicy === undefined) delete process.env.VISUAL_LAYER_SOURCE_POLICY;
+    else process.env.VISUAL_LAYER_SOURCE_POLICY = previousPolicy;
+    if (previousKey === undefined) delete process.env.OPENAI_API_KEY;
+    else process.env.OPENAI_API_KEY = previousKey;
+  }
+
+  console.log(JSON.stringify({ ok: true, title_source: pipeline.visual_job.production?.title_final_source, character_source: pipeline.visual_job.production?.character_source, output: `${composed.compose_result.width}x${composed.compose_result.height}`, phases: pipeline.logs }, null, 2));
+}
+
+async function runTitleVerificationSmoke(): Promise<void> {
+  const { verifyTitleLayer } = await import("./production/runVisualProductionPipeline");
+  const ok = verifyTitleLayer("НОВЫЕ ТРИГГЕРЫ БАНКОВ", "НОВЫЕ ТРИГГЕРЫ БАНКОВ");
+  const bad = verifyTitleLayer("НОВЫЕ ТРИГГЕРЫ БАНКОВ", "НОВЫЕ БАНКИ");
+  if (!ok.exact_match || bad.exact_match) throw new Error("Title verification smoke failed.");
+  console.log(JSON.stringify({ ok: true, exact: ok, mismatch: bad }, null, 2));
+}
+
+async function runCharacterCriticSmoke(): Promise<void> {
+  const { reviewCharacterLayer } = await import("./production/runVisualProductionPipeline");
+  const review = reviewCharacterLayer("walking between security beams");
+  if (review.same_character_likelihood < 0.7 || !review.requested_action_present) throw new Error("Character critic smoke failed.");
+  console.log(JSON.stringify({ ok: true, review }, null, 2));
+}
+
+async function runOpenAiEditSmoke(options: CliOptions): Promise<void> {
+  if (process.env.VISUAL_ENABLE_LIVE_REFERENCE_TEST !== "true") {
+    console.log(JSON.stringify({ ok: true, live_call: false, skipped_reason: "VISUAL_ENABLE_LIVE_REFERENCE_TEST is not true" }, null, 2));
+    return;
+  }
+  if (!options.imagePath) throw new Error("Usage: npm run visual:openai-edit-smoke -- --image <path> --prompt \"same character holding a cup\"");
+  const { detectImageMimeType } = await import("./imageProcessing/detectImageMimeType");
+  const { editFromReference } = await import("./ai/openaiImageEditProvider");
+  const { normalizeCliFilePath } = await import("./utils/cliPath");
+  const imagePath = normalizeCliFilePath(options.imagePath);
+  const detected = await detectImageMimeType(imagePath);
+  const result = await editFromReference({ project_key: (options.project || "monopoly_pay") as never, job_id: "openai-edit-smoke", layer_type: "character", input_images: [{ path: imagePath, role: "main_character", priority: 100 }], prompt: options.prompt || "same character holding a cup", size: "1024x1024", quality: "medium" });
+  console.log(JSON.stringify({ ok: true, live_call: true, output_path: result.output_path, model: result.model, input_count: result.input_count, detected_mime: detected, normalized_inputs: result.reference_input_files }, null, 2));
+  console.log(`OUTPUT PNG: ${result.output_path}`);
+}
+
+async function runProductionLiveSmoke(options: CliOptions): Promise<void> {
+  if (process.env.VISUAL_ENABLE_LIVE_PRODUCTION_TEST !== "true") {
+    console.log(JSON.stringify({ ok: true, live_call: false, skipped_reason: "VISUAL_ENABLE_LIVE_PRODUCTION_TEST is not true" }, null, 2));
+    return;
+  }
+  const { buildVisualJobFromCommand } = await import("./jobBuilder");
+  const { runVisualProductionPipeline } = await import("./production/runVisualProductionPipeline");
+  const { composeWithVisualQaRepair } = await import("./production/composeWithVisualQa");
+  const command = options.commandTextArg || "новые триггеры банков, дед проходит между лучами сигнализации";
+  const built = await buildVisualJobFromCommand({ command_text: command, project_key: (options.project || "monopoly_pay") as never, options: { enable_ai: false } });
+  const pipeline = await runVisualProductionPipeline({ command_text: command, visual_job: built.visual_job, enable_ai: true, quality_mode: "quality", job_id: "production-live-smoke" });
+  const composed = await composeWithVisualQaRepair(pipeline.visual_job);
+  const finalJob = composed.visual_job;
+  console.log(JSON.stringify({
+    ok: true,
+    live_call: true,
+    job_id: "production-live-smoke",
+    final_output_path: composed.compose_result.output_path,
+    final_output_size: `${composed.compose_result.width}x${composed.compose_result.height}`,
+    layers: {
+      title: finalJob.title_image_layer?.generated_asset_path || finalJob.title_image_layer?.asset_path || "",
+      character: finalJob.character_layer?.generated_asset_path || finalJob.character_layer?.asset_path || "",
+      background: finalJob.background_layer?.asset_path || finalJob.background_layer?.generated_asset_path || "",
+    },
+    production_mode: pipeline.visual_job.production?.mode,
+    image_calls: pipeline.visual_job.production?.image_call_accounting || pipeline.image_call_accounting,
+    production: pipeline.visual_job.production,
+  }, null, 2));
+  console.log(`FINAL PNG: ${composed.compose_result.output_path}`);
 }
 
 async function runTitleExtractionSmoke(): Promise<void> {
@@ -905,6 +1211,11 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (options.assetFirstSmoke) {
+    await runAssetFirstSmoke();
+    return;
+  }
+
   if (options.layeredSmoke) {
     await runLayeredSmoke();
     return;
@@ -942,6 +1253,56 @@ async function main(): Promise<void> {
 
   if (options.referenceLiveSmoke) {
     await runReferenceLiveSmoke(options);
+    return;
+  }
+
+  if (options.imageMimeSmoke) {
+    await runImageMimeSmoke();
+    return;
+  }
+
+  if (options.referenceNormalizationSmoke) {
+    await runReferenceNormalizationSmoke();
+    return;
+  }
+
+  if (options.cliPathSmoke) {
+    await runCliPathSmoke();
+    return;
+  }
+
+  if (options.imageEditParamsSmoke) {
+    await runImageEditParamsSmoke();
+    return;
+  }
+
+  if (options.productionPlanSmoke) {
+    await runProductionPlanSmoke();
+    return;
+  }
+
+  if (options.multiPassSmoke) {
+    await runMultiPassSmoke();
+    return;
+  }
+
+  if (options.titleVerificationSmoke) {
+    await runTitleVerificationSmoke();
+    return;
+  }
+
+  if (options.characterCriticSmoke) {
+    await runCharacterCriticSmoke();
+    return;
+  }
+
+  if (options.openAiEditSmoke) {
+    await runOpenAiEditSmoke(options);
+    return;
+  }
+
+  if (options.productionLiveSmoke) {
+    await runProductionLiveSmoke(options);
     return;
   }
 

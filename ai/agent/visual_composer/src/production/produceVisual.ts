@@ -1,6 +1,7 @@
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { composeWithVisualQaRepair } from "./composeWithVisualQa";
+import { runVisualProductionPipeline } from "./runVisualProductionPipeline";
 import { buildVisualJobFromCommand, type BuildVisualJobInput } from "../jobBuilder";
 import { createVisualJobRecord, FileVisualJobStore } from "../store";
 import { safeFilename } from "../utils/safeFilename";
@@ -56,6 +57,15 @@ export async function produceVisualFromCommand(input: ProduceVisualInput): Promi
     buildResult.visual_job.layout.variant,
     jobId,
   );
+  const productionPipeline = await runVisualProductionPipeline({
+    command_text: commandText,
+    visual_job: buildResult.visual_job,
+    manifest: input.asset_manifest,
+    enable_ai: Boolean(input.options?.enable_ai),
+    job_id: jobId,
+  });
+  buildResult.visual_job = productionPipeline.visual_job;
+  if (productionPipeline.logs.length) buildResult.warnings.push(...productionPipeline.logs);
   const qaCompose = await composeWithVisualQaRepair({ ...buildResult.visual_job, output_path: outputPath });
   const composeResult = qaCompose.compose_result;
   buildResult.visual_job = qaCompose.visual_job;
@@ -107,6 +117,20 @@ export async function produceVisualFromCommand(input: ProduceVisualInput): Promi
     buildResult.visual_job.illustration_layer?.warnings?.join("; ") || "",
     buildResult.visual_job.background_layer?.warnings?.join("; ") || "",
     buildResult.visual_job.title_image_layer?.warnings?.join("; ") || "",
+    `pipeline_route=${buildResult.visual_job.production?.pipeline_route || "-"}`,
+    `production_mode=${buildResult.visual_job.production?.mode || "-"}`,
+    `production_phase=${buildResult.visual_job.production?.phase || "-"}`,
+    `production_plan=${JSON.stringify(buildResult.visual_job.production?.plan || {})}`,
+    `title_attempts=${buildResult.visual_job.production?.title_attempts ?? "-"}`,
+    `title_verified=${buildResult.visual_job.production?.title_verified ?? "-"}`,
+    `character_attempts=${buildResult.visual_job.production?.character_attempts ?? "-"}`,
+    `character_source=${buildResult.visual_job.production?.character_source ?? "-"}`,
+    `character_identity_reference_source=${buildResult.visual_job.production?.character_identity_reference_source ?? "-"}`,
+    `character_consistency_score=${buildResult.visual_job.production?.character_consistency_score ?? "-"}`,
+    `image_edit_model=${buildResult.visual_job.production?.image_edit_model ?? "-"}`,
+    `image_edit_optional_params_applied=${buildResult.visual_job.production?.image_edit_optional_params_applied?.join(",") || "-"}`,
+    `image_edit_optional_params_skipped=${buildResult.visual_job.production?.image_edit_optional_params_skipped ? JSON.stringify(buildResult.visual_job.production.image_edit_optional_params_skipped) : "-"}`,
+    `image_calls_this_job=${buildResult.visual_job.production?.image_calls_this_job ?? 0}`,
   ];
   record.compose_log = [
     `layout=${record.visual_job.layout.variant}`,

@@ -224,3 +224,15 @@ DNK MVP 1.48: improve layered visual art direction
 ```
 
 The visual bot roadmap now treats Monopoly/Pay output as production layer art direction: preset-based placement, manual layer movement, title preprocessing and explicit provider capability reporting for reference/edit.
+
+## DNK MVP 1.51 Autonomous Multi-Pass Pipeline
+
+The visual bot production direction moves from asset-first reuse toward autonomous layer generation:
+
+- command creates a production plan;
+- title image is generated as a layer and verified;
+- character pose is generated from reference/edit where live provider is enabled;
+- project background is reused by default;
+- final composite runs QA and records critic/repair diagnostics.
+
+Approved asset packs remain in the plan as cache/reference/manual override/fallback.

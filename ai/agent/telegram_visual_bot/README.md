@@ -322,3 +322,103 @@ npm run visual:reference-live-smoke -- --project monopoly --image <path>
 ```
 
 `visual:reference-live-smoke` skips live calls unless `VISUAL_ENABLE_LIVE_REFERENCE_TEST=true`.
+
+## DNK MVP 1.51 Approved Asset Packs
+
+Monopoly and Monopoly Pay now prefer approved production assets before AI/fallback:
+
+1. exact approved `title_image` by `text`;
+2. approved `character_pose` by pose/tags;
+3. approved background/logo/icon/template assets;
+4. AI only when approved assets are missing and AI is enabled;
+5. composer fallback only as final fallback.
+
+Upload examples:
+
+```text
+asset pay title text: НОВЫЕ ТРИГГЕРЫ БАНКОВ tags: bank,trigger,3d approved: true
+asset pay pose pose: phone tags: ded,phone,pay approved: true
+asset monopoly title text: ИСТОРИЯ ЗНАКОМСТВА tags: story,orange,3d approved: true
+asset monopoly pose pose: phone_receipt tags: ded,phone,receipt approved: true
+```
+
+After upload:
+
+```text
+/asset_index
+/asset_status pay
+/debug_job
+```
+
+Use `V1_11_APPROVED_ASSET_PACK_TEST_PLAN.md` for manual checks.
+
+## DNK MVP 1.51 Autonomous Multi-Pass Pipeline
+
+Manual plan: `V1_51_AUTONOMOUS_MULTIPASS_TEST_PLAN.md`.
+
+The bot now starts production with:
+
+```text
+Принял. Собираю картинку по слоям...
+```
+
+For Monopoly/Pay, `/debug_job` shows production diagnostics:
+
+- `production_mode`;
+- `production_phase`;
+- `title_attempts` and verification;
+- `character_attempts` and consistency score;
+- `background_source`;
+- `final_critic`;
+- `image_calls_this_job`.
+
+Runtime commands:
+
+```text
+/visual_fast
+/visual_quality
+/visual_mode
+```
+
+## DNK MVP 1.51 Live E2E Troubleshooting
+
+`visual:production-live-smoke` is a CLI production pipeline check. It does not configure or validate the Telegram webhook.
+
+If Telegram bot is silent:
+
+1. Ensure `npm run dev` is running.
+2. Ensure the cloudflared tunnel is running.
+3. Run `npm run telegram:visual:get-webhook`.
+4. Compare webhook URL with the current tunnel URL.
+5. Reset with `npm run telegram:visual:set-webhook -- --url <current-url> --drop-pending`.
+
+Live character edit checks are gated separately:
+
+```bash
+VISUAL_ENABLE_LIVE_REFERENCE_TEST=true npm run visual:openai-edit-smoke -- --image <path> --prompt "same character holding a golden trophy"
+VISUAL_ENABLE_LIVE_PRODUCTION_TEST=true npm run visual:production-live-smoke -- --project monopoly_pay --command "новые триггеры банков, дед проходит между лучами сигнализации"
+```
+
+Expected CLI output includes `OUTPUT PNG: <path>` for edit smoke and `FINAL PNG: <path>` for production live smoke.
+
+## DNK MVP 1.51 Telegram Autonomous Pipeline Check
+
+For Monopoly and Monopoly Pay, a normal Telegram text command routes through `autonomous_multi_pass` when the project is supported. `/debug_job` should show:
+
+```text
+pipeline_route: autonomous_multi_pass
+production_mode: quality
+production_phase: production_complete
+title_source: ai
+character_source: reference_edit
+character_identity_reference: source=locked_main_character
+image_edit_model: gpt-image-2
+image_edit_optional_params_skipped: {"input_fidelity":"unsupported_for_model"}
+background_source: asset
+```
+
+If character edit fails and a fallback asset is used, the final caption includes:
+
+```text
+Персонаж: использован резервный слой — новая поза не сгенерировалась.
+```

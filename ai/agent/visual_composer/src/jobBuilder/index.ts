@@ -82,7 +82,7 @@ export async function buildVisualJobFromCommand(input: BuildVisualJobInput): Pro
   visualJob.internal_prompt = [profile.image_style_rules, profile.composition_rules, profile.negative_rules, commandText].filter(Boolean).join("\n");
 
   if (input.options?.enable_ai) {
-    if ((projectKey === "monopoly" || projectKey === "monopoly_pay") && visualJob.title_image_layer?.enabled) {
+    if ((projectKey === "monopoly" || projectKey === "monopoly_pay") && visualJob.title_image_layer?.enabled && visualJob.title_image_layer.source !== "asset") {
       const titleLayer = await provider.generateTitleImageLayer?.({
         ...aiInput,
         visual_job: visualJob,
@@ -99,6 +99,8 @@ export async function buildVisualJobFromCommand(input: BuildVisualJobInput): Pro
         };
         if (titleLayer.warnings?.length) warnings.push(...titleLayer.warnings);
       }
+    } else if (visualJob.title_image_layer?.source === "asset") {
+      warnings.push("AI title_image skipped: approved title asset already selected.");
     }
     if (!visualJob.illustration_layer?.asset_path && visualMode !== "hockey_photo_template") {
       const aiIllustration = await provider.generateIllustrationLayer({ ...aiInput, visual_job: visualJob });

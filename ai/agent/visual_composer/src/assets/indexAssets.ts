@@ -8,11 +8,15 @@ const typeByDir: Record<string, VisualAssetType> = {
   backgrounds: "background",
   characters: "character",
   illustrations: "illustration",
+  character_poses: "character_pose",
   logos: "logo",
+  title_images: "title_image",
   references: "reference",
   style: "reference",
   templates: "template",
+  composition_templates: "composition_template",
   icons: "icon",
+  decor: "decor",
   photos: "photo",
   print: "print",
   qr: "qr",
@@ -43,6 +47,9 @@ export async function indexVisualAssets(rootDir = path.join(process.cwd(), "ai",
           usage: meta.usage || type,
           description: meta.description || "",
           safe_for_auto_use: meta.safe_for_auto_use ?? true,
+          approved: meta.approved ?? false,
+          text: meta.text,
+          pose: meta.pose,
           priority: meta.priority || 0,
           lock_policy: meta.lock_policy || defaultLockPolicy(type),
           recommended_modes: meta.recommended_modes || [],
@@ -63,7 +70,9 @@ export async function indexVisualAssets(rootDir = path.join(process.cwd(), "ai",
 
 function defaultRole(type: VisualAssetType): VisualAsset["role"] {
   if (type === "character") return "main_character";
+  if (type === "character_pose") return "main_character";
   if (type === "logo") return "brand_logo";
+  if (type === "title_image") return "title";
   if (type === "reference") return "style_reference";
   if (type === "background") return "background";
   if (type === "template") return "composition_reference";
@@ -73,7 +82,7 @@ function defaultRole(type: VisualAssetType): VisualAsset["role"] {
 function defaultLockPolicy(type: VisualAssetType): VisualAsset["lock_policy"] {
   if (type === "character" || type === "logo") return "locked";
   if (type === "reference") return "reference_only";
-  if (type === "background" || type === "illustration") return "replaceable";
+  if (type === "background" || type === "illustration" || type === "title_image" || type === "character_pose") return "replaceable";
   return "optional";
 }
 

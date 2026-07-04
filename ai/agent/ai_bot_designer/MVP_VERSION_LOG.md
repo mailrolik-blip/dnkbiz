@@ -29,3 +29,15 @@ Recommended commit message for this task:
 ```text
 DNK MVP 1.50: production visual QA and reference-edit integration
 ```
+
+- 1.51-draft: approved visual asset packs for Monopoly and Pay (uncommitted infrastructure retained)
+
+- 1.51: add autonomous multi-pass AI visual pipeline
+  - continuation: fix live OpenAI image edit MIME/path handling and complete first real multi-pass E2E readiness
+  - continuation: fix gpt-image-2 edit parameters and Telegram autonomous character generation diagnostics
+
+Recommended commit message for this task:
+
+```text
+DNK MVP 1.51: add autonomous multi-pass AI visual pipeline
+```

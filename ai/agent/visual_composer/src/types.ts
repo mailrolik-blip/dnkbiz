@@ -222,6 +222,38 @@ export interface VisualJob {
     confidence: number;
     warnings: string[];
   };
+  production?: {
+      mode?: "fast" | "quality";
+      phase?: string;
+      pipeline_route?: "autonomous_multi_pass" | "legacy_composer";
+      plan?: unknown;
+    title_attempts?: number;
+    title_verified?: boolean;
+    title_final_source?: string;
+      character_attempts?: number;
+      character_consistency_score?: number;
+      character_source?: string;
+      character_identity_reference_source?: string;
+      character_identity_reference_path?: string;
+      character_secondary_reference_paths?: string[];
+      image_edit_model?: string;
+      image_edit_optional_params_applied?: string[];
+      image_edit_optional_params_skipped?: Record<string, string>;
+      background_source?: string;
+      final_critic_result?: unknown;
+      repair_cycles?: number;
+      image_calls_this_job?: number;
+      image_call_accounting?: {
+        attempted: number;
+        successful: number;
+        failed: number;
+        title: number;
+        character: number;
+        background: number;
+      };
+      history?: string[];
+      warnings?: string[];
+    };
 }
 
 export interface ComposeResult {
