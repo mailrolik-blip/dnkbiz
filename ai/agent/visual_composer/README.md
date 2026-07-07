@@ -585,3 +585,53 @@ skipped_optional_parameters: { input_fidelity: "unsupported_for_model" }
 ```
 
 The production planner uses a locked `character` / `main_character` asset as the primary identity reference. Approved `character_pose` assets are secondary references or fallbacks in `generate_first` mode.
+
+## DNK MVP 1.52 Visual Recipe Engine
+
+Default production mode is now:
+
+```env
+VISUAL_PIPELINE_MODE=hybrid_economy
+VISUAL_MAX_AI_IMAGE_CALLS_PER_JOB=1
+```
+
+`hybrid_economy` runs channel-independent `VisualProductionEngine`:
+
+```text
+command -> VisualRecipe -> local title renderer -> approved/fixed assets -> optional one AI variable-layer call -> local compose -> local QA -> PNG
+```
+
+The previous autonomous multi-pass R&D pipeline is preserved behind:
+
+```env
+VISUAL_PIPELINE_MODE=experimental_multipass
+```
+
+Recipes:
+
+- `monopoly_social_wide_v1`: 0 AI calls for normal title/compose, max 1 reference edit for explicit new pose.
+- `monopoly_pay_social_wide_v1`: local Pay title PNG, palette/background assets, max 1 reference edit for explicit new pose.
+- `casper_one_shot_v1`: one-shot AI visual, max 1 call, optional local title overlay.
+- `gorilla_hockey_photo_template_v1`: existing photo/template is 0 AI calls, explicit new player/uniform is max 1 call.
+
+New local checks:
+
+```bash
+npm run visual:recipe-smoke
+npm run visual:hybrid-economy-smoke
+npm run visual:one-call-budget-smoke
+npm run visual:idempotency-smoke
+npm run visual:local-title-renderer-smoke
+npm run visual:provider-routing-smoke
+npm run visual:cost-ledger-smoke
+npm run visual:pilot-report-smoke
+```
+
+Cost reports:
+
+```bash
+npm run visual:cost-report
+npm run visual:pilot-report
+```
+
+Provider adapters are registered for `openai`, `bfl`, and `yandexart`. Live calls are gated by `VISUAL_ENABLE_LIVE_IMAGE_PROVIDERS=true`; offline smoke defaults to the local mock provider.

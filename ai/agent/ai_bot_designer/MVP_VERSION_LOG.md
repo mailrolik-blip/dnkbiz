@@ -41,3 +41,11 @@ Recommended commit message for this task:
 ```text
 DNK MVP 1.51: add autonomous multi-pass AI visual pipeline
 ```
+
+- 1.52: add cost-controlled Visual Recipe engine
+
+Recommended commit message for this task:
+
+```text
+DNK MVP 1.52: add cost-controlled Visual Recipe engine
+```

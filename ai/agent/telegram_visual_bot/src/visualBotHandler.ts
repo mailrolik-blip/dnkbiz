@@ -12,6 +12,8 @@ import type { TelegramClient, TelegramMessage, TelegramUpdate, UploadedTelegramA
 import { getLargestPhoto, getMessageText, getUpdateChatId, getUpdateUserId } from "./telegramUpdate";
 import { assetProjectFromAlias, parseAssetCaption, saveTelegramAssetFromMessage } from "./assetIntake";
 import { splitTelegramText } from "./telegramApi";
+import { isStaleTrigger, ProcessedTriggerRegistry } from "../../visual_composer/src/idempotency/ProcessedTriggerRegistry";
+import { VisualAcceptanceTelemetry } from "../../visual_composer/src/telemetry/VisualAcceptanceTelemetry";
 
 export interface VisualBotHandlerDeps {
   telegram: TelegramClient;
@@ -57,6 +59,11 @@ export function visualRevisionKeyboard() {
         { text: "PNG без сжатия", callback_data: "visual:send_original" },
         { text: "Слои ZIP", callback_data: "visual:send_layer_pack" },
       ],
+      [
+        { text: "Accepted", callback_data: "visual:accept" },
+        { text: "Needs local revision", callback_data: "visual:needs_local_revision" },
+      ],
+      [{ text: "Needs new AI variant", callback_data: "visual:regenerate" }],
       [{ text: "❌ Закрыть", callback_data: "visual:close" }],
     ],
   };
@@ -75,6 +82,18 @@ export async function handleVisualBotUpdate(update: TelegramUpdate, deps: Visual
   }
 
   if (update.callback_query?.data) {
+    if (update.callback_query.data === "visual:regenerate" || update.callback_query.data.includes("new_ai")) {
+      const claim = await claimPaidTrigger(update);
+      if (!claim.claimed) {
+        await deps.telegram.answerCallbackQuery(update.callback_query.id, "Повтор trigger отфильтрован");
+        return { ok: true, handled: true, reason: "duplicate_trigger_filtered" };
+      }
+      await claim.registry.update(claim.key, "running");
+      await handleCallback(update.callback_query.id, chatId, userId || undefined, update.callback_query.data, effectiveDeps, stateStore);
+      const after = await stateStore.getChatState(chatId);
+      await claim.registry.update(claim.key, "completed", after.active_job_id);
+      return { ok: true, handled: true };
+    }
     await handleCallback(update.callback_query.id, chatId, userId || undefined, update.callback_query.data, effectiveDeps, stateStore);
     return { ok: true, handled: true };
   }
@@ -115,7 +134,19 @@ export async function handleVisualBotUpdate(update: TelegramUpdate, deps: Visual
 
   const state = await stateStore.getChatState(chatId);
   if (state.mode === "awaiting_visual_revision") {
+    const claim = await claimPaidTrigger(update);
+    if (!claim.claimed) {
+      await deps.telegram.sendMessage(chatId, "Повтор этого Telegram trigger отфильтрован, платная генерация не запускалась.");
+      return { ok: true, handled: true, reason: "duplicate_trigger_filtered" };
+    }
+    if (isStaleTrigger(message.date ? message.date * 1000 : undefined)) {
+      await claim.registry.update(claim.key, "canceled");
+      await deps.telegram.sendMessage(chatId, "Старый Telegram update из backlog пропущен, генерация не запускалась.");
+      return { ok: true, handled: true, reason: "stale_trigger_filtered" };
+    }
+    await claim.registry.update(claim.key, "running");
     await handleRevisionMessage(chatId, userId || undefined, text, state.revision_target, state.active_job_id, effectiveDeps, stateStore);
+    await claim.registry.update(claim.key, "completed", state.active_job_id);
     return { ok: true, handled: true };
   }
 
@@ -125,8 +156,34 @@ export async function handleVisualBotUpdate(update: TelegramUpdate, deps: Visual
   }
 
   const pendingAsset = uploadedAsset || state.pending_uploaded_asset;
+  const claim = await claimPaidTrigger(update);
+  if (!claim.claimed) {
+    await deps.telegram.sendMessage(chatId, "Повтор этого Telegram trigger отфильтрован, платная генерация не запускалась.");
+    return { ok: true, handled: true, reason: "duplicate_trigger_filtered" };
+  }
+  if (isStaleTrigger(message.date ? message.date * 1000 : undefined)) {
+    await claim.registry.update(claim.key, "canceled");
+    await deps.telegram.sendMessage(chatId, "Старый Telegram update из backlog пропущен, генерация не запускалась.");
+    return { ok: true, handled: true, reason: "stale_trigger_filtered" };
+  }
+  await claim.registry.update(claim.key, "running");
   await handleNewVisualTask(chatId, userId || undefined, text, pendingAsset, effectiveDeps, stateStore);
+  const after = await stateStore.getChatState(chatId);
+  await claim.registry.update(claim.key, "completed", after.active_job_id);
   return { ok: true, handled: true };
+}
+
+async function claimPaidTrigger(update: TelegramUpdate): Promise<{ claimed: boolean; key: string; registry: ProcessedTriggerRegistry }> {
+  const registry = new ProcessedTriggerRegistry();
+  const key = triggerKey(update);
+  const claim = await registry.claim(key);
+  return { claimed: claim.claimed, key, registry };
+}
+
+function triggerKey(update: TelegramUpdate): string {
+  if (update.callback_query?.id) return `telegram:callback:${update.callback_query.id}`;
+  if (update.message?.chat?.id && update.message?.message_id) return `telegram:message:${update.message.chat.id}:${update.message.message_id}`;
+  return `telegram:update:${update.update_id}`;
 }
 
 async function handleCommand(chatId: string, text: string, telegram: TelegramClient, stateStore: TelegramStateStore) {
@@ -286,8 +343,15 @@ async function handleCallback(callbackQueryId: string, chatId: string, userId: s
     await sendLayerPack(chatId, state.active_job_id, deps.telegram);
     return;
   }
+  if (data === "visual:accept" || data === "visual:needs_local_revision") {
+    await deps.telegram.answerCallbackQuery(callbackQueryId, "Зафиксировано");
+    if (state.active_job_id) await new VisualAcceptanceTelemetry().record(state.active_job_id, data === "visual:accept" ? "accepted" : "needs_local_revision");
+    await deps.telegram.sendMessage(chatId, data === "visual:accept" ? "Статус результата: Accepted." : "Статус результата: Needs local revision. Платный AI call не запускался.");
+    return;
+  }
   if (data === "visual:regenerate") {
     await deps.telegram.answerCallbackQuery(callbackQueryId, "Собираю новый вариант");
+    if (state.active_job_id) await new VisualAcceptanceTelemetry().record(state.active_job_id, "needs_new_ai_variant");
     await regenerateActiveJob(chatId, userId, state.active_job_id, deps, stateStore);
     return;
   }
@@ -469,6 +533,9 @@ async function sendDebugJob(chatId: string, telegram: TelegramClient, stateStore
     `project: ${record.detected.project_key}`,
     `mode: ${record.detected.visual_mode}`,
     `pipeline_route: ${job.production?.pipeline_route || "-"}`,
+    `recipe_key: ${(job.production?.plan as { recipe?: { key?: string } } | undefined)?.recipe?.key || "-"}`,
+    `recipe_title: ${job.production?.recipe_intent?.exact_title || job.text_layer?.text || "-"}`,
+    `recipe_character_action: ${job.production?.recipe_intent?.character_action || "-"}`,
     `production_mode: ${job.production?.mode || "-"}`,
     `production_phase: ${job.production?.phase || "-"}`,
     `layout: ${job.layout.variant}`,
@@ -495,17 +562,25 @@ async function sendDebugJob(chatId: string, telegram: TelegramClient, stateStore
     `character_layer: ${job.character_layer?.asset_path || job.illustration_layer?.asset_path || "-"}`,
     `title_image_layer: source=${job.title_image_layer?.source || "-"} path=${job.title_image_layer?.asset_path || job.title_image_layer?.generated_asset_path || "-"} transparent=${job.title_image_layer?.transparent_background ? "yes" : "no"} text=${job.title_image_layer?.text || "-"}`,
     `title_source: ${job.production?.title_final_source || job.title_image_layer?.source || "-"}`,
+    `title_path: ${job.title_image_layer?.generated_asset_path || job.title_image_layer?.asset_path || "-"}`,
+    `title_font_source: ${job.production?.title_font_source || "-"}`,
+    `title_font_fallback: ${job.production?.title_font_fallback ?? "-"}`,
     `title_attempts: ${job.production?.title_attempts ?? "-"} verified=${job.production?.title_verified ?? "-"}`,
     `character_source: ${job.production?.character_source || job.character_layer?.source || "-"}`,
     `character_attempts: ${job.production?.character_attempts ?? "-"} score=${job.production?.character_consistency_score ?? "-"}`,
     `character_identity_reference: source=${job.production?.character_identity_reference_source || "-"} path=${job.production?.character_identity_reference_path || "-"}`,
     `image_edit_model: ${job.production?.image_edit_model || "-"}`,
+    `provider_route_requested: ${job.production?.provider_route_requested || "-"}`,
+    `provider_resolved: ${job.production?.provider_resolved || "-"}`,
+    `provider_runtime_available: ${job.production?.provider_runtime_available ?? "-"}`,
+    `provider_billable: ${job.production?.provider_billable ?? "-"}`,
     `image_edit_optional_params_applied: ${(job.production?.image_edit_optional_params_applied || []).join(",") || "-"}`,
     `image_edit_optional_params_skipped: ${job.production?.image_edit_optional_params_skipped ? JSON.stringify(job.production.image_edit_optional_params_skipped) : "-"}`,
     `background_source: ${job.production?.background_source || job.background_layer?.source || "-"}`,
     `final_critic: ${job.production?.final_critic_result ? JSON.stringify(job.production.final_critic_result).slice(0, 260) : "-"}`,
     `repair_cycles: ${job.production?.repair_cycles ?? "-"} image_calls_this_job=${job.production?.image_calls_this_job ?? "-"}`,
-    `image_calls: attempted=${job.production?.image_call_accounting?.attempted ?? "-"} successful=${job.production?.image_call_accounting?.successful ?? "-"} failed=${job.production?.image_call_accounting?.failed ?? "-"}`,
+    `image_calls: real_billable=${job.production?.image_call_accounting?.real_billable ?? 0} attempted=${job.production?.image_call_accounting?.attempted ?? "-"} successful=${job.production?.image_call_accounting?.successful ?? "-"} failed=${job.production?.image_call_accounting?.failed ?? "-"}`,
+    `estimated_provider_cost: ${job.production?.estimated_provider_cost ?? "-"}`,
     `title_fit: font=${job.title_image_layer?.fit_metadata?.final_font_size || "-"} lines=${job.title_image_layer?.fit_metadata?.lines?.join("/") || "-"} warnings=${job.title_image_layer?.fit_metadata?.warnings?.join(",") || "-"}`,
     `illustration: ${job.illustration_layer?.asset_path || "-"}`,
     `logo: ${job.brand?.logo_path || "-"}`,

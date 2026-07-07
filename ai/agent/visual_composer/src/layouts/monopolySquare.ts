@@ -41,7 +41,7 @@ export async function renderMonopolySquare(job: VisualJob, context: RenderContex
   context.warnings.push(`placement_preset=${placement.name}`);
   context.warnings.push(`title_image_box=${formatBox(placement.title_image_box)}`);
   context.warnings.push(`character_box=${formatBox(placement.character_box)}`);
-  context.warnings.push(`composer_usage background=${background.existed ? "asset" : "fallback"} character=${character.existed && (job.character_layer?.locked || job.illustration_layer?.locked) ? "asset" : character.existed ? "illustration_asset" : "fallback"} title=${titleSource?.existed ? "asset" : "composer_fallback"} logo=${logo?.existed ? "asset" : "none"}`);
+  context.warnings.push(`composer_usage background=${background.existed ? "asset" : "fallback"} character=${character.existed && (job.character_layer?.locked || job.illustration_layer?.locked) ? "asset" : character.existed ? "illustration_asset" : "fallback"} title=${titleSource?.existed ? job.title_image_layer?.source || "asset" : "composer_fallback"} logo=${logo?.existed ? "asset" : "none"}`);
   if (!background.existed) context.warnings.push("quality_warning background missing; fallback background used.");
   if (!character.existed) context.warnings.push("character_missing");
   if (placement.character_box.height < height * 0.45) context.warnings.push("character_too_small");
@@ -51,7 +51,8 @@ export async function renderMonopolySquare(job: VisualJob, context: RenderContex
 
   const titlePolicy = process.env.VISUAL_TITLE_IMAGE_PROVIDER || "composer";
   context.warnings.push(`title_image_policy provider=${titlePolicy} title_style_reference_used=${job.style_assets?.title_style_reference ? "yes" : "no"}`);
-  const titleResult = titleSource?.existed && titlePolicy !== "composer"
+  const useExistingTitle = titleSource?.existed && (job.title_image_layer?.source === "local_renderer" || titlePolicy !== "composer");
+  const titleResult = useExistingTitle
     ? await preprocessTitleImage(await sharp(titleSource.input).png().toBuffer(), placement.title_image_box, job.title_image_layer?.transparent_background)
     : await renderBrandTitleImageLayer({ text: headline, project_key: "monopoly", width: placement.title_image_box.width, height: placement.title_image_box.height, tags: styleTags(job), maxLines: 2 });
   const titleBuffer = titleResult.buffer;
@@ -59,10 +60,10 @@ export async function renderMonopolySquare(job: VisualJob, context: RenderContex
     const preprocessWarnings = (titleResult as { warnings?: string[] }).warnings || [];
     job.title_image_layer = {
       ...(job.title_image_layer || { enabled: true, text: headline }),
-      source: titleSource?.existed && titlePolicy !== "composer" ? job.title_image_layer?.source || "asset" : "composer_fallback",
+      source: useExistingTitle ? job.title_image_layer?.source || "asset" : "composer_fallback",
       fit_metadata: "final_font_size" in titleResult.metadata ? titleResult.metadata : { warnings: preprocessWarnings },
     };
-    if (!job.title_image_layer.asset_path) {
+    if (!job.title_image_layer.asset_path && !job.title_image_layer.generated_asset_path) {
       job.title_image_layer.generated_asset_path = await saveTitleLayerPng(job, context.outputPath, titleBuffer);
     }
   }

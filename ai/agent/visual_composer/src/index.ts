@@ -45,6 +45,21 @@ interface CliOptions {
   referenceLiveSmoke?: boolean;
   aiUsage?: boolean;
   aiUsageReset?: boolean;
+  recipeSmoke?: boolean;
+  recipeIntentSmoke?: boolean;
+  layerSourceIntegritySmoke?: boolean;
+  payTitleRendererSmoke?: boolean;
+  payTitleSheet?: boolean;
+  providerRuntimeSafetySmoke?: boolean;
+  hybridEconomySmoke?: boolean;
+  oneCallBudgetSmoke?: boolean;
+  idempotencySmoke?: boolean;
+  localTitleRendererSmoke?: boolean;
+  providerRoutingSmoke?: boolean;
+  costLedgerSmoke?: boolean;
+  pilotReportSmoke?: boolean;
+  costReport?: boolean;
+  pilotReport?: boolean;
   yes?: boolean;
   image?: boolean;
   imagePath?: string;
@@ -98,6 +113,21 @@ function parseArgs(argv: string[]): CliOptions {
     if (arg === "--production-live-smoke") options.productionLiveSmoke = true;
     if (arg === "--ai-usage") options.aiUsage = true;
     if (arg === "--ai-usage-reset") options.aiUsageReset = true;
+    if (arg === "--recipe-smoke") options.recipeSmoke = true;
+    if (arg === "--recipe-intent-smoke") options.recipeIntentSmoke = true;
+    if (arg === "--layer-source-integrity-smoke") options.layerSourceIntegritySmoke = true;
+    if (arg === "--pay-title-renderer-smoke") options.payTitleRendererSmoke = true;
+    if (arg === "--pay-title-sheet") options.payTitleSheet = true;
+    if (arg === "--provider-runtime-safety-smoke") options.providerRuntimeSafetySmoke = true;
+    if (arg === "--hybrid-economy-smoke") options.hybridEconomySmoke = true;
+    if (arg === "--one-call-budget-smoke") options.oneCallBudgetSmoke = true;
+    if (arg === "--idempotency-smoke") options.idempotencySmoke = true;
+    if (arg === "--local-title-renderer-smoke") options.localTitleRendererSmoke = true;
+    if (arg === "--provider-routing-smoke") options.providerRoutingSmoke = true;
+    if (arg === "--cost-ledger-smoke") options.costLedgerSmoke = true;
+    if (arg === "--pilot-report-smoke") options.pilotReportSmoke = true;
+    if (arg === "--cost-report") options.costReport = true;
+    if (arg === "--pilot-report") options.pilotReport = true;
     if (arg === "--yes") options.yes = true;
     if (arg === "--image") options.image = true;
     if (arg === "--image" && argv[index + 1] && !argv[index + 1].startsWith("--")) options.imagePath = argv[index + 1];
@@ -1328,6 +1358,37 @@ async function main(): Promise<void> {
 
   if (options.aiUsage || options.aiUsageReset) {
     await runAiUsage(options);
+    return;
+  }
+
+  if (options.recipeSmoke || options.recipeIntentSmoke || options.layerSourceIntegritySmoke || options.payTitleRendererSmoke || options.payTitleSheet || options.providerRuntimeSafetySmoke || options.hybridEconomySmoke || options.oneCallBudgetSmoke || options.idempotencySmoke || options.localTitleRendererSmoke || options.providerRoutingSmoke || options.costLedgerSmoke || options.pilotReportSmoke) {
+    const { runV152Smoke } = await import("./smokes/v152Smoke");
+    const smokeCase = options.recipeSmoke ? "recipe"
+      : options.recipeIntentSmoke ? "recipe-intent"
+        : options.layerSourceIntegritySmoke ? "layer-source-integrity"
+          : options.payTitleRendererSmoke ? "pay-title-renderer"
+            : options.payTitleSheet ? "pay-title-sheet"
+              : options.providerRuntimeSafetySmoke ? "provider-runtime-safety"
+                : options.hybridEconomySmoke ? "hybrid-economy"
+                  : options.oneCallBudgetSmoke ? "one-call-budget"
+                    : options.idempotencySmoke ? "idempotency"
+                      : options.localTitleRendererSmoke ? "local-title-renderer"
+                        : options.providerRoutingSmoke ? "provider-routing"
+                          : options.costLedgerSmoke ? "cost-ledger"
+                            : "pilot-report";
+    await runV152Smoke(smokeCase);
+    return;
+  }
+
+  if (options.costReport) {
+    const { VisualCostLedger } = await import("./cost/VisualCostLedger");
+    console.log(await new VisualCostLedger().report());
+    return;
+  }
+
+  if (options.pilotReport) {
+    const { runV152Smoke } = await import("./smokes/v152Smoke");
+    await runV152Smoke("pilot-report");
     return;
   }
 

@@ -422,3 +422,26 @@ If character edit fails and a fallback asset is used, the final caption includes
 ```text
 Персонаж: использован резервный слой — новая поза не сгенерировалась.
 ```
+
+## DNK MVP 1.52 Hybrid Visual Engine
+
+Telegram is now an adapter only. Visual production runs through `VisualProductionEngine`, the same core used by `/admin/visual`.
+
+```text
+Telegram webhook -> TelegramVisualAdapter -> VisualProductionEngine -> PNG -> Telegram sendPhoto/sendDocument
+```
+
+Default cost-controlled env:
+
+```env
+VISUAL_PIPELINE_MODE=hybrid_economy
+VISUAL_MAX_AI_IMAGE_CALLS_PER_JOB=1
+```
+
+Duplicate cost protection persists processed triggers under `.storage/visual_triggers/`:
+
+- `telegram:update:<update_id>`
+- `telegram:message:<chat_id>:<message_id>`
+- `telegram:callback:<callback_query_id>`
+
+Service commands such as `/start`, `/health`, `/status`, `/debug_job`, `/visual_mode`, `/visual_quality`, `/visual_fast`, `/asset_status`, and `/asset_index` do not create visual jobs.

@@ -1,5 +1,28 @@
 # Visual Production Bot v2 implementation plan
 
+## DNK MVP 1.52 status
+
+Completed:
+
+- Pivoted default production from autonomous multi-pass R&D to cost-controlled `hybrid_economy`.
+- Added channel-independent `VisualProductionEngine`.
+- Added Visual Recipe schema/registry and production recipes:
+  - `monopoly_social_wide_v1`
+  - `monopoly_pay_social_wide_v1`
+  - `casper_one_shot_v1`
+  - `gorilla_hockey_photo_template_v1`
+- Added local Monopoly/Pay title renderers with configurable style JSON and no bundled font binaries.
+- Added hard one-call cost policy and local cost ledger.
+- Added persistent Telegram trigger registry to prevent duplicate paid generation.
+- Added `/admin/visual` operator UI using the same engine as Telegram.
+- Preserved autonomous multi-pass as `experimental_multipass`.
+
+Next:
+
+- Run real pilot demos through Brand Recipes.
+- Measure acceptance and AI calls/job using pilot report.
+- Do not build public SaaS/billing until the commercial validation gate is met.
+
 ## v2.1 status
 
 Completed in workflow export:

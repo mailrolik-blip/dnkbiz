@@ -6,6 +6,7 @@ import { buildVisualJobFromCommand, type BuildVisualJobInput } from "../jobBuild
 import { createVisualJobRecord, FileVisualJobStore } from "../store";
 import { safeFilename } from "../utils/safeFilename";
 import { qualityCheckVisual } from "../quality";
+import { getVisualPipelineMode, VisualProductionEngine } from "../engine/VisualProductionEngine";
 
 export interface ProduceVisualInput extends BuildVisualJobInput {
   source?: {
@@ -38,6 +39,33 @@ function buildPublicOutput(projectKey: string, layoutVariant: string, jobId: str
 }
 
 export async function produceVisualFromCommand(input: ProduceVisualInput): Promise<ProduceVisualResult> {
+  if (getVisualPipelineMode() === "hybrid_economy") {
+    const engine = new VisualProductionEngine();
+    const result = await engine.run({
+      user_id: input.source?.user_id,
+      brand_key: input.project_key || undefined,
+      command_text: input.command_text,
+      channel_context: { channel: input.source?.chat_id ? "telegram" : "api", chat_id: input.source?.chat_id },
+      uploaded_assets: input.uploaded_assets || [],
+      options: { enable_ai: Boolean(input.options?.enable_ai) },
+      asset_manifest: input.asset_manifest,
+    });
+    return {
+      ok: true,
+      job_id: result.job_id,
+      version: 1,
+      detected: result.detected,
+      visual_job: result.visual_job,
+      output_url: result.output_url,
+      output_path: result.output_path,
+      width: result.visual_job.final_composite?.width || 0,
+      height: result.visual_job.final_composite?.height || 0,
+      post_caption: result.visual_job.post_caption,
+      available_revisions: ["text", "title_image", "character", "background", "layout", "format"],
+      warnings: result.warnings,
+    };
+  }
+
   const commandText = input.command_text.trim();
   const buildResult = await buildVisualJobFromCommand({
     command_text: commandText,

@@ -28,7 +28,7 @@ export type OutputPreset =
   | "print_a4"
   | "print_a5";
 
-export type VisualLayerSource = "asset" | "ai" | "fallback" | "composer_fallback";
+export type VisualLayerSource = "asset" | "ai" | "fallback" | "composer_fallback" | "local_renderer";
 
 export interface LayerPlacement {
   x: number;
@@ -107,7 +107,7 @@ export interface TitleImageLayer {
   generated_asset_path?: string;
   transparent_background?: boolean;
   style_ref_asset_path?: string;
-  source?: "asset" | "ai" | "composer_fallback";
+  source?: "asset" | "ai" | "composer_fallback" | "local_renderer";
   position?: "top" | "bottom" | "left" | "right" | "center";
   scale?: number;
   fit?: "contain" | "cover";
@@ -225,11 +225,22 @@ export interface VisualJob {
   production?: {
       mode?: "fast" | "quality";
       phase?: string;
-      pipeline_route?: "autonomous_multi_pass" | "legacy_composer";
+      pipeline_route?: "hybrid_economy" | "autonomous_multi_pass" | "legacy_composer";
       plan?: unknown;
     title_attempts?: number;
     title_verified?: boolean;
-    title_final_source?: string;
+      title_final_source?: string;
+      recipe_intent?: {
+        exact_title: string;
+        character_action: string | null;
+        background_request: string | null;
+        composition_request: string | null;
+        explicit_ai_variant: boolean;
+        confidence: number;
+        parsing_method: string;
+      };
+      title_font_source?: string;
+      title_font_fallback?: boolean;
       character_attempts?: number;
       character_consistency_score?: number;
       character_source?: string;
@@ -237,6 +248,12 @@ export interface VisualJob {
       character_identity_reference_path?: string;
       character_secondary_reference_paths?: string[];
       image_edit_model?: string;
+      provider_route_requested?: string;
+      provider_resolved?: string;
+      provider_runtime_available?: boolean;
+      provider_billable?: boolean;
+      provider_model?: string;
+      estimated_provider_cost?: number;
       image_edit_optional_params_applied?: string[];
       image_edit_optional_params_skipped?: Record<string, string>;
       background_source?: string;
@@ -250,6 +267,7 @@ export interface VisualJob {
         title: number;
         character: number;
         background: number;
+        real_billable?: number;
       };
       history?: string[];
       warnings?: string[];

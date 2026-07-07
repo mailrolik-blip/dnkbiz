@@ -1,0 +1,13 @@
+{
+  "font_family": "Arial, Helvetica, sans-serif",
+  "font_size_range": [58, 170],
+  "line_height": 0.98,
+  "tracking": 0,
+  "fill_gradient": ["#fff6a8", "#ffd447", "#ff8c19"],
+  "stroke_width": 12,
+  "stroke_color": "#3a1608",
+  "highlight": { "color": "#ffffff", "opacity": 0.35 },
+  "extrusion": { "steps": 9, "x_step": 4, "y_step": 5, "colors": ["#9c2413", "#c93216", "#f04b19"] },
+  "shadow": { "offset": [22, 28], "blur": 8, "opacity": 0.34 },
+  "padding": 42
+}

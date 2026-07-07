@@ -25,6 +25,7 @@ export interface TelegramPhotoSize extends TelegramFileRef {
 
 export interface TelegramMessage {
   message_id: number;
+  date?: number;
   from?: TelegramUser;
   chat: TelegramChat;
   text?: string;

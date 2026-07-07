@@ -1,5 +1,24 @@
 # Changelog
 
+## DNK MVP 1.52: add cost-controlled Visual Recipe engine
+
+- Added channel-independent `VisualProductionEngine`.
+- Added Visual Recipe registry and recipes for Monopoly, Monopoly Pay, Casper and Gorilla Hockey.
+- Made `hybrid_economy` the default visual pipeline mode and preserved autonomous multi-pass as `experimental_multipass`.
+- Added hard one-call image budget with `CostBudgetExceededError`.
+- Added persistent Telegram trigger idempotency for update/message/callback keys.
+- Added local Monopoly and Pay title renderers with JSON style configs and no bundled font binaries.
+- Added provider router with `openai`, `bfl`, `yandexart` adapters behind live env gates and local mock provider for smoke tests.
+- Added visual cost ledger, cost report and pilot report scripts.
+- Added `/admin/visual` internal operator UI using the same engine as Telegram.
+- Added commercial validation gate and product positioning docs.
+
+Recommended commit message:
+
+```text
+DNK MVP 1.52: add cost-controlled Visual Recipe engine
+```
+
 ## 2026-07-03
 
 ### DNK MVP 1.47 layered visual pipeline
